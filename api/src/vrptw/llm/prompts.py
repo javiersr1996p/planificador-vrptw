@@ -7,8 +7,9 @@ diferencias respecto a 2024 están en `docs/prompts.md`.
 
 from vrptw.model import SOLOMON, Instance
 
-# Cualquier cambio en el texto de los prompts exige cambiar esta cadena.
-PROMPT_VERSION = "vrptw-prompt-2"
+# Cualquier cambio en el texto de los prompts (o en las descripciones de las
+# herramientas del agente, en `agent.py`) exige cambiar esta cadena.
+PROMPT_VERSION = "vrptw-prompt-3"
 
 # Frase que se añade con el perfil SOLOMON: ventanas y capacidad son restricciones duras.
 HARD_CONSTRAINTS = (
@@ -240,6 +241,43 @@ def solve_prompt(instance: Instance) -> str:
         ),
     ]
     return "\n".join(lines) + "\n"
+
+
+def agent_prompt(instance: Instance, max_turns: int) -> str:
+    """Prompt del LLM como agente: el de resolución más el uso de las herramientas.
+
+    Incluye `max_turns` para que el modelo sepa cuándo debe dar la respuesta final.
+    """
+    lines = [
+        "You can use two tools on this instance:",
+        (
+            "- solve_classic runs one of the classic VRPTW methods of the application "
+            "and returns its routes with their evaluation: score, total distance, "
+            "vehicles used, unattended customers, whether the solution is feasible and "
+            "the number of violations of each type."
+        ),
+        (
+            "- evaluate_routes returns the same evaluation for the routes you give it. "
+            "It is the evaluator that will judge your final answer, and it computes "
+            "the score with the rule above."
+        ),
+        (
+            "Use the tools as you see fit: for example, run several methods, compare "
+            "their evaluations, try to improve the best routes and check your changes "
+            "with evaluate_routes. You can call several tools in the same turn."
+        ),
+        (
+            f"You have at most {max_turns} turns, counting the one with your final "
+            "answer. A turn in which you call a tool is not a final answer, so do not "
+            "call any tool in your last turn."
+        ),
+        (
+            "Your final solution is the one in the JSON block at the end of your final "
+            "answer, not the output of a tool: write in that block the routes you "
+            "choose, in the format described above."
+        ),
+    ]
+    return solve_prompt(instance) + "\n".join(lines) + "\n"
 
 
 def recheck_prompt() -> str:

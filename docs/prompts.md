@@ -4,6 +4,7 @@ Los prompts están en `api/src/vrptw/llm/prompts.py` y se adaptan del prompt def
 
 - `solve_prompt(instance)`: prompt de resolución, en inglés como el de 2024.
 - `recheck_prompt()`: segundo prompt, de comprobación.
+- `agent_prompt(instance, max_turns)`: prompt del LLM en el papel de agente; es el de resolución más las instrucciones para usar las herramientas `solve_classic` y `evaluate_routes` (definidas en `api/src/vrptw/llm/agent.py`, con sus descripciones también versionadas) y el número máximo de turnos.
 - `PROMPT_VERSION`: se guarda en cada `RunRecord` (`prompt_version`). Cualquier cambio de texto obliga a cambiarla. Las instantáneas de `api/tests/data/prompts/` incluyen la versión, de modo que un cambio de texto sin cambio de versión rompe las pruebas.
 
 ## Origen en 2024

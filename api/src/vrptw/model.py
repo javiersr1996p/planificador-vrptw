@@ -181,8 +181,10 @@ class RunRecord(BaseModel):
     tool_calls: list[dict[str, Any]] | None = None
     tokens_in: int | None = None
     tokens_out: int | None = None
-    api_cost: float | None = None
+    api_cost: float | None = None  # USD
+    api_cost_eur: float | None = None
     price_table_version: str | None = None
+    stop_reason: str | None = None  # de la última respuesta del modelo
     self_reported_score: float | None = None
     wall_time_s: float
     solution: Solution | None = None

@@ -1,14 +1,17 @@
 """Pruebas de los prompts: instantáneas, contenido y dependencia del perfil de coste."""
 
+import json
 from pathlib import Path
 
 import pytest
 
 from vrptw.instances.solomon import load_solomon
 from vrptw.instances.tfe2024 import load_tfe2024
+from vrptw.llm.agent import MAX_TURNS, TOOLS
 from vrptw.llm.prompts import (
     HARD_CONSTRAINTS,
     PROMPT_VERSION,
+    agent_prompt,
     recheck_prompt,
     solve_prompt,
 )
@@ -38,6 +41,23 @@ def test_snapshot_c101_25() -> None:
 
 def test_snapshot_recheck() -> None:
     _check("recheck.txt", recheck_prompt())
+
+
+def test_snapshot_agent_10c1() -> None:
+    _check("agent-10c-1.txt", agent_prompt(load_tfe2024("10c-1"), MAX_TURNS))
+
+
+def test_snapshot_agent_tools() -> None:
+    # las descripciones de las herramientas también las lee el modelo
+    _check("agent-tools.txt", json.dumps(TOOLS, indent=2) + "\n")
+
+
+def test_agent_prompt_extends_solve_prompt() -> None:
+    inst = load_tfe2024("10c-1")
+    text = agent_prompt(inst, 4)
+    assert text.startswith(solve_prompt(inst))
+    assert "at most 4 turns" in text
+    assert "solve_classic" in text and "evaluate_routes" in text
 
 
 def test_10c1_content() -> None:
