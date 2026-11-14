@@ -10,7 +10,13 @@ import pytest
 from vrptw.evaluate import evaluate
 from vrptw.instances.tfe2024 import load_tfe2024
 from vrptw.llm import agent
-from vrptw.llm.agent import MAX_TOOL_TIME_S, MAX_TURNS, TOOLS, solve_agent
+from vrptw.llm.agent import (
+    MAX_TOOL_TIME_S,
+    MAX_TURNS,
+    MIN_CALL_TOKENS,
+    TOOLS,
+    solve_agent,
+)
 from vrptw.llm.prompts import PROMPT_VERSION, agent_prompt
 from vrptw.llm.providers import (
     PROVIDERS,
@@ -306,6 +312,65 @@ def test_auth_error_propagates(monkeypatch: pytest.MonkeyPatch) -> None:
         run(decide, monkeypatch)
     assert info.value.kind == "auth"
     assert KEY not in str(info.value)
+
+
+def budgeted(out: int, limits: list[int]) -> Any:
+    """Proveedor que anota el `max_tokens` de cada llamada, gasta `out` tokens de
+    salida (sin pasar de él) y siempre pide una herramienta."""
+
+    def call(
+        messages: Messages, tools: Messages, model: str, api_key: str, max_tokens: int
+    ) -> LLMResponse:
+        limits.append(max_tokens)
+        calls = (tool("evaluate_routes", routes=HEURISTIC),)
+        return LLMResponse("", calls, "tool_use", tokens_out=min(out, max_tokens))
+
+    return call
+
+
+def test_output_budget_shrinks_each_call_and_stops() -> None:
+    limits: list[int] = []
+    record = solve_agent(
+        INSTANCE,
+        "fake",
+        "fake-model",
+        KEY,
+        8000,
+        call=budgeted(3000, limits),
+        output_budget=8000,
+    )
+    # quedan 8000, 5000 y 2000; tras la tercera, 0 < MIN_CALL_TOKENS
+    assert limits == [8000, 5000, 2000] and record.tokens_out == 8000
+    assert record.parse_status == "unparseable" and record.solution is None
+    assert record.params["output_budget"] == 8000
+    assert record.params["early_stop"] == "output_budget"
+    assert len(trace(record)) == 2  # las herramientas de la tercera no se ejecutan
+
+
+def test_output_budget_below_minimum_makes_no_call() -> None:
+    limits: list[int] = []
+    record = solve_agent(
+        INSTANCE,
+        "fake",
+        "fake-model",
+        KEY,
+        8000,
+        call=budgeted(0, limits),
+        output_budget=MIN_CALL_TOKENS - 1,
+    )
+    assert limits == [] and roles(record) == ["user"]
+    assert record.parse_status == "unparseable"
+    assert record.params["early_stop"] == "output_budget"
+
+
+def test_without_budget_every_call_gets_max_tokens() -> None:
+    limits: list[int] = []
+    record = solve_agent(
+        INSTANCE, "fake", "fake-model", KEY, 4000, call=budgeted(3000, limits)
+    )
+    assert limits == [4000] * MAX_TURNS
+    assert "output_budget" not in record.params
+    assert "early_stop" not in record.params
 
 
 def test_key_is_not_recorded_nor_logged(

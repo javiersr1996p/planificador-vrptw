@@ -5,7 +5,7 @@ from typing import Any
 import pytest
 
 from vrptw.bench.estimate import (
-    GLOBAL_CAP_EUR,
+    GLOBAL_CAP_USD,
     LLM_TIERS,
     MODEL_CAPS_EUR,
     MODELS,
@@ -13,8 +13,12 @@ from vrptw.bench.estimate import (
     Row,
     estimate,
     load_llm_instance,
+    prompt_size,
+    run_calls,
 )
 from vrptw.cli import main
+from vrptw.llm.agent import MAX_TURNS, MIN_CALL_TOKENS
+from vrptw.llm.pricing import USD_PER_EUR
 from vrptw.llm.prompts import solve_prompt
 from vrptw.llm.providers import PROVIDERS
 
@@ -37,9 +41,25 @@ def test_breakdown_by_tier_model_and_role(rows: list[Row]) -> None:
     assert runs == {0: 6, 1: 108, 2: 108, 3: 72, 4: 36}
 
 
-def test_caps_add_up_to_the_global_cap() -> None:
-    assert sum(t.cap_eur for t in LLM_TIERS.values()) == GLOBAL_CAP_EUR
-    assert sum(MODEL_CAPS_EUR.values()) == GLOBAL_CAP_EUR
+def test_caps_fit_in_the_global_cap_in_usd() -> None:
+    tiers = sum(t.cap_eur for t in LLM_TIERS.values())
+    models = sum(MODEL_CAPS_EUR.values())
+    assert tiers == models == 18.0
+    assert tiers * USD_PER_EUR <= GLOBAL_CAP_USD == 20.0
+
+
+@pytest.mark.parametrize("scenario", ["bajo", "alto"])
+@pytest.mark.parametrize("budget", [8_000, 10_000, 2_000])
+def test_agent_output_stays_within_budget(scenario: str, budget: int) -> None:
+    size = prompt_size(load_llm_instance("C101", 25))
+    calls = run_calls(size, "claude-opus-5-5", "llm_agent", scenario, budget)
+    outputs = [out for _, out in calls]
+    assert sum(outputs) <= budget
+    for i in range(len(outputs)):  # cada llamada se hizo con el mínimo disponible
+        assert budget - sum(outputs[:i]) >= MIN_CALL_TOKENS
+    if scenario == "alto":  # la cota superior agota el presupuesto en 6 llamadas
+        assert len(calls) == MAX_TURNS and sum(outputs) == budget
+        assert outputs[0] == budget - MIN_CALL_TOKENS
 
 
 def test_no_network_call(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -75,6 +95,7 @@ def test_cli_prints_totals(capsys: pytest.CaptureFixture[str]) -> None:
     assert main(["bench", "estimate"]) == 0
     out = capsys.readouterr().out
     assert "TOTAL (330 ejecuciones)" in out and "EUR" in out
+    assert "Tope global 20 USD" in out and "Esfuerzo medium" in out
     assert "Supuestos:" in out
 
 

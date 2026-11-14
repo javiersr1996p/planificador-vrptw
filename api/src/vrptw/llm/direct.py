@@ -20,7 +20,13 @@ from vrptw.cli import _git_sha
 from vrptw.evaluate import evaluate
 from vrptw.llm.pricing import call_cost
 from vrptw.llm.prompts import PROMPT_VERSION, recheck_prompt, solve_prompt
-from vrptw.llm.providers import PROVIDERS, LLMResponse, ProviderError
+from vrptw.llm.providers import (
+    EFFORT,
+    PROVIDERS,
+    LLMResponse,
+    Provider,
+    ProviderError,
+)
 from vrptw.model import Instance, RunRecord, Solution
 
 ParseStatus = Literal["ok", "unparseable", "timeout", "refused"]
@@ -97,12 +103,14 @@ def build_llm_record(
     `messages` es la conversación completa, con las respuestas del modelo ya
     añadidas. Tokens y coste suman todas las `responses`; `raw_response` es el
     texto de la última. La evaluación sale siempre de `evaluate`. El coste solo
-    se calcula con `anthropic` y un modelo con precio; si no, queda en None.
+    se calcula con `anthropic` y un modelo con precio; si no, queda en None. Con
+    `anthropic`, `params` lleva además el esfuerzo enviado (`EFFORT`).
     """
     tokens_in = sum(r.tokens_in for r in responses)
     tokens_out = sum(r.tokens_out for r in responses)
     usd = eur = version = None
     if provider == "anthropic":
+        params = {**(params or {}), "effort": EFFORT}
         try:
             usd, eur, version = call_cost(model, tokens_in, tokens_out)
         except ValueError:
@@ -147,14 +155,18 @@ def solve_direct(
     api_key: str,
     max_tokens: int,
     recheck: bool = False,
+    call: Provider | None = None,
 ) -> RunRecord:
     """Una ejecución del LLM como resolvedor directo.
 
     Con `recheck` se envía además el segundo prompt (TFE p. 79) y la solución sale
     de la segunda respuesta. Un `ProviderError` de tiempo agotado da
-    `parse_status="timeout"`; cualquier otro se propaga.
+    `parse_status="timeout"`; cualquier otro se propaga. `call`, si se da, hace
+    cada llamada en lugar de `PROVIDERS[provider]` (el runner del benchmark pasa
+    un envoltorio que controla el gasto); `provider` sigue nombrando al registro.
     """
-    call = PROVIDERS[provider]
+    if call is None:
+        call = PROVIDERS[provider]
     messages: list[dict[str, Any]] = [
         {"role": "user", "content": solve_prompt(instance)}
     ]

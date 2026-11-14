@@ -19,6 +19,13 @@ como en el resolvedor directo, y la solución es la que declara el modelo, no la
 última que devolvió una herramienta. Si el último turno aún pide herramientas, no
 se ejecutan (el modelo ya no vería su resultado) y la ejecución queda como
 `unparseable`.
+
+Con `output_budget`, la salida de toda la ejecución (razonamiento incluido) no
+pasa de ese presupuesto: cada llamada recibe como `max_tokens` lo que queda (sin
+pasar de `max_tokens`). Si quedan menos de `MIN_CALL_TOKENS`, no se llama: la
+ejecución termina sin respuesta final (`unparseable`, con
+`params["early_stop"] = "output_budget"`), y si el turno anterior pedía
+herramientas, no se ejecutan, por la misma razón que en el último turno.
 """
 
 import json
@@ -35,7 +42,13 @@ from vrptw.llm.direct import (
     is_routes,
 )
 from vrptw.llm.prompts import agent_prompt
-from vrptw.llm.providers import PROVIDERS, LLMResponse, ProviderError, ToolCall
+from vrptw.llm.providers import (
+    PROVIDERS,
+    LLMResponse,
+    Provider,
+    ProviderError,
+    ToolCall,
+)
 from vrptw.model import Evaluation, Instance, RunRecord, Solution
 from vrptw.solvers.registry import SOLVERS
 
@@ -44,6 +57,12 @@ MAX_TURNS = 6
 # unos 50 s con 100 clientes; con 10 s, un turno que pruebe los cuatro métodos se
 # queda en unos 30 s de cálculo (la heurística es casi instantánea).
 MAX_TOOL_TIME_S = 10.0
+# Con presupuesto de salida, una llamada con menos de esto no se hace (supuesto
+# propio): la respuesta final de 100 clientes ocupa unos 390-465 bytes de JSON (la
+# heurística en C101, R101 y RC101, como mucho un token por byte), y el resto queda
+# para razonar antes de contestar. 1024 era también el mínimo del antiguo
+# `budget_tokens` de razonamiento.
+MIN_CALL_TOKENS = 1024
 
 # Las descripciones las lee el modelo: cambiarlas exige subir PROMPT_VERSION (la
 # instantánea `tests/data/prompts/agent-tools.txt` lo comprueba).
@@ -170,6 +189,8 @@ def solve_agent(
     max_tokens: int,
     seed: int = 0,
     max_turns: int = MAX_TURNS,
+    call: Provider | None = None,
+    output_budget: int | None = None,
 ) -> RunRecord:
     """Una ejecución del LLM como agente con los métodos clásicos como herramientas.
 
@@ -177,9 +198,13 @@ def solve_agent(
     guarda la conversación completa y, en `tool_calls`, una entrada por llamada
     ejecutada (`id`, `name`, `arguments`, `is_error`, `result` y `time_s`). Una
     negativa da `parse_status="refused"` y un `ProviderError` de tiempo agotado,
-    `timeout`; cualquier otro se propaga.
+    `timeout`; cualquier otro se propaga. `call`, si se da, hace cada llamada en
+    lugar de `PROVIDERS[provider]`, como en `solve_direct`. `output_budget` es el
+    presupuesto de salida de la ejecución (ver el docstring del módulo); sin él,
+    cada llamada recibe `max_tokens`.
     """
-    call = PROVIDERS[provider]
+    if call is None:
+        call = PROVIDERS[provider]
     messages: list[dict[str, Any]] = [
         {"role": "user", "content": agent_prompt(instance, max_turns)}
     ]
@@ -187,10 +212,23 @@ def solve_agent(
     trace: list[dict[str, Any]] = []
     status: ParseStatus = "unparseable"
     parsed = Parsed(None, None)
+    early_stop: str | None = None
+
+    def next_max_tokens() -> int:
+        if output_budget is None:
+            return max_tokens
+        return min(max_tokens, output_budget - sum(r.tokens_out for r in responses))
+
+    def out_of_budget() -> bool:
+        return output_budget is not None and next_max_tokens() < MIN_CALL_TOKENS
+
     start = time.perf_counter()
     try:
         while len(responses) < max_turns:
-            response = call(messages, TOOLS, model, api_key, max_tokens)
+            if out_of_budget():
+                early_stop = "output_budget"
+                break
+            response = call(messages, TOOLS, model, api_key, next_max_tokens())
             responses.append(response)
             messages.append(response.message())
             if response.stop_reason == "refusal":
@@ -202,6 +240,9 @@ def solve_agent(
                 break
             if len(responses) == max_turns:
                 break  # no hay turno siguiente: nadie leería los resultados
+            if out_of_budget():
+                early_stop = "output_budget"
+                break  # tampoco hay turno siguiente
             for tool_call in response.tool_calls:
                 tool_start = time.perf_counter()
                 result, is_error = _run_tool(instance, seed, tool_call)
@@ -234,6 +275,15 @@ def solve_agent(
             raise
         status, parsed = "timeout", Parsed(None, None)
     wall_time = time.perf_counter() - start
+    params: dict[str, Any] = {
+        "max_tokens": max_tokens,
+        "max_turns": max_turns,
+        "max_tool_time_s": MAX_TOOL_TIME_S,
+    }
+    if output_budget is not None:
+        params["output_budget"] = output_budget
+    if early_stop is not None:
+        params["early_stop"] = early_stop
 
     return build_llm_record(
         instance,
@@ -246,11 +296,7 @@ def solve_agent(
         solution=Solution(routes=parsed.routes) if parsed.routes is not None else None,
         wall_time_s=wall_time,
         self_reported_score=parsed.score,
-        params={
-            "max_tokens": max_tokens,
-            "max_turns": max_turns,
-            "max_tool_time_s": MAX_TOOL_TIME_S,
-        },
+        params=params,
         tool_calls=trace,
         seed=seed,
     )

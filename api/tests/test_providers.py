@@ -120,6 +120,8 @@ def test_text_response_is_normalized(monkeypatch: pytest.MonkeyPatch) -> None:
     assert body["system"] == "Eres un planificador."
     assert body["messages"] == [{"role": "user", "content": "Resuelve la instancia."}]
     assert "tools" not in body
+    assert body["output_config"] == {"effort": "medium"}  # en todas las llamadas
+    assert "thinking" not in body
     assert all(c.is_closed for c in net.clients)
 
 
@@ -144,6 +146,7 @@ def test_tool_call_round_trip_keeps_thinking(monkeypatch: pytest.MonkeyPatch) ->
     assert call_anthropic(messages, TOOLS, MODEL, KEY, 2000).text == "Hecho."
 
     first, again = net.bodies()
+    assert first["output_config"] == again["output_config"] == {"effort": "medium"}
     assert first["tools"] == [
         {
             "name": "solve_classic",

@@ -20,12 +20,18 @@ Todo lo demás es supuesto; `ASSUMPTIONS` lo imprime `vrptw bench estimate`:
 - Razonamiento reenviado: se cobra como entrada. Haiku 5.5, Sonnet 5.5 y Opus 5.5
   conservan el razonamiento de todos los turnos previos y lo facturan como
   entrada (página "Thinking" de Anthropic).
-- Salida, escenario alto (cota superior): cada llamada agota `max_tokens` y el
-  agente usa sus `MAX_TURNS` llamadas, con cuatro resultados de `solve_classic`
-  por turno con herramientas.
+- Esfuerzo `medium` en los tres modelos (`providers.EFFORT`), y el agente con un
+  presupuesto de salida por ejecución igual a `max_tokens` (`solve_agent`,
+  `output_budget`).
+- Salida, escenario alto (cota superior): la llamada directa agota `max_tokens`.
+  El agente usa sus `MAX_TURNS` llamadas y agota su presupuesto: la primera gasta
+  todo menos `MIN_CALL_TOKENS`, que así se reenvía como entrada en las cinco
+  siguientes, y la última gasta el resto; con cuatro resultados de
+  `solve_classic` por turno con herramientas.
 - Salida, escenario bajo (supuesto propio): `LOW_OUTPUT` por modelo y tamaño en
   `llm_direct`; el agente hace tres llamadas (la mitad de esa salida y dos de
-  `AGENT_FOLLOWUP_TOKENS`) con un resultado de `solve_classic` por turno.
+  `AGENT_FOLLOWUP_TOKENS`, dentro del presupuesto) con un resultado de
+  `solve_classic` por turno.
 - Casos reales: aún no existen; se sustituyen por R101 recortado a 12 y 25
   clientes, sin coordenadas y con la matriz euclídea en el prompt.
 - Sin caché: toda la entrada a precio base (si la API cachea, cuesta menos).
@@ -38,10 +44,10 @@ from typing import NamedTuple
 from vrptw.bench.run import TIERS
 from vrptw.instances.solomon import coordinates, euclidean_matrix, load_solomon
 from vrptw.instances.tfe2024 import load_tfe2024
-from vrptw.llm.agent import MAX_TURNS, TOOLS, _run_tool
-from vrptw.llm.pricing import call_cost
+from vrptw.llm.agent import MAX_TURNS, MIN_CALL_TOKENS, TOOLS, _run_tool
+from vrptw.llm.pricing import USD_PER_EUR, call_cost
 from vrptw.llm.prompts import agent_prompt, solve_prompt
-from vrptw.llm.providers import ToolCall
+from vrptw.llm.providers import EFFORT, ToolCall
 from vrptw.model import SOLOMON, Instance
 
 MODELS = ("claude-haiku-5-5", "claude-sonnet-5-5", "claude-opus-5-5")
@@ -69,19 +75,23 @@ LLM_TIERS: dict[int, LLMTier] = {
     3: LLMTier("Solomon 50", tuple(TIERS[3]), 2, 4.0),
     4: LLMTier("Solomon 100", tuple(TIERS[4]), 2, 4.0),
 }
-GLOBAL_CAP_EUR = 18.0
-RESERVE_EUR = 2.0
-# Subtope por modelo (suma 18): ver `MODEL_CAPS_NOTE`.
+# Tope global duro en USD, lo que factura Anthropic (decisión del usuario). Los
+# topes de escalón y los subtopes por modelo siguen en EUR (suma 18 EUR, 19,89 USD
+# con `USD_PER_EUR`); el runner los convierte a USD.
+GLOBAL_CAP_USD = 20.0
+# Subtope por modelo (suma 18 EUR): ver `MODEL_CAPS_NOTE`.
 MODEL_CAPS_EUR = {
     "claude-haiku-5-5": 0.5,
     "claude-sonnet-5-5": 6.5,
     "claude-opus-5-5": 11.0,
 }
 MODEL_CAPS_NOTE = (
-    "Subtopes (Opus 11, Sonnet 6,5, Haiku 0,5 EUR): proporcionales al escenario "
-    "bajo de esta estimación, para que, si el presupuesto obliga a parar, los "
-    "tres modelos pierdan la misma fracción de ejecuciones. Haiku queda en el "
-    "doble de su escenario bajo. Se revisan con los tokens del escalón 0."
+    "Subtopes (Opus 11, Sonnet 6,5, Haiku 0,5 EUR; suma 18 EUR = "
+    f"{18 * USD_PER_EUR:.2f} USD, dentro del tope global de 20 USD): se fijaron "
+    "proporcionales al escenario bajo de la estimación anterior (Sonnet a "
+    "esfuerzo high), para que, si el presupuesto obliga a parar, los tres "
+    "modelos pierdan la misma fracción de ejecuciones, y se mantienen. Se "
+    "revisan con los tokens del escalón 0."
 )
 
 # max_tokens por llamada, igual en los tres modelos para que el tope no favorezca
@@ -93,10 +103,11 @@ MAX_TOKENS_BY_SIZE = ((25, 8_000), (100, 10_000))
 
 BYTES_PER_TOKEN = {"bajo": 3.5 / 1.3, "alto": 1.0}
 TOOL_SYSTEM_TOKENS = 286
-# Escenario bajo de `llm_direct`: base + por cliente (tokens de salida).
+# Escenario bajo de `llm_direct`: base + por cliente (tokens de salida). Sonnet
+# con el mismo supuesto que Opus: los dos a esfuerzo medium.
 LOW_OUTPUT = {
     "claude-haiku-5-5": (1_500, 40),
-    "claude-sonnet-5-5": (3_000, 80),
+    "claude-sonnet-5-5": (2_000, 60),
     "claude-opus-5-5": (2_000, 60),
 }
 AGENT_FOLLOWUP_TOKENS = 1_000
@@ -123,15 +134,24 @@ ASSUMPTIONS = (
         "thinking, 'Thinking block preservation by model')."
     ),
     (
-        "Salida alta (cota superior): cada llamada agota max_tokens (el razonamiento "
-        "cuenta para max_tokens y se factura como salida) y el agente usa sus 6 "
-        "llamadas, con 4 resultados de solve_classic por turno con herramientas."
+        f"Esfuerzo {EFFORT} en los tres modelos (output_config.effort; "
+        "https://platform.claude.com/docs/en/build-with-claude/effort). Agente con "
+        "presupuesto de salida por ejecución igual a max_tokens: cada llamada "
+        "recibe lo que queda y no se llama con menos de "
+        f"{MIN_CALL_TOKENS} tokens."
+    ),
+    (
+        "Salida alta (cota superior): el directo agota max_tokens (el razonamiento "
+        "cuenta para max_tokens y se factura como salida). El agente hace sus 6 "
+        f"llamadas y agota el presupuesto: la 1.ª gasta todo menos {MIN_CALL_TOKENS}, "
+        "que se reenvía como entrada en las 5 siguientes, y la 6.ª el resto; 4 "
+        "resultados de solve_classic por turno con herramientas."
     ),
     (
         "Salida baja (supuesto propio): directo, base + k x clientes (Haiku "
-        "1500+40n, Sonnet 3000+80n por su esfuerzo high por defecto, Opus 2000+60n), "
-        "sin pasar de max_tokens; agente, 3 llamadas (la mitad de eso, 1000 y 1000) "
-        "con 1 resultado de solve_classic por turno."
+        "1500+40n; Sonnet y Opus 2000+60n, los dos a esfuerzo medium), sin pasar de "
+        "max_tokens; agente, 3 llamadas (la mitad de eso, 1000 y 1000, dentro del "
+        "presupuesto) con 1 resultado de solve_classic por turno."
     ),
     "Resultado de solve_classic: el JSON real de la heurística en esa instancia.",
     (
@@ -143,6 +163,11 @@ ASSUMPTIONS = (
         "API cachea el historial del agente, el coste real es menor."
     ),
     "Sin recheck (D5). Precios y tipo de cambio solo de data/models.json y pricing.py.",
+    (
+        f"Tope global {GLOBAL_CAP_USD:.0f} USD (lo que factura Anthropic); topes de "
+        f"escalón y subtopes en EUR, que el runner convierte a USD a {USD_PER_EUR} "
+        "USD por EUR."
+    ),
 )
 
 
@@ -222,10 +247,23 @@ def prompt_size(instance: Instance) -> PromptSize:
     )
 
 
+def within_budget(outputs: list[int], budget: int) -> list[int]:
+    """Las salidas que deja hacer el presupuesto del agente, como `solve_agent`:
+    cada llamada recibe lo que queda y no se llama con menos de `MIN_CALL_TOKENS`."""
+    done: list[int] = []
+    for out in outputs:
+        left = budget - sum(done)
+        if left < MIN_CALL_TOKENS:
+            break
+        done.append(min(out, left))
+    return done
+
+
 def run_calls(
     size: PromptSize, model: str, role: str, scenario: str, max_tokens: int
 ) -> list[tuple[int, int]]:
-    """(tokens de entrada, tokens de salida) de cada llamada de una ejecución."""
+    """(tokens de entrada, tokens de salida) de cada llamada de una ejecución. El
+    agente tiene un presupuesto de salida por ejecución igual a `max_tokens`."""
 
     def tokens(n_bytes: int) -> int:
         return math.ceil(n_bytes / BYTES_PER_TOKEN[scenario])
@@ -236,9 +274,13 @@ def run_calls(
         return [(tokens(size.direct_bytes), low if scenario == "bajo" else max_tokens)]
 
     if scenario == "bajo":
-        outputs = [low // 2] + [min(AGENT_FOLLOWUP_TOKENS, max_tokens)] * 2
+        wanted = [low // 2] + [AGENT_FOLLOWUP_TOKENS] * 2
     else:
-        outputs = [max_tokens] * MAX_TURNS
+        # cota superior: lo gastado pronto se reenvía en todas las llamadas que
+        # siguen, y la última aún necesita `MIN_CALL_TOKENS`
+        first = max(max_tokens - MIN_CALL_TOKENS, 0)
+        wanted = [first] + [0] * (MAX_TURNS - 2) + [MIN_CALL_TOKENS]
+    outputs = within_budget(wanted, max_tokens)
     results = RESULTS_PER_TOOL_TURN[scenario] * tokens(size.result_bytes)
     history = tokens(size.agent_bytes) + TOOL_SYSTEM_TOKENS
     calls = []
@@ -299,8 +341,12 @@ def render(rows: list[Row], max_tokens: int | None = None) -> str:
     """Tabla por escalón, modelo y papel, subtotales frente a sus topes y supuestos."""
     k = 1000
     lines = [
-        "Estimación del benchmark LLM (sin llamadas a la API). EUR = USD / BCE.",
-        "max_tokens por llamada: "
+        (
+            "Estimación del benchmark LLM (sin llamadas a la API). EUR = USD / "
+            f"{USD_PER_EUR} (BCE)."
+        ),
+        f"Esfuerzo {EFFORT} en los tres modelos. max_tokens por llamada del directo "
+        "y presupuesto de salida por ejecución del agente: "
         + (
             f"{max_tokens} en todas"
             if max_tokens
@@ -321,16 +367,17 @@ def render(rows: list[Row], max_tokens: int | None = None) -> str:
             f"{r.eur[0]:>9.2f} {r.eur[1]:>9.2f}"
         )
 
-    lines += ["", "Por escalón (tope del escalón):"]
+    lines += ["", "Por escalón (EUR; tope del escalón; alto también en USD):"]
     for number, tier in LLM_TIERS.items():
         low, high = _total([r for r in rows if r.tier == number])
         runs = sum(r.runs for r in rows if r.tier == number)
         lines.append(
             f"  {number} {tier.name:<22} {runs:>4} ejec.  bajo {low:7.2f}  "
-            f"alto {high:8.2f}  tope {tier.cap_eur:5.2f}  "
+            f"alto {high:8.2f} ({high * USD_PER_EUR:6.2f} USD)  "
+            f"tope {tier.cap_eur:5.2f}  "
             f"bajo {_check(low, tier.cap_eur)}, alto {_check(high, tier.cap_eur)}"
         )
-    lines += ["", "Por modelo (subtope):"]
+    lines += ["", "Por modelo (EUR; subtope):"]
     for model in MODELS:
         low, high = _total([r for r in rows if r.model == model])
         cap = MODEL_CAPS_EUR[model]
@@ -343,13 +390,16 @@ def render(rows: list[Row], max_tokens: int | None = None) -> str:
         low, high = _total([r for r in rows if r.role == role])
         lines.append(f"  {role:<10} bajo {low:7.2f}  alto {high:8.2f}")
     low, high = _total(rows)
+    # call_cost da eur = usd / USD_PER_EUR: el paso a USD es exacto
+    low_usd, high_usd = low * USD_PER_EUR, high * USD_PER_EUR
     lines += [
         "",
         (
-            f"TOTAL ({sum(r.runs for r in rows)} ejecuciones): bajo {low:.2f} EUR, "
-            f"alto {high:.2f} EUR. Tope global {GLOBAL_CAP_EUR:.0f} EUR (+"
-            f"{RESERVE_EUR:.0f} de reserva): bajo {_check(low, GLOBAL_CAP_EUR)}, "
-            f"alto {_check(high, GLOBAL_CAP_EUR)}."
+            f"TOTAL ({sum(r.runs for r in rows)} ejecuciones): bajo {low:.2f} EUR "
+            f"= {low_usd:.2f} USD, alto {high:.2f} EUR = {high_usd:.2f} USD. Tope "
+            f"global {GLOBAL_CAP_USD:.0f} USD: bajo "
+            f"{_check(low_usd, GLOBAL_CAP_USD)}, alto "
+            f"{_check(high_usd, GLOBAL_CAP_USD)}."
         ),
         "",
         MODEL_CAPS_NOTE,

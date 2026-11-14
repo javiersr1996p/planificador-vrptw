@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import os
 import platform
 import subprocess
 import sys
@@ -125,6 +126,45 @@ def _bench_estimate(args: argparse.Namespace) -> int:
     return 0
 
 
+def _bench_llm(args: argparse.Namespace) -> int:
+    from vrptw.bench import llm_run  # import tardío, como bench.run
+    from vrptw.bench.estimate import MODELS, ROLES
+    from vrptw.llm.providers import ProviderError
+
+    models = args.models or list(MODELS)
+    roles = args.roles or list(ROLES)
+    for kind, values, valid in (("modelo", models, MODELS), ("papel", roles, ROLES)):
+        unknown = [v for v in values if v not in valid]
+        if unknown:
+            print(
+                f"error: {kind} desconocido {unknown[0]!r}: use uno de {list(valid)}",
+                file=sys.stderr,
+            )
+            return 1
+    out_dir = Path(args.out_dir) if args.out_dir else llm_run.DEFAULT_OUT_DIR
+    ledger = llm_run.LEDGER_PATH
+    if not args.confirm:
+        print(llm_run.render_plan(args.tier, models, roles, out_dir, ledger))
+        return 0
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if not api_key:
+        print(
+            "error: falta la variable de entorno ANTHROPIC_API_KEY; por ejemplo: "
+            "uv run --env-file .env vrptw bench llm --tier N --confirm",
+            file=sys.stderr,
+        )
+        return 1
+    try:
+        status = llm_run.run_llm_tier(
+            args.tier, api_key, models, roles, out_dir, ledger
+        )
+    except ProviderError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    print(llm_run.render_summary(args.tier, status, models, out_dir, ledger))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="vrptw", description="Planificador VRPTW")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -172,6 +212,23 @@ def build_parser() -> argparse.ArgumentParser:
         help="mismo max_tokens en todas las llamadas (por defecto, el propuesto)",
     )
     estimate.set_defaults(func=_bench_estimate)
+    llm = bench.add_parser(
+        "llm",
+        help="benchmark LLM de un escalón, con topes de gasto (sin --confirm, "
+        "solo el plan)",
+    )
+    llm.add_argument("--tier", type=int, required=True, choices=(0, 1, 2, 3, 4))
+    llm.add_argument("--models", nargs="+", help="por defecto, los tres modelos")
+    llm.add_argument("--roles", nargs="+", help="llm_direct, llm_agent (por defecto)")
+    llm.add_argument(
+        "--confirm",
+        action="store_true",
+        help="ejecuta de verdad (clave en ANTHROPIC_API_KEY); sin él, solo el plan",
+    )
+    llm.add_argument(
+        "--out-dir", help="directorio de los RunRecord (por defecto api/runs/llm/)"
+    )
+    llm.set_defaults(func=_bench_llm)
     return parser
 
 

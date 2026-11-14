@@ -29,7 +29,7 @@ del error original, y sin encadenar la excepción original.
 
 import logging
 from collections.abc import Callable, Sequence
-from typing import Any, NamedTuple, cast
+from typing import Any, Final, NamedTuple, cast
 
 import anthropic
 from anthropic.types import MessageParam, TextBlock, ToolParam, ToolUseBlock
@@ -42,6 +42,12 @@ for _logger in ("anthropic", "httpx2", "httpcore2"):
 # Fija el destino: ANTHROPIC_BASE_URL no puede desviar la clave del visitante.
 ANTHROPIC_URL = "https://api.anthropic.com"
 TIMEOUT_S = 300.0
+# Esfuerzo de razonamiento de todas las llamadas, el mismo en los tres modelos. Va
+# en `output_config.effort` (https://platform.claude.com/docs/en/build-with-claude/
+# effort; el SDK anthropic 2.8.0 lo acepta en `messages.create` como
+# `output_config: OutputConfigParam`). `medium` es el valor por defecto de Opus 5.5
+# y Haiku 5.5; Sonnet 5.5, sin fijarlo, usaría `high`.
+EFFORT: Final = "medium"
 
 
 class ToolCall(NamedTuple):
@@ -176,8 +182,8 @@ def call_anthropic(
 
     Tiempo de espera de `TIMEOUT_S` segundos y sin reintentos (`max_retries=0`):
     un 429 o un corte de red llegan a quien llama como `ProviderError`, y es quien
-    llama el que decide si repite. No se fija `thinking` ni `effort`: cada modelo
-    usa su valor por defecto.
+    llama el que decide si repite. El esfuerzo es siempre `EFFORT`; `thinking` no se
+    fija y cada modelo usa su valor por defecto.
     """
     if not api_key:
         raise ProviderError("auth", "anthropic: falta la clave de API")
@@ -206,6 +212,7 @@ def call_anthropic(
                     tools=cast(list[ToolParam], api_tools)
                     if api_tools
                     else anthropic.omit,
+                    output_config={"effort": EFFORT},
                 )
             )
     except anthropic.APITimeoutError:
