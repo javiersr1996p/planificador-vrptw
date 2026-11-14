@@ -23,6 +23,18 @@ Conversión: EUR = USD / 1,1052.
 | Ventana de contexto / salida máxima | 1M tokens / 128K tokens en los cuatro modelos actuales | https://platform.claude.com/docs/en/about-claude/models/overview |
 | Prefijo de clave | `sk-ant-` (ejemplo `sk-ant-api03-...`) | https://platform.claude.com/docs/en/get-api-key |
 
+### Los tres modelos de Claude usados en el benchmark (consulta 2026-11-14)
+
+Páginas oficiales leídas en su versión Markdown completa (la misma URL terminada en `.md`). Precios base en USD/MTok; EUR = USD / 1,1052. Los tres IDs son instantáneas fijas, con contexto de 1M tokens y salida máxima de 128K tokens.
+
+| Modelo | Entrada (USD / EUR) | Salida (USD / EUR) | Razonamiento | URL |
+|---|---|---|---|---|
+| `claude-haiku-5-5` | 0,10 / 0,0905 hasta 100.000 tokens de prompt; 0,50 / 0,4524 por encima | 0,50 / 0,4524; 2,50 / 2,2620 por encima de 100.000 | Adaptativo, activo por defecto; se puede desactivar con esfuerzo `high` o inferior. Esfuerzo por defecto `medium` | https://platform.claude.com/docs/en/models/haiku-5-5/overview |
+| `claude-sonnet-5-5` | 2 / 1,8096 | 10 / 9,0481 | Adaptativo; `disabled` da error 400 (solo admite `between_tools`). Esfuerzo por defecto `high` | https://platform.claude.com/docs/en/models/sonnet-5-5/overview |
+| `claude-opus-5-5` | 4 / 3,6193 | 20 / 18,0963 | Adaptativo y siempre activo; `disabled` da error 400. Esfuerzo por defecto `medium` | https://platform.claude.com/docs/en/models/opus-5-5/overview |
+| Tabla de precios y tramo largo de Haiku 5.5 (el prompt cuenta todos los tokens de entrada, incluida la caché) | | | | https://platform.claude.com/docs/en/about-claude/pricing |
+| Facturación del razonamiento: los tokens de razonamiento se cobran como salida aunque no se devuelva su texto, y cuentan para `max_tokens` | | | | https://platform.claude.com/docs/en/build-with-claude/thinking |
+
 ## OpenAI (sucesor de GPT-4o)
 
 | Dato | Valor | URL |
