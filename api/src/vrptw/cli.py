@@ -115,6 +115,16 @@ def _bench_classic(args: argparse.Namespace) -> int:
     return 0
 
 
+def _bench_estimate(args: argparse.Namespace) -> int:
+    if args.max_tokens is not None and args.max_tokens < 1:
+        print("error: --max-tokens debe ser al menos 1", file=sys.stderr)
+        return 1
+    from vrptw.bench.estimate import estimate, render  # import tardío, como bench.run
+
+    print(render(estimate(args.max_tokens), args.max_tokens))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="vrptw", description="Planificador VRPTW")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -153,6 +163,15 @@ def build_parser() -> argparse.ArgumentParser:
         "--out-dir", help="directorio de los RunRecord (por defecto api/runs/)"
     )
     classic.set_defaults(func=_bench_classic)
+    estimate = bench.add_parser(
+        "estimate", help="coste estimado del benchmark LLM, sin llamadas a la API"
+    )
+    estimate.add_argument(
+        "--max-tokens",
+        type=int,
+        help="mismo max_tokens en todas las llamadas (por defecto, el propuesto)",
+    )
+    estimate.set_defaults(func=_bench_estimate)
     return parser
 
 
