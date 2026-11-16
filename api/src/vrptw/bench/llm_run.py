@@ -269,19 +269,38 @@ def guarded(job: Job, ledger: Path, caps: Caps) -> Provider:
 
 
 def jobs(
-    tier: int, models: Sequence[str] = MODELS, roles: Sequence[str] = ROLES
+    tier: int,
+    models: Sequence[str] = MODELS,
+    roles: Sequence[str] = ROLES,
+    instances: Sequence[str] | None = None,
+    reps: int | None = None,
+    max_tokens: int | None = None,
 ) -> list[Job]:
     """Ejecuciones del escalón, repetición a repetición: si un tope lo detiene,
     las repeticiones ya hechas quedan completas. Sin los casos reales (`REAL_NOTE`).
+
+    Si se dan, `instances` (etiquetas de `LLM_TIERS`) se queda con esas
+    instancias del escalón, `reps` sustituye sus repeticiones y `max_tokens` el
+    propuesto por tamaño (`max_tokens_for`), que es también el presupuesto de
+    salida del agente.
     """
     spec = LLM_TIERS[tier]
-    instances = [
-        load_llm_instance(name, n) for name, n in spec.instances if name != "real"
+    loaded = [
+        load_llm_instance(name, n)
+        for name, n in spec.instances
+        if name != "real" and (instances is None or name in instances)
     ]
     return [
-        Job(tier, instance, model, role, rep, max_tokens_for(len(instance.customers)))
-        for rep in range(spec.reps)
-        for instance in instances
+        Job(
+            tier,
+            instance,
+            model,
+            role,
+            rep,
+            max_tokens or max_tokens_for(len(instance.customers)),
+        )
+        for rep in range(spec.reps if reps is None else reps)
+        for instance in loaded
         for model in models
         for role in roles
     ]
@@ -319,10 +338,14 @@ def run_llm_tier(
     out_dir: Path = DEFAULT_OUT_DIR,
     ledger: Path = LEDGER_PATH,
     caps: Caps = CAPS,
+    instances: Sequence[str] | None = None,
+    reps: int | None = None,
+    max_tokens: int | None = None,
 ) -> dict[str, list[str]]:
     """Lanza las ejecuciones pendientes del escalón y devuelve sus nombres por
     estado: `done`, `cached`, `failed` (tope o `ProviderError`) y `skipped` (no
     lanzadas porque chocarían con un tope ya alcanzado en esta pasada).
+    `instances`, `reps` y `max_tokens`, como en `jobs`.
 
     Un `ProviderError` de `FATAL` se apunta en `failed.json` y se propaga.
     """
@@ -333,7 +356,7 @@ def run_llm_tier(
         "skipped": [],
     }
     blocked: set[str] = set()
-    plan = jobs(tier, models, roles)
+    plan = jobs(tier, models, roles, instances, reps, max_tokens)
     for i, job in enumerate(plan, 1):
         stem = job.stem
         path = out_dir / f"{stem}.json"
@@ -394,11 +417,15 @@ def render_plan(
     out_dir: Path,
     ledger: Path,
     caps: Caps = CAPS,
+    instances: Sequence[str] | None = None,
+    reps: int | None = None,
+    max_tokens: int | None = None,
 ) -> str:
     """Qué haría `run_llm_tier` y el peor caso de lo pendiente según `estimate.py`
     (escenario alto), sin llamar a nadie."""
     spec = LLM_TIERS[tier]
-    plan = jobs(tier, models, roles)
+    reps = spec.reps if reps is None else reps
+    plan = jobs(tier, models, roles, instances, reps, max_tokens)
     pending = [j for j in plan if not (out_dir / f"{j.stem}.json").exists()]
     sizes: dict[str, PromptSize] = {}
     worst: dict[tuple[str, str], list[float]] = {}
@@ -411,7 +438,7 @@ def render_plan(
         worst.setdefault((job.model, job.role), []).append(
             sum(call_cost(job.model, a, b).usd for a, b in calls)
         )
-    instances = {j.instance.id: j for j in plan}.values()
+    per_instance = {j.instance.id: j for j in plan}.values()
     lines = [
         (
             f"Escalón {tier} ({spec.name}): {len(plan)} ejecuciones, "
@@ -422,9 +449,9 @@ def render_plan(
         + ", ".join(
             f"{j.instance.id} ({len(j.instance.customers)} clientes, "
             f"max_tokens {j.max_tokens})"
-            for j in instances
+            for j in per_instance
         )
-        + f"; repeticiones: {spec.reps}; modelos: {', '.join(models)}; "
+        + f"; repeticiones: {reps}; modelos: {', '.join(models)}; "
         f"papeles: {', '.join(roles)}.",
         (
             f"Esfuerzo {EFFORT}; el agente tiene como presupuesto de salida por "

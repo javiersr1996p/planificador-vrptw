@@ -89,6 +89,29 @@ def test_unknown_method_is_readable(
     assert "método desconocido" in err and "Traceback" not in err
 
 
+@pytest.mark.parametrize(
+    ("options", "message"),
+    [
+        (["--tier", "0", "--max-tokens", "1023"], "entre 1024"),
+        (["--tier", "0", "--max-tokens", "21334"], "21333 (máximo sin streaming)"),
+        (["--tier", "0", "--reps", "0"], "--reps debe ser al menos 1"),
+        (["--tier", "0", "--instances", "10c-1", "C101"], "use una de ['10c-1']"),
+        (["--tier", "1", "--instances", "real"], "'real' fuera del escalón 1"),
+    ],
+)
+def test_bench_llm_rejects_bad_options(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    options: list[str],
+    message: str,
+) -> None:
+    code = main(["bench", "llm", *options, "--out-dir", str(tmp_path)])
+    err = capsys.readouterr().err
+    assert code == 1
+    assert message in err and "Traceback" not in err
+    assert list(tmp_path.iterdir()) == []
+
+
 def test_unsupported_n_exits_with_usage_error() -> None:
     with pytest.raises(SystemExit) as exc:
         main(["solve", "--instance", "C101", "--n", "10", "--method", "heuristic"])

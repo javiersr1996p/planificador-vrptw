@@ -230,6 +230,38 @@ def test_resume_does_not_repeat(
     assert len(run(tmp_path)["done"]) == 6 and api.calls == 2 * TIER_CALLS
 
 
+def test_max_tokens_override_is_another_cache_key(api: FakeAPI, tmp_path: Path) -> None:
+    """Lo hecho con los 8000 del escalón 0 no cuenta como hecho con 16000: las
+    seis ejecuciones se repiten, con 16000 en el directo y como presupuesto de
+    salida del agente, y una tercera pasada con 16000 ya no llama."""
+    first = run(tmp_path)
+    second = run(tmp_path, max_tokens=16000)
+    assert not second["cached"] and len(second["done"]) == 6
+    assert api.calls == 2 * TIER_CALLS
+    assert all("_mt8000_" in s for s in first["done"])
+    assert all("_mt16000_" in s for s in second["done"])
+    assert api.limits[TIER_CALLS : TIER_CALLS + 4] == [16000, 16000, 15500, 15000]
+    budgets = [
+        r.params["output_budget"] for r in records(tmp_path) if r.role == "llm_agent"
+    ]
+    assert sorted(budgets) == [8000] * 3 + [16000] * 3
+    third = run(tmp_path, max_tokens=16000)
+    assert third["cached"] == second["done"] and api.calls == 2 * TIER_CALLS
+
+
+def test_jobs_select_instances_reps_and_max_tokens() -> None:
+    default = llm_run.jobs(4)
+    assert len(default) == 3 * 2 * 3 * 2  # instancias, repeticiones, modelos, papeles
+    assert {j.max_tokens for j in default} == {10000}
+    chosen = llm_run.jobs(4, instances=["C101"], reps=1, max_tokens=16000)
+    assert len(chosen) == 3 * 2
+    assert {(j.instance.id, j.rep, j.max_tokens) for j in chosen} == {
+        ("c101-100-trunc", 0, 16000)
+    }
+    # sin `instances`, los casos reales siguen fuera
+    assert {j.instance.source for j in llm_run.jobs(1, reps=1)} == {"tfe2024"}
+
+
 @pytest.mark.parametrize(("kind", "estimated"), [("network", 1), ("bad_request", 0)])
 def test_provider_error_mid_agent_is_kept_and_retried(
     kind: str, estimated: int, api: FakeAPI, tmp_path: Path
@@ -308,6 +340,23 @@ def test_cli_without_confirm_makes_no_call(
     out = capsys.readouterr().out
     assert api.calls == 0 and list(tmp_path.iterdir()) == []
     assert "6 pendientes" in out and "Peor caso" in out and "Total" in out
+
+
+def test_cli_plan_applies_instances_reps_and_max_tokens(
+    api: FakeAPI,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    run(tmp_path)  # el escalón 0 ya hecho con sus 8000
+    calls, files = api.calls, sorted(tmp_path.rglob("*"))
+    capsys.readouterr()
+    args = ("--instances", "10c-1", "--reps", "2", "--max-tokens", "16000")
+    assert cli(tmp_path, monkeypatch, *args) == 0
+    out = capsys.readouterr().out
+    assert api.calls == calls and sorted(tmp_path.rglob("*")) == files
+    assert "12 ejecuciones, 0 ya hechas" in out and "12 pendientes" in out
+    assert "max_tokens 16000" in out and "repeticiones: 2" in out
 
 
 def test_cli_without_key_exits_1(

@@ -128,8 +128,9 @@ def _bench_estimate(args: argparse.Namespace) -> int:
 
 def _bench_llm(args: argparse.Namespace) -> int:
     from vrptw.bench import llm_run  # import tardío, como bench.run
-    from vrptw.bench.estimate import MODELS, ROLES
-    from vrptw.llm.providers import ProviderError
+    from vrptw.bench.estimate import LLM_TIERS, MODELS, ROLES
+    from vrptw.llm.agent import MIN_CALL_TOKENS
+    from vrptw.llm.providers import MAX_NONSTREAMING_TOKENS, ProviderError
 
     models = args.models or list(MODELS)
     roles = args.roles or list(ROLES)
@@ -141,10 +142,43 @@ def _bench_llm(args: argparse.Namespace) -> int:
                 file=sys.stderr,
             )
             return 1
+    if args.max_tokens is not None and not (
+        MIN_CALL_TOKENS <= args.max_tokens <= MAX_NONSTREAMING_TOKENS
+    ):
+        print(
+            f"error: --max-tokens debe estar entre {MIN_CALL_TOKENS} (mínimo por "
+            f"llamada del agente) y {MAX_NONSTREAMING_TOKENS} (máximo sin streaming)",
+            file=sys.stderr,
+        )
+        return 1
+    if args.reps is not None and args.reps < 1:
+        print("error: --reps debe ser al menos 1", file=sys.stderr)
+        return 1
+    # los casos reales no se ejecutan (llm_run.REAL_NOTE)
+    labels = [name for name, _ in LLM_TIERS[args.tier].instances if name != "real"]
+    unknown = [i for i in args.instances or [] if i not in labels]
+    if unknown:
+        print(
+            f"error: instancia {unknown[0]!r} fuera del escalón {args.tier}: use una "
+            f"de {labels}",
+            file=sys.stderr,
+        )
+        return 1
     out_dir = Path(args.out_dir) if args.out_dir else llm_run.DEFAULT_OUT_DIR
     ledger = llm_run.LEDGER_PATH
     if not args.confirm:
-        print(llm_run.render_plan(args.tier, models, roles, out_dir, ledger))
+        print(
+            llm_run.render_plan(
+                args.tier,
+                models,
+                roles,
+                out_dir,
+                ledger,
+                instances=args.instances,
+                reps=args.reps,
+                max_tokens=args.max_tokens,
+            )
+        )
         return 0
     api_key = os.environ.get("ANTHROPIC_API_KEY", "")
     if not api_key:
@@ -156,7 +190,15 @@ def _bench_llm(args: argparse.Namespace) -> int:
         return 1
     try:
         status = llm_run.run_llm_tier(
-            args.tier, api_key, models, roles, out_dir, ledger
+            args.tier,
+            api_key,
+            models,
+            roles,
+            out_dir,
+            ledger,
+            instances=args.instances,
+            reps=args.reps,
+            max_tokens=args.max_tokens,
         )
     except ProviderError as exc:
         print(f"error: {exc}", file=sys.stderr)
@@ -220,6 +262,20 @@ def build_parser() -> argparse.ArgumentParser:
     llm.add_argument("--tier", type=int, required=True, choices=(0, 1, 2, 3, 4))
     llm.add_argument("--models", nargs="+", help="por defecto, los tres modelos")
     llm.add_argument("--roles", nargs="+", help="llm_direct, llm_agent (por defecto)")
+    llm.add_argument(
+        "--instances",
+        nargs="+",
+        help="etiquetas del escalón (10c-1, C101...); por defecto, todas",
+    )
+    llm.add_argument(
+        "--reps", type=int, help="repeticiones (por defecto, las del escalón)"
+    )
+    llm.add_argument(
+        "--max-tokens",
+        type=int,
+        help="max_tokens de todas las llamadas y presupuesto de salida del agente "
+        "(por defecto, el propuesto por tamaño)",
+    )
     llm.add_argument(
         "--confirm",
         action="store_true",

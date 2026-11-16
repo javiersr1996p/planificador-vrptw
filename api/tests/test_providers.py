@@ -297,10 +297,49 @@ def test_transport_error_is_readable_and_hides_key(
     assert len(net.requests) == 1
 
 
-def test_timeout_message_names_the_limit(monkeypatch: pytest.MonkeyPatch) -> None:
-    use_network(monkeypatch, raise_(httpx2.ReadTimeout("timed out")))
-    with pytest.raises(ProviderError, match=r"sin respuesta en 300 s"):
-        call_anthropic([{"role": "user", "content": "hola"}], [], MODEL, KEY, 100)
+@pytest.mark.parametrize(("max_tokens", "seconds"), [(100, 300), (16_000, 495)])
+def test_timeout_message_names_the_limit(
+    monkeypatch: pytest.MonkeyPatch, max_tokens: int, seconds: int
+) -> None:
+    net = use_network(monkeypatch, raise_(httpx2.ReadTimeout("timed out")))
+    with pytest.raises(ProviderError, match=rf"sin respuesta en {seconds} s"):
+        call_anthropic(
+            [{"role": "user", "content": "hola"}], [], MODEL, KEY, max_tokens
+        )
+    [client] = net.clients
+    assert client.timeout == pytest.approx(seconds)
+
+
+def test_timeout_follows_sdk_worst_case_rate() -> None:
+    """128 000 tokens en 3600 s más un 10 %, sin bajar de 300 s ni pasar de 600 s."""
+    assert providers.timeout_for(8_000) == 300  # 225 s x 1,1 = 247,5 s
+    assert providers.timeout_for(10_000) == pytest.approx(281.25 * 1.1)
+    assert providers.timeout_for(16_000) == pytest.approx(495)  # 450 s x 1,1
+    top = providers.MAX_NONSTREAMING_TOKENS
+    assert top == 21_333 and providers.timeout_for(top) == 600
+    with pytest.raises(ValueError, match="exige streaming"):
+        providers.timeout_for(top + 1)
+
+
+def test_nonstreaming_limit_is_the_sdk_one() -> None:
+    """El SDK instalado, con su tiempo de espera por defecto, admite sin streaming
+    `MAX_NONSTREAMING_TOKENS` y exige streaming con uno más. Con un tiempo de
+    espera propio no lo comprueba: lo hace `timeout_for`."""
+    top = providers.MAX_NONSTREAMING_TOKENS
+    with anthropic.Anthropic(api_key=KEY) as sdk:
+        assert sdk._calculate_nonstreaming_timeout(top, None).read == 600
+        with pytest.raises(ValueError, match="Streaming is required"):
+            sdk._calculate_nonstreaming_timeout(top + 1, None)
+
+
+def test_max_tokens_that_needs_streaming_is_not_sent(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    net = use_network(monkeypatch, reply(api_message([], "end_turn")))
+    too_many = providers.MAX_NONSTREAMING_TOKENS + 1
+    with pytest.raises(ValueError, match="exige streaming"):
+        call_anthropic([{"role": "user", "content": "hola"}], [], MODEL, KEY, too_many)
+    assert net.requests == [] and net.clients == []
 
 
 def test_empty_key_is_rejected_without_network(monkeypatch: pytest.MonkeyPatch) -> None:

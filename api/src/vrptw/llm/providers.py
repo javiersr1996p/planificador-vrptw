@@ -42,6 +42,15 @@ for _logger in ("anthropic", "httpx2", "httpcore2"):
 # Fija el destino: ANTHROPIC_BASE_URL no puede desviar la clave del visitante.
 ANTHROPIC_URL = "https://api.anthropic.com"
 TIMEOUT_S = 300.0
+# Sin streaming, el SDK anthropic 2.8.0 (`_calculate_nonstreaming_timeout`) supone
+# un ritmo de peor caso de 128 000 tokens de salida en 3600 s y exige streaming si
+# con él una llamada pasa de 600 s, es decir, por encima de 21 333 tokens. Cada
+# llamada espera lo que da ese ritmo para su `max_tokens` más un 10 % de margen
+# (supuesto propio), nunca menos de `TIMEOUT_S` ni más de esos 600 s.
+SDK_SECONDS_PER_TOKEN = 3600 / 128_000
+SDK_STREAMING_ABOVE_S = 600.0
+MAX_NONSTREAMING_TOKENS = int(SDK_STREAMING_ABOVE_S / SDK_SECONDS_PER_TOKEN)
+TIMEOUT_MARGIN = 1.1
 # Esfuerzo de razonamiento de todas las llamadas, el mismo en los tres modelos. Va
 # en `output_config.effort` (https://platform.claude.com/docs/en/build-with-claude/
 # effort; el SDK anthropic 2.8.0 lo acepta en `messages.create` como
@@ -171,6 +180,19 @@ def _from_anthropic(message: anthropic.types.Message) -> LLMResponse:
     )
 
 
+def timeout_for(max_tokens: int) -> float:
+    """Segundos de espera de una llamada sin streaming de `max_tokens` tokens de
+    salida (ver `TIMEOUT_MARGIN`). Por encima de `MAX_NONSTREAMING_TOKENS`, que el
+    SDK solo admite con streaming, lanza `ValueError`."""
+    if max_tokens > MAX_NONSTREAMING_TOKENS:
+        raise ValueError(
+            f"max_tokens {max_tokens} exige streaming: el máximo sin él es "
+            f"{MAX_NONSTREAMING_TOKENS}"
+        )
+    expected = max_tokens * SDK_SECONDS_PER_TOKEN * TIMEOUT_MARGIN
+    return min(max(TIMEOUT_S, expected), SDK_STREAMING_ABOVE_S)
+
+
 def call_anthropic(
     messages: list[dict[str, Any]],
     tools: list[dict[str, Any]],
@@ -180,13 +202,15 @@ def call_anthropic(
 ) -> LLMResponse:
     """Una llamada a la API de mensajes de Anthropic, sin streaming.
 
-    Tiempo de espera de `TIMEOUT_S` segundos y sin reintentos (`max_retries=0`):
-    un 429 o un corte de red llegan a quien llama como `ProviderError`, y es quien
-    llama el que decide si repite. El esfuerzo es siempre `EFFORT`; `thinking` no se
-    fija y cada modelo usa su valor por defecto.
+    Tiempo de espera de `timeout_for(max_tokens)` segundos (al menos `TIMEOUT_S`;
+    `ValueError`, sin llamar, si `max_tokens` exige streaming) y sin reintentos
+    (`max_retries=0`): un 429 o un corte de red llegan a quien llama como
+    `ProviderError`, y es quien llama el que decide si repite. El esfuerzo es
+    siempre `EFFORT`; `thinking` no se fija y cada modelo usa su valor por defecto.
     """
     if not api_key:
         raise ProviderError("auth", "anthropic: falta la clave de API")
+    timeout = timeout_for(max_tokens)
     system, api_messages = _to_anthropic(messages)
     api_tools = [
         {
@@ -200,7 +224,7 @@ def call_anthropic(
         with anthropic.Anthropic(
             api_key=api_key,
             base_url=ANTHROPIC_URL,
-            timeout=TIMEOUT_S,
+            timeout=timeout,
             max_retries=0,
         ) as client:
             return _from_anthropic(
@@ -216,7 +240,7 @@ def call_anthropic(
                 )
             )
     except anthropic.APITimeoutError:
-        error = ProviderError("timeout", f"anthropic: sin respuesta en {TIMEOUT_S:g} s")
+        error = ProviderError("timeout", f"anthropic: sin respuesta en {timeout:g} s")
     except anthropic.APIConnectionError:
         error = ProviderError("network", "anthropic: error de red")
     except anthropic.APIStatusError as exc:
