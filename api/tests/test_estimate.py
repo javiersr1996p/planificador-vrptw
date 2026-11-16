@@ -45,7 +45,7 @@ def test_caps_fit_in_the_global_cap_in_usd() -> None:
     tiers = sum(t.cap_eur for t in LLM_TIERS.values())
     models = sum(MODEL_CAPS_EUR.values())
     assert tiers == models == 18.0
-    assert tiers * USD_PER_EUR <= GLOBAL_CAP_USD == 25.0
+    assert tiers * USD_PER_EUR <= GLOBAL_CAP_USD == 30.0
 
 
 @pytest.mark.parametrize("scenario", ["bajo", "alto"])
@@ -95,7 +95,7 @@ def test_cli_prints_totals(capsys: pytest.CaptureFixture[str]) -> None:
     assert main(["bench", "estimate"]) == 0
     out = capsys.readouterr().out
     assert "TOTAL (330 ejecuciones)" in out and "EUR" in out
-    assert "Tope global 25 USD" in out and "Esfuerzo medium" in out
+    assert "Tope global 30 USD" in out and "Esfuerzo medium" in out
     assert "Supuestos:" in out
 
 

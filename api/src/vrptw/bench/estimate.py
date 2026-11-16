@@ -77,10 +77,11 @@ LLM_TIERS: dict[int, LLMTier] = {
     4: LLMTier("Solomon 100", tuple(TIERS[4]), 2, 4.0),
 }
 # Tope global duro en USD, lo que factura Anthropic (decisión del usuario: 20 USD
-# hasta la minicalibración; luego 22,76 USD más de benchmark, con 25 USD de tope).
+# hasta la minicalibración; luego 25 USD y, con los costes reales del escalón 1,
+# 30 USD).
 # Los topes de escalón y los subtopes por modelo en EUR quedan como referencia de
 # esta estimación; el runner ya no los aplica.
-GLOBAL_CAP_USD = 25.0
+GLOBAL_CAP_USD = 30.0
 # Subtope por modelo (suma 18 EUR): ver `MODEL_CAPS_NOTE`.
 MODEL_CAPS_EUR = {
     "claude-haiku-5-5": 0.5,

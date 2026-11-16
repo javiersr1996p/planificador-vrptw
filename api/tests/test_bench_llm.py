@@ -163,7 +163,7 @@ def test_global_cap_counts_previous_spend(api: FakeAPI, tmp_path: Path) -> None:
 
 
 def test_default_caps_are_only_the_global_one() -> None:
-    assert CAPS == (({}, {}, 25.0))
+    assert CAPS == (({}, {}, 30.0))
 
 
 def test_guard_counts_previous_output_as_input(api: FakeAPI, tmp_path: Path) -> None:
