@@ -255,7 +255,7 @@ def test_jobs_select_instances_reps_and_max_tokens() -> None:
     chosen = llm_run.jobs(4, instances=["C101"], reps=1, max_tokens=16000)
     assert len(chosen) == 3 * 2
     assert {(j.instance.id, j.rep, j.max_tokens) for j in chosen} == {
-        ("c101-100-trunc", 0, 16000)
+        ("c101-100-trunc-cam", 0, 16000)
     }
     # sin `instances`, los casos reales siguen fuera
     assert {j.instance.source for j in llm_run.jobs(1, reps=1)} == {"tfe2024"}

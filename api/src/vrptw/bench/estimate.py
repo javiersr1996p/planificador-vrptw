@@ -42,6 +42,7 @@ import math
 from typing import NamedTuple
 
 from vrptw.bench.run import TIERS
+from vrptw.instances.camouflage import camouflage
 from vrptw.instances.solomon import coordinates, euclidean_matrix, load_solomon
 from vrptw.instances.tfe2024 import load_tfe2024
 from vrptw.llm.agent import MAX_TURNS, MIN_CALL_TOKENS, TOOLS, _run_tool
@@ -214,13 +215,15 @@ def load_llm_instance(name: str, n: int | None) -> Instance:
     """Instancia de una entrada de `LLM_TIERS`.
 
     `("real", n)` da, hasta la fase 4, un sustituto que solo sirve para estimar.
+    Las de Solomon van camufladas (`camouflage`): el modelo podría reconocerlas
+    y dar de memoria su óptimo publicado.
     """
     if name == "real":
         assert n is not None
         return real_substitute(n)
     if n is None:
         return load_tfe2024(name)
-    return load_solomon(name, n, truncated=True)
+    return camouflage(load_solomon(name, n, truncated=True))
 
 
 def max_tokens_for(n: int) -> int:
