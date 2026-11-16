@@ -75,10 +75,11 @@ LLM_TIERS: dict[int, LLMTier] = {
     3: LLMTier("Solomon 50", tuple(TIERS[3]), 2, 4.0),
     4: LLMTier("Solomon 100", tuple(TIERS[4]), 2, 4.0),
 }
-# Tope global duro en USD, lo que factura Anthropic (decisión del usuario). Los
-# topes de escalón y los subtopes por modelo siguen en EUR (suma 18 EUR, 19,89 USD
-# con `USD_PER_EUR`); el runner los convierte a USD.
-GLOBAL_CAP_USD = 20.0
+# Tope global duro en USD, lo que factura Anthropic (decisión del usuario: 20 USD
+# hasta la minicalibración; luego 22,76 USD más de benchmark, con 25 USD de tope).
+# Los topes de escalón y los subtopes por modelo en EUR quedan como referencia de
+# esta estimación; el runner ya no los aplica.
+GLOBAL_CAP_USD = 25.0
 # Subtope por modelo (suma 18 EUR): ver `MODEL_CAPS_NOTE`.
 MODEL_CAPS_EUR = {
     "claude-haiku-5-5": 0.5,
@@ -164,9 +165,9 @@ ASSUMPTIONS = (
     ),
     "Sin recheck (D5). Precios y tipo de cambio solo de data/models.json y pricing.py.",
     (
-        f"Tope global {GLOBAL_CAP_USD:.0f} USD (lo que factura Anthropic); topes de "
-        f"escalón y subtopes en EUR, que el runner convierte a USD a {USD_PER_EUR} "
-        "USD por EUR."
+        f"Tope global {GLOBAL_CAP_USD:.0f} USD (lo que factura Anthropic), el único "
+        "que aplica el runner; los topes de escalón y subtopes en EUR quedan como "
+        "referencia de esta estimación."
     ),
 )
 

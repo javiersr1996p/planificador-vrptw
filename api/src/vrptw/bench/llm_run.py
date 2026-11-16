@@ -20,9 +20,9 @@ Cada llamada al proveedor pasa por el envoltorio de `guarded`, que el runner da 
 Libro (`LEDGER_PATH`, `api/runs/ledger.json`): lista JSON con una entrada por
 llamada pagada (`date`, `tier`, `model`, `role`, `instance`, `rep`, `call`,
 `tokens_in`, `tokens_out`, `usd`, `eur`, `estimated`). Los topes y la comprobación
-van en USD, que es lo que factura Anthropic: global `GLOBAL_CAP_USD` (20 USD); los
-de escalón y modelo, definidos en EUR en `estimate.py`, se convierten con
-`USD_PER_EUR`. `eur` se guarda solo como dato. Lo gastado se lee siempre del
+van en USD, que es lo que factura Anthropic. Por defecto solo hay tope global,
+`GLOBAL_CAP_USD`; `Caps` admite además topes por escalón y por modelo, que solo se
+aplican a las claves que tengan. `eur` se guarda solo como dato. Lo gastado se lee siempre del
 libro, así que cuenta las ejecuciones anteriores y los otros escalones. Un solo
 runner a la vez: dos procesos con el mismo libro no se ven el gasto.
 
@@ -52,7 +52,6 @@ from typing import Any, NamedTuple
 from vrptw.bench.estimate import (
     GLOBAL_CAP_USD,
     LLM_TIERS,
-    MODEL_CAPS_EUR,
     MODELS,
     ROLES,
     TOOL_SYSTEM_TOKENS,
@@ -92,18 +91,16 @@ REAL_NOTE = (
 
 
 class Caps(NamedTuple):
-    """Topes en USD."""
+    """Topes en USD; un escalón o un modelo sin clave no tiene tope propio."""
 
     tier: dict[int, float]
     model: dict[str, float]
     total: float
 
 
-CAPS = Caps(
-    {n: t.cap_eur * USD_PER_EUR for n, t in LLM_TIERS.items()},
-    {m: cap * USD_PER_EUR for m, cap in MODEL_CAPS_EUR.items()},
-    GLOBAL_CAP_USD,
-)
+# Solo el tope global: los de escalón y modelo se quitaron por decisión del usuario
+# tras medir los costes reales con la minicalibración.
+CAPS = Caps({}, {}, GLOBAL_CAP_USD)
 
 
 class BudgetExceeded(Exception):
@@ -160,10 +157,14 @@ def over_caps(
     total, by_tier, by_model = _cap_names(tier, model)
     limits = [
         (total, _spent(entries), caps.total),
-        (by_tier, _spent(entries, tier=tier), caps.tier[tier]),
-        (by_model, _spent(entries, model=model), caps.model[model]),
+        (by_tier, _spent(entries, tier=tier), caps.tier.get(tier)),
+        (by_model, _spent(entries, model=model), caps.model.get(model)),
     ]
-    return [name for name, spent, cap in limits if spent + worst_usd > cap]
+    return [
+        name
+        for name, spent, cap in limits
+        if cap is not None and spent + worst_usd > cap
+    ]
 
 
 def worst_case_tokens(
@@ -395,16 +396,14 @@ def _spend_lines(
 ) -> list[str]:
     rows = [
         ("global", _spent(entries), caps.total),
-        (f"escalón {tier}", _spent(entries, tier=tier), caps.tier[tier]),
-        *((f"modelo {m}", _spent(entries, model=m), caps.model[m]) for m in models),
+        (f"escalón {tier}", _spent(entries, tier=tier), caps.tier.get(tier)),
+        *((f"modelo {m}", _spent(entries, model=m), caps.model.get(m)) for m in models),
     ]
     return [
-        (
-            "Gastado según el libro / tope (USD; escalón y modelo convertidos desde EUR "
-            f"a {USD_PER_EUR}):"
-        ),
+        "Gastado según el libro / tope (USD):",
         *(
-            f"  {name:<24} {spent:7.4f} / {cap:5.2f} USD ({cap / USD_PER_EUR:5.2f} EUR)"
+            f"  {name:<24} {spent:7.4f} / "
+            + ("sin tope" if cap is None else f"{cap:5.2f} USD")
             for name, spent, cap in rows
         ),
     ]

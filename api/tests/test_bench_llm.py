@@ -136,10 +136,11 @@ def test_tier_cap_stops_without_calling(api: FakeAPI, tmp_path: Path) -> None:
 def test_model_cap_reads_other_tiers_and_stops_only_that_model(
     api: FakeAPI, tmp_path: Path
 ) -> None:
-    # subtope de Haiku: 0,5 EUR = 0,5526 USD; su peor caso pasa de 0,004 USD
-    before = CAPS.model[HAIKU] - 0.001
+    # subtope de Haiku de 0,5526 USD; su peor caso pasa de 0,004 USD
+    caps = CAPS._replace(model={HAIKU: 0.5526})
+    before = caps.model[HAIKU] - 0.001
     previous_spend(tmp_path, tier=3, model=HAIKU, usd=before)
-    status = run(tmp_path)
+    status = run(tmp_path, caps=caps)
     assert api.calls == 2 * (1 + AGENT_CALLS)  # Sonnet y Opus, ninguna de Haiku
     assert spent(ledger(tmp_path), model=HAIKU) == before
     [stop] = failed(tmp_path)
@@ -161,10 +162,8 @@ def test_global_cap_counts_previous_spend(api: FakeAPI, tmp_path: Path) -> None:
     assert [len(status[k]) for k in ("done", "failed", "skipped")] == [2, 1, 3]
 
 
-def test_default_caps_are_in_usd() -> None:
-    assert CAPS.total == 20.0
-    assert CAPS.tier[0] == pytest.approx(1.1052)  # 1 EUR
-    assert CAPS.model[OPUS] == pytest.approx(11 * 1.1052)
+def test_default_caps_are_only_the_global_one() -> None:
+    assert CAPS == (({}, {}, 25.0))
 
 
 def test_guard_counts_previous_output_as_input(api: FakeAPI, tmp_path: Path) -> None:
