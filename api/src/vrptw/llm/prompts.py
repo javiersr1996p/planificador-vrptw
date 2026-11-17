@@ -5,7 +5,7 @@ prompt de comprobación (p. 79). Los textos son en inglés, como los de 2024. La
 diferencias respecto a 2024 están en `docs/prompts.md`.
 """
 
-from vrptw.model import SOLOMON, Instance
+from vrptw.model import SOLOMON, Evaluation, Instance
 
 # Cualquier cambio en el texto de los prompts (o en las descripciones de las
 # herramientas del agente, en `agent.py`) exige cambiar esta cadena.
@@ -44,11 +44,19 @@ def _table(instance: Instance) -> str:
     return "\n".join(rows)
 
 
-def _matrix(instance: Instance) -> str:
-    """Matriz de tiempos de viaje para instancias sin coordenadas cartesianas."""
+def _matrix(instance: Instance, *, distance: bool = False) -> str:
+    """Matriz de tiempos (o de distancias) de viaje para instancias sin coordenadas."""
     if instance.matrix is None:
         raise ValueError(f"instance {instance.id}: no coordinates and no travel matrix")
-    rows = [",".join(_n(v) for v in row) for row in instance.matrix.time]
+    values = instance.matrix.distance if distance else instance.matrix.time
+    return "\n".join(",".join(_n(v) for v in row) for row in values)
+
+
+def _traffic_table(instance: Instance) -> str:
+    """Tabla CSV de las franjas del perfil de tráfico."""
+    rows = ["FROM,TO,FACTOR"]
+    for w in instance.traffic_profile or ():
+        rows.append(f"{_n(w.from_)},{_n(w.to)},{_n(w.factor)}")
     return "\n".join(rows)
 
 
@@ -100,7 +108,7 @@ def solve_prompt(instance: Instance) -> str:
     """Prompt de resolución para `instance`."""
     d_unit, t_unit = (
         ("kilometer", "minute")
-        if instance.source == "tfe2024"
+        if instance.source in ("tfe2024", "real")
         else ("distance unit", "time unit")
     )
     n = len(instance.customers)
@@ -108,6 +116,14 @@ def solve_prompt(instance: Instance) -> str:
     capacity = instance.fleet.capacity
     depot = instance.depot
     cartesian = depot.x is not None
+    matrix = instance.matrix
+    # Con matrices distintas o con perfil de tráfico, el tiempo de viaje no es la distancia.
+    separate = not cartesian and matrix is not None and matrix.distance != matrix.time
+    timed = separate or bool(instance.traffic_profile)
+    hard = HARD_CONSTRAINTS
+    if instance.source == "real":
+        # Las distancias por carretera no se truncan; las de Solomon, sí.
+        hard = hard.replace(" (truncated to one decimal)", "")
 
     if cartesian:
         where = (
@@ -117,8 +133,9 @@ def solve_prompt(instance: Instance) -> str:
         )
     else:
         where = (
-            "whose travel times are given in a matrix. The vehicles start from the "
-            "depot (Customer 0)"
+            f"whose travel {'times and distances are' if separate else 'times are'} "
+            f"given in {'matrices' if separate else 'a matrix'}. The vehicles start "
+            f"from the depot (Customer 0)"
         )
     if capacity is None:
         cap = "There is no capacity limit for the vehicles."
@@ -154,9 +171,18 @@ def solve_prompt(instance: Instance) -> str:
             "The calculation of the score is explained later."
         ),
         (
-            f"To simplify the problem, we will consider a uniform vehicle velocity of 1 "
-            f"{d_unit} per {t_unit}, so the travel time between two points equals the "
-            f"travel distance. Key concepts: The time window of the customer is "
+            (
+                f"The vehicles travel on the road network, so the travel time between "
+                f"two points (in {t_unit}s) and the travel distance (in {d_unit}s) are "
+                f"different quantities. "
+                if timed
+                else (
+                    f"To simplify the problem, we will consider a uniform vehicle "
+                    f"velocity of 1 {d_unit} per {t_unit}, so the travel time between "
+                    f"two points equals the travel distance. "
+                )
+            )
+            + f"Key concepts: The time window of the customer is "
             f"explicit in the READY TIME and DUE TIME columns, meaning that the customer "
             f"is only available for delivery between the READY TIME value and the DUE "
             f"TIME value. These values are expressed in {t_unit}s. The SERVICE TIME "
@@ -182,8 +208,27 @@ def solve_prompt(instance: Instance) -> str:
             "- TRAVEL STARTS AT: the time the vehicle leaves the previous point (the "
             "depot or the previous customer)."
         ),
-        "- TRAVEL DISTANCE: the distance from the previous point to the customer.",
-        "- ARRIVAL TIME = TRAVEL STARTS AT + TRAVEL DISTANCE.",
+        *(
+            [
+                (
+                    "- TRAVEL TIME: the time the vehicle takes from the previous point "
+                    "to the customer."
+                ),
+                (
+                    "- TRAVEL DISTANCE: the distance from the previous point to the "
+                    "customer."
+                ),
+                "- ARRIVAL TIME = TRAVEL STARTS AT + TRAVEL TIME.",
+            ]
+            if timed
+            else [
+                (
+                    "- TRAVEL DISTANCE: the distance from the previous point to the "
+                    "customer."
+                ),
+                "- ARRIVAL TIME = TRAVEL STARTS AT + TRAVEL DISTANCE.",
+            ]
+        ),
         (
             "- WAITING TIME: if ARRIVAL TIME < READY TIME then READY TIME - ARRIVAL "
             "TIME, otherwise 0. The vehicle waits until READY TIME."
@@ -200,7 +245,7 @@ def solve_prompt(instance: Instance) -> str:
             "This TRAVEL DISTANCE must be taken into account in the ACCUMULATED DISTANCE."
         ),
         _score_rule(instance, d_unit, t_unit),
-        *([HARD_CONSTRAINTS] if instance.cost_profile == SOLOMON else []),
+        *([hard] if instance.cost_profile == SOLOMON else []),
         (
             "A vehicle can visit one or more than one customer, not all vehicles must "
             "visit the same number of customers, and vehicles that visit no customer "
@@ -221,13 +266,42 @@ def solve_prompt(instance: Instance) -> str:
         _table(instance),
     ]
     if not cartesian:
+        order = (
+            "Row 0 is the depot and row i is the i-th customer of the table above, "
+            "in the same order."
+        )
+        if separate:
+            lines += [
+                (
+                    f"Travel time matrix: row i and column j give the travel time, in "
+                    f"{t_unit}s, from point i to point j. {order}"
+                ),
+                _matrix(instance),
+                (
+                    f"Travel distance matrix: row i and column j give the travel "
+                    f"distance, in {d_unit}s, from point i to point j, with the same "
+                    f"row order."
+                ),
+                _matrix(instance, distance=True),
+            ]
+        else:
+            lines += [
+                (
+                    "Travel time matrix: row i and column j give the travel time (and "
+                    f"distance) from point i to point j. {order}"
+                ),
+                _matrix(instance),
+            ]
+    if instance.traffic_profile:
         lines += [
             (
-                "Travel time matrix: row i and column j give the travel time (and "
-                "distance) from point i to point j. Row 0 is the depot and row i is "
-                "the i-th customer of the table above, in the same order."
+                "The travel time of each leg is the value of the travel time matrix "
+                "multiplied by a factor that depends on the time at which the vehicle "
+                "leaves the previous point (TRAVEL STARTS AT): the FACTOR of the slot "
+                f"[FROM, TO) that contains that time, in {t_unit}s, or 1 if it is "
+                "outside all slots (if slots overlap, the first one listed applies)."
             ),
-            _matrix(instance),
+            _traffic_table(instance),
         ]
     lines += [
         "Remember the goals: vehicle route data and the score of the problem.",
@@ -289,3 +363,50 @@ def recheck_prompt() -> str:
         "final solution in the same format: "
         '{"routes": [[...], ...], "score": number}.\n'
     )
+
+
+def explain_prompt(instance: Instance, evaluation: Evaluation, method: str) -> str:
+    """Prompt para explicar en español una solución ya evaluada, sin la matriz."""
+    d_unit, t_unit = (
+        ("kilometers", "minutes")
+        if instance.source in ("tfe2024", "real")
+        else ("distance units", "time units")
+    )
+    rows = ["VEHICLE,CUSTOMER,ARRIVAL,START,WAIT,LATE,LOAD"]
+    for v, stops in enumerate(evaluation.stops, start=1):
+        for s in stops:
+            values = [s.arrival, s.start, s.wait, s.late, s.load]
+            rows.append(",".join([str(v), str(s.customer), *(_n(x) for x in values)]))
+    violations = (
+        "; ".join(
+            f"{x.type}"
+            + (f" (vehicle {x.route + 1})" if x.route is not None else "")
+            + (f" (customer {x.customer})" if x.customer is not None else "")
+            for x in evaluation.violations
+        )
+        or "none"
+    )
+    lines = [
+        (
+            f"A vehicle routing solution with time windows was computed with the method "
+            f"{method!r} for {len(instance.customers)} customers and at most "
+            f"{instance.fleet.vehicles} vehicles. Times are in {t_unit}, distances in "
+            f"{d_unit}."
+        ),
+        "Stops of each vehicle, in visiting order:",
+        "\n".join(rows),
+        (
+            f"Totals: score {_n(evaluation.score)}, distance {_n(evaluation.distance)} "
+            f"{d_unit}, vehicles used {evaluation.vehicles_used}, total waiting time "
+            f"{_n(evaluation.total_wait)} {t_unit}, total late time "
+            f"{_n(evaluation.total_late)} {t_unit}, unattended customers "
+            f"{evaluation.unserved}, load above capacity {_n(evaluation.overload)}."
+        ),
+        f"Feasible: {'yes' if evaluation.feasible else 'no'}. Violations: {violations}.",
+        (
+            "Explain this solution in Spanish, briefly, for a logistics manager: what "
+            "each vehicle does, where there are waits or delays, and whether the "
+            "solution is feasible. Use only the figures above."
+        ),
+    ]
+    return "\n".join(lines) + "\n"

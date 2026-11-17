@@ -5,7 +5,7 @@ import json
 from datetime import datetime
 from typing import Any, Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 MAX_CUSTOMERS = 100
 
@@ -32,6 +32,7 @@ class Depot(BaseModel):
     y: float | None = None
     lat: float | None = None
     lon: float | None = None
+    address: str | None = None
     ready: float
     due: float | None = None
 
@@ -99,6 +100,12 @@ class Instance(BaseModel):
     traffic_profile: list[TrafficWindow] | None = None
     cost_profile: CostProfile
 
+    @field_validator("traffic_profile", mode="before")
+    @classmethod
+    def _empty_traffic_is_none(cls, value: Any) -> Any:
+        """Un perfil de tráfico vacío equivale a no tener perfil."""
+        return None if value == [] else value
+
     @model_validator(mode="after")
     def _consistent(self) -> Self:
         ids = [c.id for c in self.customers]
@@ -116,6 +123,8 @@ class Instance(BaseModel):
     def content_hash(self) -> str:
         """SHA-256 del contenido canónico, sin `id` ni `name`."""
         content = self.model_dump(mode="json", exclude={"id", "name"})
+        if content["depot"]["address"] is None:  # conserva los hashes previos al campo
+            del content["depot"]["address"]
         canonical = json.dumps(content, sort_keys=True, separators=(",", ":"))
         return hashlib.sha256(canonical.encode()).hexdigest()
 

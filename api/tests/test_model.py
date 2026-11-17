@@ -4,6 +4,8 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
+from vrptw.instances.solomon import load_solomon
+from vrptw.instances.tfe2024 import load_tfe2024
 from vrptw.model import (
     SOLOMON,
     TFE,
@@ -161,3 +163,35 @@ def test_run_record_classic_roundtrip() -> None:
     )
     reloaded = RunRecord.model_validate_json(record.model_dump_json())
     assert reloaded == record
+
+
+def test_published_hashes_unchanged() -> None:
+    assert (
+        load_solomon("c101", 100).content_hash()
+        == "0b3df0615a08267a4f1bae3b8bcb95f5b093d8ec2a37a91db0be51ad5715d0df"
+    )
+    assert (
+        load_solomon("c101", 25, truncated=True).content_hash()
+        == "b7b54eda5d128f77eee56f123bcaeeea06238a6067cdf50f45adbeb3c63a4b8d"
+    )
+    assert (
+        load_tfe2024("10c-1").content_hash()
+        == "80dc3fc03dd17b314d2a79eac614bd58429118e4d8e311679c093f3212587741"
+    )
+
+
+def test_depot_address_changes_hash() -> None:
+    with_address = make_instance(depot=Depot(x=0, y=0, ready=0, address="Calle A 1"))
+    assert with_address.content_hash() != make_instance().content_hash()
+
+
+def test_empty_traffic_profile_is_none_and_keeps_hash() -> None:
+    original = load_solomon("c101", 25, truncated=True)
+    flat = Instance.model_validate(
+        {**original.model_dump(mode="json"), "traffic_profile": []}
+    )
+    assert flat.traffic_profile is None
+    assert (
+        flat.content_hash()
+        == "b7b54eda5d128f77eee56f123bcaeeea06238a6067cdf50f45adbeb3c63a4b8d"
+    )

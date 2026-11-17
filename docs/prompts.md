@@ -5,7 +5,8 @@ Los prompts están en `api/src/vrptw/llm/prompts.py` y se adaptan del prompt def
 - `solve_prompt(instance)`: prompt de resolución, en inglés como el de 2024.
 - `recheck_prompt()`: segundo prompt, de comprobación.
 - `agent_prompt(instance, max_turns)`: prompt del LLM en el papel de agente; es el de resolución más las instrucciones para usar las herramientas `solve_classic` y `evaluate_routes` (definidas en `api/src/vrptw/llm/agent.py`, con sus descripciones también versionadas) y el número máximo de turnos.
-- `PROMPT_VERSION`: se guarda en cada `RunRecord` (`prompt_version`). Cualquier cambio de texto obliga a cambiarla. Las instantáneas de `api/tests/data/prompts/` incluyen la versión, de modo que un cambio de texto sin cambio de versión rompe las pruebas.
+- `explain_prompt(instance, evaluation, method)`: prompt para que el LLM explique en español, para un responsable de logística, una solución ya evaluada. Lleva la tabla de paradas de cada vehículo (`VEHICLE,CUSTOMER,ARRIVAL,START,WAIT,LATE,LOAD`), los totales y las violaciones, sin la matriz, y pide usar solo esas cifras. Los vehículos se numeran desde 1 en la tabla y en las violaciones (`vehicle 1`). No forma parte de las ejecuciones del benchmark.
+- `PROMPT_VERSION`: se guarda en cada `RunRecord` (`prompt_version`). Cualquier cambio en el texto de las instancias del benchmark obliga a cambiarla. Las instantáneas de `api/tests/data/prompts/` incluyen la versión, de modo que un cambio de texto sin cambio de versión rompe las pruebas.
 
 ## Origen en 2024
 
@@ -33,11 +34,27 @@ Los prompts están en `api/src/vrptw/llm/prompts.py` y se adaptan del prompt def
 |---|---|---|
 | El texto original da los datos en un CSV adjunto (y en el propio prompt para Llama3). Ahora la tabla CSV (CUSTOMER, X, Y, DEMAND, READY_TIME, DUE_TIME, SERVICE_TIME) va siempre incrustada, y el depósito, la flota y su capacidad se describen en frases | Una llamada a la API no adjunta ficheros | 77 y 78 |
 | "We are going to use 5 vehicles" pasa a "at most K vehicles", con K tomado de la flota de la instancia | El número de clientes y de vehículos ya no está fijo en el texto, y el propio prompt dice que no hace falta usarlos todos | 76 y 77 |
-| Kilómetros y minutos solo en las instancias de 2024; en el resto, "distance unit" y "time unit" | Las instancias de Solomon no declaran unidades | 76 |
+| Kilómetros y minutos en las instancias de 2024 y en los casos reales (`source == "real"`); en el resto, "distance unit" y "time unit" | Las instancias de Solomon no declaran unidades | 76 |
 | Si el depósito tiene DUE_TIME, se dice que volver más tarde cuenta como retraso | Es lo que hace `evaluate.py` | No consta en el TFE |
 | Se omite la frase "it can be better not using all vehicles and having more WAITING TIME and LATE ARRIVAL TIME" y queda solo la parte de vehículos | Es verdad solo con ciertos pesos; con los del perfil Solomon (vehículo sin coste) no tiene sentido | 77 |
 | Se añade "vehicles that visit no customer are not used" | Coincide con la definición de vehículo usado del evaluador | No consta en el TFE |
-| Instancia sin coordenadas cartesianas: se omiten X e Y y se añade la matriz de tiempos de `instance.matrix`; sin matriz se lanza `ValueError` | Aún no hay instancias geográficas; es el camino mínimo | No consta en el TFE |
+| Instancia sin coordenadas cartesianas (casos reales): se omiten X e Y y se añade la matriz de tiempos de `instance.matrix`; sin matriz se lanza `ValueError` | Los casos reales se dan por coordenadas geográficas y matrices de carretera | No consta en el TFE |
+
+## Casos reales
+
+Con `source == "real"` el prompt de resolución cambia así:
+
+- Unidades en kilómetros y minutos. Las distancias por carretera no se truncan, así que no aparece "truncated to one decimal".
+- Dos matrices, una de tiempo y otra de distancia, cuando difieren; si son iguales, una sola, de tiempo (y distancia).
+- Si la instancia tiene perfil de tráfico, una tabla `FROM,TO,FACTOR` con los intervalos `[FROM, TO)` en que se multiplica el tiempo de viaje; también va en `agent_prompt`.
+
+## Camuflaje de las instancias de Solomon
+
+Antes de enviar una instancia de Solomon al modelo se aplica `camouflage` (`api/src/vrptw/instances/camouflage.py`), porque un modelo podría reconocerla y dar de memoria su óptimo publicado. Se renumeran los clientes, se giran 90° y se desplazan las coordenadas, se retrasan las ventanas y se multiplican demandas y capacidad por un entero. Los parámetros salen de SHA-256 del id de la instancia, así que son reproducibles. La matriz de distancias es la original permutada, y la distancia y las violaciones de cualquier solución no cambian; el score tampoco, salvo con retrasos (redondeo) o exceso de carga (el exceso se multiplica por la escala). El óptimo publicado sigue valiendo de referencia. Se usa en `bench/estimate.py` y en la API (`api/main.py`); `restore_routes` devuelve las rutas a la numeración original. Las instancias del TFE de 2024 y los casos reales no se camuflan.
+
+## Versión del prompt
+
+`PROMPT_VERSION` sigue en `vrptw-prompt-3` a propósito: los prompts de las instancias del benchmark no cambiaron ni un byte (lo fijan las instantáneas y los hashes de las pruebas) y no hay ninguna ejecución publicada sobre casos reales. Los cambios para casos reales y `explain_prompt` no alteran ninguna ejecución ya registrada.
 
 ## Lo que se conserva sin cambios
 
