@@ -1,0 +1,2096 @@
+{
+  "run_id": "b21e4f514ecf403681f37476edccb409",
+  "date": "2026-11-16T22:23:57.149537Z",
+  "git_sha": "115ddeb86af1408feb9554ac40142e51892a5293",
+  "hardware": "Windows-11-10.0.26200-SP0",
+  "instance_id": "rc101-100-trunc-cam",
+  "instance_hash": "c759e9db0f25167752404a846dafed3f0dadc8c38bf775addb9846db31b8234f",
+  "method": "llm_agent",
+  "role": "llm_agent",
+  "seed": 1,
+  "params": {
+    "max_tokens": 16000,
+    "max_turns": 6,
+    "max_tool_time_s": 10.0,
+    "output_budget": 16000,
+    "effort": "medium",
+    "tier": 4,
+    "rep": 1
+  },
+  "provider": "anthropic",
+  "model_requested": "claude-haiku-5-5",
+  "model_returned": "claude-haiku-5-5",
+  "prompt_version": "vrptw-prompt-3",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Don't give example, hypothetical or sample answers. The audience is academic.\nToday you are going to be an expert in solving VRPTW problems. You need to solve a VRPTW problem.\nNext, you have the description of the problem:\nWe have 100 customers, located with their (X,Y) coordinates, all measured in distance units from the origin. The vehicles start from the depot (Customer 0) in the position (114,116), and need to attend to the customers. We can use at most 25 vehicles, all leaving the depot at time 288; they must be back at the depot no later than 528; arriving later counts as LATE ARRIVAL TIME at the depot. Each vehicle has a capacity of 800, and each customer has a DEMAND that is loaded in the vehicle that serves it. The sum of the demands of the customers of one route must not exceed the capacity. The vehicles altogether must reach all customers.\nWe are looking for the optimal routes in terms of the score that the vehicles must take in order to deliver to all customers, if possible. The calculation of the score is explained later.\nTo simplify the problem, we will consider a uniform vehicle velocity of 1 distance unit per time unit, so the travel time between two points equals the travel distance. Key concepts: The time window of the customer is explicit in the READY TIME and DUE TIME columns, meaning that the customer is only available for delivery between the READY TIME value and the DUE TIME value. These values are expressed in time units. The SERVICE TIME column is the other critical one, it represents the time that the vehicles need to deliver to the customer and it is also expressed in time units. In other words, the delivery must start between READY TIME and DUE TIME and the delivery lasts SERVICE TIME time units.\nIf it is not possible to reach all customers, the better solution would be the one where most customers are attended.\nYou can use modern approaches to solve VRPTW problem, such as: Branch and Price, Branch and Cut, Dynamic Programming with State Space Relaxation, Lagrangian Relaxation, Heuristic Search with Relaxation.\nFor each vehicle, compute the visits one after another with these quantities, as floats:\n- TRAVEL STARTS AT: the time the vehicle leaves the previous point (the depot or the previous customer).\n- TRAVEL DISTANCE: the distance from the previous point to the customer.\n- ARRIVAL TIME = TRAVEL STARTS AT + TRAVEL DISTANCE.\n- WAITING TIME: if ARRIVAL TIME < READY TIME then READY TIME - ARRIVAL TIME, otherwise 0. The vehicle waits until READY TIME.\n- LATE ARRIVAL TIME: if ARRIVAL TIME > DUE TIME then ARRIVAL TIME - DUE TIME, otherwise 0.\n- ENDS DELIVERY AT = max(ARRIVAL TIME, READY TIME) + SERVICE TIME.\n- ACCUMULATED DISTANCE: the distance travelled by the vehicle so far.\nRemember that, for next travel, TRAVEL STARTS AT = ENDS DELIVERY AT. And all vehicles must return to the depot once they have finished the routes. This TRAVEL DISTANCE must be taken into account in the ACCUMULATED DISTANCE.\nGive the Score of the solution. Final score = 10000 x unattended customers + sum of the ACCUMULATED DISTANCE of each vehicle + 1000 x sum of LATE ARRIVAL TIME + 1000 x units of load above the vehicle capacity. As you see, for calculating the score, the most heavily penalized items are the ones with the largest weights above. These items have no cost in the score: the number of vehicles used, WAITING TIME. Distances are Euclidean distances truncated to one decimal: each leg between two points measures floor(10 x d) / 10 distance units, where d is the exact Euclidean distance. Use these truncated leg distances in every calculation.\nTime windows and vehicle capacity are hard constraints: the delivery must start no later than DUE TIME, and the load of each vehicle cannot exceed its capacity. A solution with any late arrival or any excess load is infeasible, and the penalty weights above only discourage that, they do not make it acceptable. Among feasible solutions, the best one is the one with the smallest total distance (truncated to one decimal).\nA vehicle can visit one or more than one customer, not all vehicles must visit the same number of customers, and vehicles that visit no customer are not used. Have in mind that it can be better not using all vehicles, because this could lead to a better solution than using all vehicles.\nRead all information carefully in order to give the solution.\nIt is mandatory for you that you dont have to provide any code.\nIt is mandatory for you to give a solution that you can afford computationally.\nDo not give example, hypothetical or sample answers.\nThe data of the problem follows, one customer per row (the depot is Customer 0 and is not in the table):\nCUSTOMER,X,Y,DEMAND,READY_TIME,DUE_TIME,SERVICE_TIME\n1,121,129,56,302,332,10\n2,97,107,12,468,498,10\n3,99,121,36,354,384,10\n4,79,131,80,416,446,10\n5,82,141,40,412,442,10\n6,159,111,80,442,472,10\n7,106,100,76,355,385,10\n8,109,141,56,353,383,10\n9,144,141,24,327,357,10\n10,129,161,120,399,429,10\n11,124,111,64,299,329,10\n12,149,114,40,436,466,10\n13,134,168,40,350,380,10\n14,129,166,40,355,385,10\n15,114,96,20,379,409,10\n16,84,138,120,363,393,10\n17,84,131,40,321,351,10\n18,82,96,40,325,355,10\n19,84,91,40,379,409,10\n20,159,114,120,353,383,10\n21,134,163,40,419,449,10\n22,129,81,40,430,460,10\n23,112,107,108,329,359,10\n24,159,118,40,439,469,10\n25,95,111,92,468,498,10\n26,108,84,108,378,408,10\n27,134,101,12,340,370,10\n28,159,116,40,355,385,10\n29,134,121,68,341,371,10\n30,152,136,124,363,393,10\n31,127,132,24,322,352,10\n32,112,137,12,466,496,10\n33,141,139,8,375,405,10\n34,159,120,80,375,405,10\n35,84,136,40,325,355,10\n36,82,131,40,352,382,10\n37,159,143,100,432,462,10\n38,79,143,80,427,457,10\n39,129,126,76,418,448,10\n40,104,116,84,432,462,10\n41,89,98,120,338,368,10\n42,139,161,40,339,369,10\n43,79,101,80,433,463,10\n44,122,125,52,455,485,10\n45,79,141,160,331,361,10\n46,124,78,80,346,376,10\n47,79,136,120,373,403,10\n48,134,171,120,403,433,10\n49,106,125,40,374,404,10\n50,116,133,92,383,413,10\n51,84,94,40,401,431,10\n52,89,91,80,367,397,10\n53,139,106,92,384,414,10\n54,149,118,40,410,440,10\n55,140,97,112,375,405,10\n56,119,76,80,437,467,10\n57,124,76,80,360,390,10\n58,161,99,28,438,468,10\n59,117,123,52,480,510,10\n60,129,171,80,350,380,10\n61,89,134,80,380,410,10\n62,135,133,72,384,414,10\n63,134,164,40,362,392,10\n64,110,131,104,420,450,10\n65,129,86,80,379,409,10\n66,124,86,120,407,437,10\n67,149,116,160,380,410,10\n68,119,84,80,352,382,10\n69,144,96,32,429,459,10\n70,129,102,60,365,395,10\n71,152,118,40,392,422,10\n72,122,140,36,358,388,10\n73,129,141,12,340,370,10\n74,133,113,56,323,353,10\n75,154,91,80,440,470,10\n76,96,82,120,377,407,10\n77,104,91,68,443,473,10\n78,112,102,36,334,364,10\n79,129,148,120,404,434,10\n80,79,96,80,329,359,10\n81,127,117,64,421,451,10\n82,89,94,80,383,413,10\n83,140,88,52,378,408,10\n84,154,118,160,360,390,10\n85,99,139,32,318,348,10\n86,144,86,76,330,360,10\n87,124,84,160,347,377,10\n88,104,106,64,428,458,10\n89,146,80,140,408,438,10\n90,159,81,64,362,392,10\n91,129,164,80,349,379,10\n92,79,98,40,397,427,10\n93,104,78,20,365,395,10\n94,104,131,64,427,457,10\n95,117,113,24,374,404,10\n96,119,78,40,333,363,10\n97,84,96,160,429,459,10\n98,144,131,76,371,401,10\n99,119,81,40,323,353,10\n100,121,103,36,330,360,10\nRemember the goals: vehicle route data and the score of the problem.\nIt is mandatory that your answer ends with a single JSON block, and nothing after it, with exactly this format: {\"routes\": [[...], ...], \"score\": number}. \"routes\" has one list per vehicle used, with the CUSTOMER numbers of the customers in the order they are visited (do not include the depot, Customer 0), and \"score\" is the final score of that solution.\nYou can use two tools on this instance:\n- solve_classic runs one of the classic VRPTW methods of the application and returns its routes with their evaluation: score, total distance, vehicles used, unattended customers, whether the solution is feasible and the number of violations of each type.\n- evaluate_routes returns the same evaluation for the routes you give it. It is the evaluator that will judge your final answer, and it computes the score with the rule above.\nUse the tools as you see fit: for example, run several methods, compare their evaluations, try to improve the best routes and check your changes with evaluate_routes. You can call several tools in the same turn.\nYou have at most 6 turns, counting the one with your final answer. A turn in which you call a tool is not a final answer, so do not call any tool in your last turn.\nYour final solution is the one in the JSON block at the end of your final answer, not the output of a tool: write in that block the routes you choose, in the format described above.\n"
+    },
+    {
+      "role": "assistant",
+      "content": "I'll start by running two of the classic methods in parallel to get candidate solutions to compare.",
+      "tool_calls": [
+        {
+          "id": "toolu_019d1PHa6Do2us8BKMhdRgy9",
+          "name": "solve_classic",
+          "arguments": {
+            "method": "tabu",
+            "time_limit_s": 10
+          }
+        },
+        {
+          "id": "toolu_01NuRMjc2U4671Jj9baUUByz",
+          "name": "solve_classic",
+          "arguments": {
+            "method": "heuristic",
+            "time_limit_s": 5
+          }
+        }
+      ],
+      "raw": [
+        {
+          "signature": "CAQSggYKEAgTGAI4AUIIdGhpbmtpbmcSDJzEEviUlb9XkkB9FRoMic/AJk06jDvAO9lcIjCEpbRU2PeyMeYlrlkMQDyX0mo1KoxJ+B7hQV62rJ2779We6/aKHYqVJX3rWmEHGz4qnwW23pPYrBpDNb5l2JTePhxdJR8jrS5ovJj0xz8cbXvdVf86gmSxpp658vt95weJr68FkKsVakXX6BjTlpCBjaqBIW7sHwANvnUTMtmDC2bfQJGQYYzYiYBKc9fDB0PGZgBAsaigCOKHcQKWMa62maddQMdXduLSiQtWNzHexksSj8SUMWdqY54Nu3qCg1m5gRBvy1dfViqOqZhZVRxh1kcSHPD5//3Jzljr4tLeOYG32SIAeIefkxu109GuD7dHADXqcqdn+Mf0KwqVNuBbaZscmXwDEz4pWGwTt7rpQS0OQ4zwBkVgF7WH30NKjRptrJqzRU2NtpXw6ic5Q/l7e35lMBoQ9rjiyHzZUuevsh5df4CQmgKL9u99SARCe/Pw0EO21tvvv0PJx8IRE5qgq284dSsMFQVSPSqYOtPEIhD7JC+TnIq2pOzHdjR1m6uOhwhNTxIodJUfNELd/Wijdl9rv5LK52H+fKLQuRFNnkyusEfgV07Jb+SwRzb2R6Nl6ZQ2oskkjgaR9+Kg5uHiCJdOkOogxSwzy86dlERawCLGifpdjl5oVBnxvkNMHwpsKl/SPQZwvW2+FjXaNG6my2pSALJwdbnuCSSwXk5ArxtlsLrRXs0BFlawKYiuvjcul4Xi7npIlaUDm1XZ/p+H7oMhF236fKSVC0a0oFUQ2jxprJI3uQxM9fteHrpGjy8qwk1HS5XWUGqK+XdUQIy4XjMIJ/r1hlsoa5UyBW0ITQZEaMW27FnN50vehgyvFO+YuwUQmSLBMEs9VbkMvFgwf5rvmx0LB8LIGUa8XLsuy5VpvrMyc4hyD4/BjEs2Wci3D1vOizfOhj7raCmpyyorDxSAfzdgApQCF9XpRIxiTGagg7L4AcH4iLlaTGuenMRc9BgB",
+          "thinking": "",
+          "type": "thinking"
+        },
+        {
+          "text": "I'll start by running two of the classic methods in parallel to get candidate solutions to compare.",
+          "type": "text"
+        },
+        {
+          "id": "toolu_019d1PHa6Do2us8BKMhdRgy9",
+          "caller": {
+            "type": "direct"
+          },
+          "input": {
+            "method": "tabu",
+            "time_limit_s": 10
+          },
+          "name": "solve_classic",
+          "type": "tool_use"
+        },
+        {
+          "id": "toolu_01NuRMjc2U4671Jj9baUUByz",
+          "caller": {
+            "type": "direct"
+          },
+          "input": {
+            "method": "heuristic",
+            "time_limit_s": 5
+          },
+          "name": "solve_classic",
+          "type": "tool_use"
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "toolu_019d1PHa6Do2us8BKMhdRgy9",
+      "content": "{\"routes\":[[41,54,6],[68,87,38,32],[57,76,66,89],[17,52,71],[35,45,61,19],[1,33,34,24,58],[95,39,72],[78,31,10,60],[11,74,28,22,56],[9,73,26,82],[23,47,4,5,94],[42,91,14,63,21,37],[85,36,13,48],[46,27,20],[49,88,97,77],[29,84,15,43],[80,99,69,75],[18,93,96,40],[86,90,81,64,44],[8,16,79],[51,92,2,25,59],[70,53,50],[30,98,67,83],[100,3,62,12],[7,55,65]],\"score\":604240.2000000001,\"distance\":3440.2,\"vehicles_used\":25,\"unserved\":0,\"feasible\":false,\"violations\":{\"depot_due\":1,\"late\":28}}",
+      "is_error": false
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "toolu_01NuRMjc2U4671Jj9baUUByz",
+      "content": "{\"routes\":[[95,59],[23,78,7,88,2,25],[40,94,32],[11,81,39,44],[49,64,77],[1,50,62,12,6],[100,70,53,55,69,75],[3,61,5,38],[74,29,98,33,79,21],[15,26,56,22],[31,73,72,8,10],[27,83,89,58],[85,16,47,4,43],[41,82,52,51,97],[66,24],[68,87,65,54],[17,36,92],[67,71,37],[99,96,46,57,93],[35,45,19],[18,80,76],[9,30,34],[84,28],[86,90],[20,48]],\"score\":62544.7,\"distance\":2544.7,\"vehicles_used\":25,\"unserved\":6,\"feasible\":false,\"violations\":{\"unserved\":6}}",
+      "is_error": false
+    },
+    {
+      "role": "assistant",
+      "content": "Neither result is feasible yet: tabu has 28 late arrivals and one depot violation, and the greedy heuristic leaves 6 customers unserved. I'll try the other two metaheuristics.",
+      "tool_calls": [
+        {
+          "id": "toolu_01N7GvtW7gWNLo3gR1Sd2xQf",
+          "name": "solve_classic",
+          "arguments": {
+            "method": "aco",
+            "time_limit_s": 10
+          }
+        },
+        {
+          "id": "toolu_01N24CXGfhPaN3qU3saDqeYX",
+          "name": "solve_classic",
+          "arguments": {
+            "method": "ga",
+            "time_limit_s": 10
+          }
+        }
+      ],
+      "raw": [
+        {
+          "signature": "CAQShwgKEAgTGAI4AUIIdGhpbmtpbmcSDDdF751fFKO+EqYA7BoMTvIF31GZKr3IAg4hIjAcHrnZdPoOvDkNKEE1oBiPw1TMUhXyVwRjFSjeNwTJZSRmVIRDA57rlb5CMNmkMH0qpAdn9Wk3UccKMoMbpf7kUZSKZBWDZpdbwwicZDSCzyS+vzb1XoDl3GUENUEd9KUtZYvzPp7hkhmL2EqcBdxAxcedFm4g3O9wwkaW2ZZVG4qDl8y5xNrQA7qibN+3nJt8esQHWcCJOpWqoOYlRwoTF+uYFPnx24zuKMYU3skqSCMyssalrha4ICZpVRTdgIsaxyLU/tyBg7yagR0KGnBDjwRUq8E8dFND14zhMRp4VRIBeG2hAyFeOVX3Iwxt7SAM9/C2p0SieIhgk1S78mBNv6XXBZ9oHIxyJBQBWU06QayXyAsHCPjmLvECINHDA/msWYeEBCn0fUm5lod0c4Ppws7HnssTpV7ga6I+nV0ctLhCnwxLxmE+Jc4OfQRq1u011ZsyqRvCL727WlzJ2WLkZBIQ44ae8+UHxDWL4LLejclU4YTKrvPsztU9PlLD6WUXGIGZw3rRmHLqkuCHIEi/Pta99DdNGDaorywGlX6Pn9MG9ccnTDF2C8FSq0D/bAm7TkrPGHsj66jFgmODvDjGjGXlvoqDQsj5Sh+ssK7G9mZU1GNskNNIhQ0QdJw+xW3AvBRucrhvZh4SB1QxSJXHX4ACnGzFUmW3brVYCrLqu8pLsYCf9MKkDS3j0kPMaD5r06Rs0QOTawQ39BP0GtotuJJZLKGrF1zhOyiwo2nrTFn9sNIBDYPYNolvfJCsHVXtlLknIcvsLg+34itKBnCUPUUd4Dj8M0VnK7aMlr/3vLZf4EEq8b6SkUc5cqqCPpUV70ritd8o2cVTQ6dfTf/BXPu+auYOIvCyMXKhXiNp2B7xzpPu9FfEg3w4ljYY1d/vDqlawhbvr7SuVQXgVv+jeoSSKnIr5MuKto8DuN36u0YIvv06LKkG0l/roDsFMfOFUm7NTC8D9ZuJrCMyBG/sC4vPyld3NMWqW8xhmkomrCFWl8TXYPhOqgmk8aF03D17gaYJhhUY2qRUm/nuS5jUpeOJTxUp9DRjYkOV4PL+qPCr3qcUzAJ1Rx6OwflI5nnByPYZvbqKGjGD0mNQTMW9KVA31NUj3LOCramz28iVdeTdqFeW3/oBlwbzNJgRDW8wHBkYR6jFRPt16HNrnaEp654Nx6RZQvP7RBhrebREHrljbvrLmwOAihDX+P7fBLcIpRY7Q7KqEy6a1JGh5th8lxjcF8QcD+AXxdcaK0wt/6jsPxx+XueQxqUyRvdHwsZ88nz4xqRcrBsVyecedHcmb8ND6ez99hgB",
+          "thinking": "",
+          "type": "thinking"
+        },
+        {
+          "text": "Neither result is feasible yet: tabu has 28 late arrivals and one depot violation, and the greedy heuristic leaves 6 customers unserved. I'll try the other two metaheuristics.",
+          "type": "text"
+        },
+        {
+          "id": "toolu_01N7GvtW7gWNLo3gR1Sd2xQf",
+          "caller": {
+            "type": "direct"
+          },
+          "input": {
+            "method": "aco",
+            "time_limit_s": 10
+          },
+          "name": "solve_classic",
+          "type": "tool_use"
+        },
+        {
+          "id": "toolu_01N24CXGfhPaN3qU3saDqeYX",
+          "caller": {
+            "type": "direct"
+          },
+          "input": {
+            "method": "ga",
+            "time_limit_s": 10
+          },
+          "name": "solve_classic",
+          "type": "tool_use"
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "toolu_01N7GvtW7gWNLo3gR1Sd2xQf",
+      "content": "{\"routes\":[[5,38,25,2],[74,27,7,77,59],[29,20,6,58],[23,68,26,66,56,22],[85,94,64,32],[49,61,88,44],[98,30,54,12,24],[95,39,81],[11,100,62,33,40],[3,50,4],[84,71,67,69,75],[17,36,47,16,43,97],[78,15,65,89],[31,8,72,79,10,21],[1,42,91,14,48,37],[45,35,82,51],[70,55,53],[19,52,92],[99,96,46,57,76],[73,63],[83],[87,93],[80,18,41],[13,60],[9,34]],\"score\":32653.0,\"distance\":2653.0,\"vehicles_used\":25,\"unserved\":3,\"feasible\":false,\"violations\":{\"unserved\":3}}",
+      "is_error": false
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "toolu_01N24CXGfhPaN3qU3saDqeYX",
+      "content": "{\"routes\":[[65,15,2,25],[50,54,44,32],[70,55,89,75,58],[86,90,66,81,59],[46,26,94,40],[100,29,98,71,24,6],[1,74,87,83,88],[27,93,43,97],[31,73,14,10,64],[45,35,61,38,5],[8,49,22,56],[20,67,34,37],[57,82,51,77],[42,13,60,48,21],[68,52,19,92],[11,99,96,53,39,12],[30,79],[18,80,3,4],[78,7,95,69],[17,72,62],[91,63,33],[85,16,36,47],[9,28,84],[23,41,76]],\"score\":2928.1,\"distance\":2928.1,\"vehicles_used\":24,\"unserved\":0,\"feasible\":true,\"violations\":{}}",
+      "is_error": false
+    },
+    {
+      "role": "assistant",
+      "content": "The GA run produced a fully feasible solution (24 vehicles, distance 2928.1, no unserved customers, no late arrivals). I'll run GA once more to see whether a shorter feasible solution turns up.",
+      "tool_calls": [
+        {
+          "id": "toolu_01KdcWPZGNkXuVMKaKTsj7hx",
+          "name": "solve_classic",
+          "arguments": {
+            "method": "ga",
+            "time_limit_s": 10
+          }
+        }
+      ],
+      "raw": [
+        {
+          "signature": "CAQS+gcKEAgTGAI4AUIIdGhpbmtpbmcSDEBfiX2855fmheS5rRoMq0j5cd/HR1+STCIPIjCFrB3eQQAxdNjsqzyGaojZBfltFseTsSUa7ygKM6d9zCBOaUvyLap9nxDl5Yn6CGYqlwcmyzIAtAGiJohbHNHbZeAHh3bVMiyTss2v7DfSzIqlGDcB1T4se5XJA2iY1eKLRgkRX3iE+XpgDd7p1cDjXiP3vQRSP29iIt0nNbp6/SYFnyCIF34R48yuEYK7Ozn2em34vOQUcBjWujyE/klxTj70r05Muno5uYj+pBEH/w827hyQ0Q3wweYjt2s5FrHu89U4QY9h4v1QDVwPQLlbpJHlVBNiQeOhXfTmq98JgO0/5jZEgiC5ohUNrb1yVQr5TPV0CmPuhdkRozX9/7CFrx3Mu+YYa8T7USJR9DXMPXuplBPXFNxh4Hb/558BSiKG1P/zSdZfV3x3xmf/t1GBDUQ1IuI+uJqUfnggvSXqH9yR0QSh3UQ9BbSHsmz8amhkdjfAxIoTCgDSgTP4CXoe4jnmh9HTVzff88XGEDicxWKJHJsV89lv6w7HqbNf0rk4gvodwFK8vVy4X7imr3Zr2BkH4FTMQQNpGeSmHmAED1h9DiT2MjqZo4XgD3lqyCT+7lSGSTIcKN0FH+AB1aEpU6oA3K/EbmM+VLeT9W51bi/ZAVOUA6NKzoEzuckhWT6PaGOVMdOpAMljbk+dvcvajRrUfKpHYcotdbN35vB3TbWf/9qh6wjzh6wFuZVFeuYIs3Q1VN8sVq29HZaaicxdqqAWiCRPvEWwAn1ubjdDecjHAcQsDFiiLMIGObx4/7+9VF8NMYYPY/O4jAzgcJazJq1rqzxjeFKhhU7pn5yiCke0h/zkecmG3Wggd4iBPWF1NCKrV3UY1+3iD6L/dRmfqLzEfrXZ5HUVLoQB4UcMSiQHn8Ys9NX7ExhGIld03OGtoNBbPw1y+ZEwG7a/FDFqXViW+w5LNivzK7ZW/asBje87Nl2sKeOrcpdcZo3HPis5tDf8dZyE9JmEAyuXmm9V+GkubL+3jShGOj2EYY1h7fQQtDz32xb8OgddI8gpfx/oiJ+XKLxj0COpJ5SFIcKvHXZGhlDINCE2U5a3aSQ1xQofrJ9khoZZq1GyygWgjlVXKiLgTOLVMLfa2a62HNXpN/U3n9d1At1dutN+qmrX2KaEK2EMzqYjUeifFRO6pp1ESTlYf8AnYaT6M0Vea62LrbDIGLX4RqUtzBXhpyz2qxKLSIeIb1+17uawe1oJH2It5A+qaLyIdvZ50AdzlNhKLyWlsyBypody1UR1DUPGmYThBoo9vyFAsqf9fckYCbyAUAB7ZYfGaj+8GAE=",
+          "thinking": "",
+          "type": "thinking"
+        },
+        {
+          "text": "The GA run produced a fully feasible solution (24 vehicles, distance 2928.1, no unserved customers, no late arrivals). I'll run GA once more to see whether a shorter feasible solution turns up.",
+          "type": "text"
+        },
+        {
+          "id": "toolu_01KdcWPZGNkXuVMKaKTsj7hx",
+          "caller": {
+            "type": "direct"
+          },
+          "input": {
+            "method": "ga",
+            "time_limit_s": 10
+          },
+          "name": "solve_classic",
+          "type": "tool_use"
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "toolu_01KdcWPZGNkXuVMKaKTsj7hx",
+      "content": "{\"routes\":[[65,15,2,25],[50,54,44,32],[70,55,89,75,58],[86,90,66,81,59],[46,26,94,40],[100,29,98,71,24,6],[1,74,87,83,88],[27,93,43,97],[31,73,14,10,64],[45,35,61,38,5],[8,49,22,56],[20,67,34,37],[57,82,51,77],[42,13,60,48,21],[68,52,19,92],[11,99,96,53,39,12],[30,79],[18,80,3,4],[78,7,95,69],[17,72,62],[91,63,33],[85,16,36,47],[9,28,84],[23,41,76]],\"score\":2928.1,\"distance\":2928.1,\"vehicles_used\":24,\"unserved\":0,\"feasible\":true,\"violations\":{}}",
+      "is_error": false
+    },
+    {
+      "role": "assistant",
+      "content": "The best solution I found is feasible with a score of 2928.1. Two independent GA runs returned the same routes, and the evaluator reports no late arrivals, no excess load, no depot violations, and no unserved customers.\n\nMethod: I ran the four classic methods (heuristic, tabu, ACO, GA). Heuristic, tabu and ACO each left customers unserved or violated time windows, so the GA solution is the one I report. It uses 24 of the 25 available vehicles, and its total truncated distance is 2928.1. Since the score equals the total distance when all customers are served on time and within capacity, the score is 2928.1. I did not run a proof of optimality, so this is the best feasible solution found, not a certified optimum.\n\n{\"routes\": [[65,15,2,25],[50,54,44,32],[70,55,89,75,58],[86,90,66,81,59],[46,26,94,40],[100,29,98,71,24,6],[1,74,87,83,88],[27,93,43,97],[31,73,14,10,64],[45,35,61,38,5],[8,49,22,56],[20,67,34,37],[57,82,51,77],[42,13,60,48,21],[68,52,19,92],[11,99,96,53,39,12],[30,79],[18,80,3,4],[78,7,95,69],[17,72,62],[91,63,33],[85,16,36,47],[9,28,84],[23,41,76]], \"score\": 2928.1}",
+      "tool_calls": [],
+      "raw": [
+        {
+          "signature": "CAQSsQkKEAgTGAI4AUIIdGhpbmtpbmcSDCG38j47jdgY+Cw6SBoMwy95jT7Cok0ZxI2gIjD4bGHbKMFmWKjfxo8B7cuq6kOBsUxLOv/OwZBmis4Rwzj8bRCWkVaOnkpAlk/CGxIqzghEyrsD/peBfIEacG+5Ercz7kECKP7mPswLFPQM/TFEM/SW56vtcxL4u9NPEKz/hVqSDYG/VLN4tAV7cJ/G09VVlcicoxAsmDb6YSgm+LllZxONEuVKN+wjA5nwFaB5A9f6RGJmv9m5/nJuxpH+KzE1ElbT2F60ph8ChAdLV5EtAYVtrMJPeBe3QEQi9t5YsCSpX7rvv0D2W0pawapzpji3KwDgAFMMg/YDEQ5H0fWYjmwEVHS08spYRTlUAO3yYZpS1pAzvBL/278UeMn5SpWWWcfcfGf3vGUyZieN0qu027Db9oqaj+1OjfERw4+M+PAcn7rrbRF71DfV2zmIjOnEe9B3KixqbVUJrXoHmjmtEOlWe8UIAnH9VV7dUgayBQwpegPGF1FxtExjeKr6Sa2acWZZEuELJvrXNUMZrbamX2nkbCuc+emKDR/m2k/ZZlfEZgN46+oGkwXrfb8m4CC7qj0tAECvAnack1atj8xcVjrZ+kXkp761nuiUAdiD1PlPl0lTtEp0HTCN4Hstbl42XBtzY0nrXZ+XavXzUFOy8+Iqw7LXNtHGx80I/a9Wf0x2VysZ7Wozd/bzOmh7fZ51Vtyqy/4fbSLgtXt9fEWp72XBaRgn4S7Rtdq9VfXwlrKdUI0daApMQ3TG49xey41IS+3neuftwKYwg7ezXMZRE+6J+lxPY6vuitm+2cdwpN3xxcU+MV6BxBO7dkhjk4+3fnMpP3J3jaXPD1hoCZ9WBBArOrTBix4qTg8aeXgpDVnl5g0/XE46kwWsnhkzEuqCdUE8DCMH2OGFDBzShAb6fwu3s+Yg56hZd54puuyjB+ez5OwoXmTiklWTGt3a+aBsaskI0TPEi9MBKs35sZzCACx12q/b7RoyILAgU07SqHzcJNwpFAzZ1OG+3mqJDkwN3xS9nlzsvziZ8jgMpbWVOJwpoVjxzi4l5iw3awD0Ml4Sl7tOkRFmEk3j57fYQ/DTtcjpb6kvLg4mzmKG3M4Z2m32DSku4NNh6C+g4DgHdXdjIzQOGkUG5QSN/p8KTXmsrNq6JZN1tPH5n7teEojWSLD2k+B5m/ylXYZwhWzzYePlGg1+i366NNFxcZmea+x4/dzi6C35odSzt+CYyVG9uBgsE457ay+lJcm+ZcYqQ9jTXMBdscaLr+fJCEhZW9TKryC/x3hA1mNyJA99ChngjxElMkkK4FbzJqmHUdUc7flOlfeIO52gGb/272xoaXawdt1Emv7LfjZMmiXiQItZ6eOYkZfnKYX55XvXdkJYuw4F+XhhL9Yl2sd1CrXYtQUDEOgC8Usvl0JvGe108/UO+C/YB9qAiWqYaWNOKtiupmbe3UO/Ux9o1P14jPmkmCcQ7Np7r6VvhGatyNUdJKZ68JmTu2ap6zUq3oS0KcU14vNQ6Z1606EDWxPJuMW/rKgq8NTJOW0/9Ba02L6fBaugJiV/gTlSA0pwXLB5zbUKGAE=",
+          "thinking": "",
+          "type": "thinking"
+        },
+        {
+          "text": "The best solution I found is feasible with a score of 2928.1. Two independent GA runs returned the same routes, and the evaluator reports no late arrivals, no excess load, no depot violations, and no unserved customers.\n\nMethod: I ran the four classic methods (heuristic, tabu, ACO, GA). Heuristic, tabu and ACO each left customers unserved or violated time windows, so the GA solution is the one I report. It uses 24 of the 25 available vehicles, and its total truncated distance is 2928.1. Since the score equals the total distance when all customers are served on time and within capacity, the score is 2928.1. I did not run a proof of optimality, so this is the best feasible solution found, not a certified optimum.\n\n{\"routes\": [[65,15,2,25],[50,54,44,32],[70,55,89,75,58],[86,90,66,81,59],[46,26,94,40],[100,29,98,71,24,6],[1,74,87,83,88],[27,93,43,97],[31,73,14,10,64],[45,35,61,38,5],[8,49,22,56],[20,67,34,37],[57,82,51,77],[42,13,60,48,21],[68,52,19,92],[11,99,96,53,39,12],[30,79],[18,80,3,4],[78,7,95,69],[17,72,62],[91,63,33],[85,16,36,47],[9,28,84],[23,41,76]], \"score\": 2928.1}",
+          "type": "text"
+        }
+      ]
+    }
+  ],
+  "raw_response": "The best solution I found is feasible with a score of 2928.1. Two independent GA runs returned the same routes, and the evaluator reports no late arrivals, no excess load, no depot violations, and no unserved customers.\n\nMethod: I ran the four classic methods (heuristic, tabu, ACO, GA). Heuristic, tabu and ACO each left customers unserved or violated time windows, so the GA solution is the one I report. It uses 24 of the 25 available vehicles, and its total truncated distance is 2928.1. Since the score equals the total distance when all customers are served on time and within capacity, the score is 2928.1. I did not run a proof of optimality, so this is the best feasible solution found, not a certified optimum.\n\n{\"routes\": [[65,15,2,25],[50,54,44,32],[70,55,89,75,58],[86,90,66,81,59],[46,26,94,40],[100,29,98,71,24,6],[1,74,87,83,88],[27,93,43,97],[31,73,14,10,64],[45,35,61,38,5],[8,49,22,56],[20,67,34,37],[57,82,51,77],[42,13,60,48,21],[68,52,19,92],[11,99,96,53,39,12],[30,79],[18,80,3,4],[78,7,95,69],[17,72,62],[91,63,33],[85,16,36,47],[9,28,84],[23,41,76]], \"score\": 2928.1}",
+  "tool_calls": [
+    {
+      "id": "toolu_019d1PHa6Do2us8BKMhdRgy9",
+      "name": "solve_classic",
+      "arguments": {
+        "method": "tabu",
+        "time_limit_s": 10
+      },
+      "is_error": false,
+      "result": {
+        "routes": [
+          [
+            41,
+            54,
+            6
+          ],
+          [
+            68,
+            87,
+            38,
+            32
+          ],
+          [
+            57,
+            76,
+            66,
+            89
+          ],
+          [
+            17,
+            52,
+            71
+          ],
+          [
+            35,
+            45,
+            61,
+            19
+          ],
+          [
+            1,
+            33,
+            34,
+            24,
+            58
+          ],
+          [
+            95,
+            39,
+            72
+          ],
+          [
+            78,
+            31,
+            10,
+            60
+          ],
+          [
+            11,
+            74,
+            28,
+            22,
+            56
+          ],
+          [
+            9,
+            73,
+            26,
+            82
+          ],
+          [
+            23,
+            47,
+            4,
+            5,
+            94
+          ],
+          [
+            42,
+            91,
+            14,
+            63,
+            21,
+            37
+          ],
+          [
+            85,
+            36,
+            13,
+            48
+          ],
+          [
+            46,
+            27,
+            20
+          ],
+          [
+            49,
+            88,
+            97,
+            77
+          ],
+          [
+            29,
+            84,
+            15,
+            43
+          ],
+          [
+            80,
+            99,
+            69,
+            75
+          ],
+          [
+            18,
+            93,
+            96,
+            40
+          ],
+          [
+            86,
+            90,
+            81,
+            64,
+            44
+          ],
+          [
+            8,
+            16,
+            79
+          ],
+          [
+            51,
+            92,
+            2,
+            25,
+            59
+          ],
+          [
+            70,
+            53,
+            50
+          ],
+          [
+            30,
+            98,
+            67,
+            83
+          ],
+          [
+            100,
+            3,
+            62,
+            12
+          ],
+          [
+            7,
+            55,
+            65
+          ]
+        ],
+        "score": 604240.2000000001,
+        "distance": 3440.2,
+        "vehicles_used": 25,
+        "unserved": 0,
+        "feasible": false,
+        "violations": {
+          "depot_due": 1,
+          "late": 28
+        }
+      },
+      "time_s": 10.002206100005424
+    },
+    {
+      "id": "toolu_01NuRMjc2U4671Jj9baUUByz",
+      "name": "solve_classic",
+      "arguments": {
+        "method": "heuristic",
+        "time_limit_s": 5
+      },
+      "is_error": false,
+      "result": {
+        "routes": [
+          [
+            95,
+            59
+          ],
+          [
+            23,
+            78,
+            7,
+            88,
+            2,
+            25
+          ],
+          [
+            40,
+            94,
+            32
+          ],
+          [
+            11,
+            81,
+            39,
+            44
+          ],
+          [
+            49,
+            64,
+            77
+          ],
+          [
+            1,
+            50,
+            62,
+            12,
+            6
+          ],
+          [
+            100,
+            70,
+            53,
+            55,
+            69,
+            75
+          ],
+          [
+            3,
+            61,
+            5,
+            38
+          ],
+          [
+            74,
+            29,
+            98,
+            33,
+            79,
+            21
+          ],
+          [
+            15,
+            26,
+            56,
+            22
+          ],
+          [
+            31,
+            73,
+            72,
+            8,
+            10
+          ],
+          [
+            27,
+            83,
+            89,
+            58
+          ],
+          [
+            85,
+            16,
+            47,
+            4,
+            43
+          ],
+          [
+            41,
+            82,
+            52,
+            51,
+            97
+          ],
+          [
+            66,
+            24
+          ],
+          [
+            68,
+            87,
+            65,
+            54
+          ],
+          [
+            17,
+            36,
+            92
+          ],
+          [
+            67,
+            71,
+            37
+          ],
+          [
+            99,
+            96,
+            46,
+            57,
+            93
+          ],
+          [
+            35,
+            45,
+            19
+          ],
+          [
+            18,
+            80,
+            76
+          ],
+          [
+            9,
+            30,
+            34
+          ],
+          [
+            84,
+            28
+          ],
+          [
+            86,
+            90
+          ],
+          [
+            20,
+            48
+          ]
+        ],
+        "score": 62544.7,
+        "distance": 2544.7,
+        "vehicles_used": 25,
+        "unserved": 6,
+        "feasible": false,
+        "violations": {
+          "unserved": 6
+        }
+      },
+      "time_s": 0.01048530000844039
+    },
+    {
+      "id": "toolu_01N7GvtW7gWNLo3gR1Sd2xQf",
+      "name": "solve_classic",
+      "arguments": {
+        "method": "aco",
+        "time_limit_s": 10
+      },
+      "is_error": false,
+      "result": {
+        "routes": [
+          [
+            5,
+            38,
+            25,
+            2
+          ],
+          [
+            74,
+            27,
+            7,
+            77,
+            59
+          ],
+          [
+            29,
+            20,
+            6,
+            58
+          ],
+          [
+            23,
+            68,
+            26,
+            66,
+            56,
+            22
+          ],
+          [
+            85,
+            94,
+            64,
+            32
+          ],
+          [
+            49,
+            61,
+            88,
+            44
+          ],
+          [
+            98,
+            30,
+            54,
+            12,
+            24
+          ],
+          [
+            95,
+            39,
+            81
+          ],
+          [
+            11,
+            100,
+            62,
+            33,
+            40
+          ],
+          [
+            3,
+            50,
+            4
+          ],
+          [
+            84,
+            71,
+            67,
+            69,
+            75
+          ],
+          [
+            17,
+            36,
+            47,
+            16,
+            43,
+            97
+          ],
+          [
+            78,
+            15,
+            65,
+            89
+          ],
+          [
+            31,
+            8,
+            72,
+            79,
+            10,
+            21
+          ],
+          [
+            1,
+            42,
+            91,
+            14,
+            48,
+            37
+          ],
+          [
+            45,
+            35,
+            82,
+            51
+          ],
+          [
+            70,
+            55,
+            53
+          ],
+          [
+            19,
+            52,
+            92
+          ],
+          [
+            99,
+            96,
+            46,
+            57,
+            76
+          ],
+          [
+            73,
+            63
+          ],
+          [
+            83
+          ],
+          [
+            87,
+            93
+          ],
+          [
+            80,
+            18,
+            41
+          ],
+          [
+            13,
+            60
+          ],
+          [
+            9,
+            34
+          ]
+        ],
+        "score": 32653.0,
+        "distance": 2653.0,
+        "vehicles_used": 25,
+        "unserved": 3,
+        "feasible": false,
+        "violations": {
+          "unserved": 3
+        }
+      },
+      "time_s": 10.012684899993474
+    },
+    {
+      "id": "toolu_01N24CXGfhPaN3qU3saDqeYX",
+      "name": "solve_classic",
+      "arguments": {
+        "method": "ga",
+        "time_limit_s": 10
+      },
+      "is_error": false,
+      "result": {
+        "routes": [
+          [
+            65,
+            15,
+            2,
+            25
+          ],
+          [
+            50,
+            54,
+            44,
+            32
+          ],
+          [
+            70,
+            55,
+            89,
+            75,
+            58
+          ],
+          [
+            86,
+            90,
+            66,
+            81,
+            59
+          ],
+          [
+            46,
+            26,
+            94,
+            40
+          ],
+          [
+            100,
+            29,
+            98,
+            71,
+            24,
+            6
+          ],
+          [
+            1,
+            74,
+            87,
+            83,
+            88
+          ],
+          [
+            27,
+            93,
+            43,
+            97
+          ],
+          [
+            31,
+            73,
+            14,
+            10,
+            64
+          ],
+          [
+            45,
+            35,
+            61,
+            38,
+            5
+          ],
+          [
+            8,
+            49,
+            22,
+            56
+          ],
+          [
+            20,
+            67,
+            34,
+            37
+          ],
+          [
+            57,
+            82,
+            51,
+            77
+          ],
+          [
+            42,
+            13,
+            60,
+            48,
+            21
+          ],
+          [
+            68,
+            52,
+            19,
+            92
+          ],
+          [
+            11,
+            99,
+            96,
+            53,
+            39,
+            12
+          ],
+          [
+            30,
+            79
+          ],
+          [
+            18,
+            80,
+            3,
+            4
+          ],
+          [
+            78,
+            7,
+            95,
+            69
+          ],
+          [
+            17,
+            72,
+            62
+          ],
+          [
+            91,
+            63,
+            33
+          ],
+          [
+            85,
+            16,
+            36,
+            47
+          ],
+          [
+            9,
+            28,
+            84
+          ],
+          [
+            23,
+            41,
+            76
+          ]
+        ],
+        "score": 2928.1,
+        "distance": 2928.1,
+        "vehicles_used": 24,
+        "unserved": 0,
+        "feasible": true,
+        "violations": {}
+      },
+      "time_s": 10.461064199975226
+    },
+    {
+      "id": "toolu_01KdcWPZGNkXuVMKaKTsj7hx",
+      "name": "solve_classic",
+      "arguments": {
+        "method": "ga",
+        "time_limit_s": 10
+      },
+      "is_error": false,
+      "result": {
+        "routes": [
+          [
+            65,
+            15,
+            2,
+            25
+          ],
+          [
+            50,
+            54,
+            44,
+            32
+          ],
+          [
+            70,
+            55,
+            89,
+            75,
+            58
+          ],
+          [
+            86,
+            90,
+            66,
+            81,
+            59
+          ],
+          [
+            46,
+            26,
+            94,
+            40
+          ],
+          [
+            100,
+            29,
+            98,
+            71,
+            24,
+            6
+          ],
+          [
+            1,
+            74,
+            87,
+            83,
+            88
+          ],
+          [
+            27,
+            93,
+            43,
+            97
+          ],
+          [
+            31,
+            73,
+            14,
+            10,
+            64
+          ],
+          [
+            45,
+            35,
+            61,
+            38,
+            5
+          ],
+          [
+            8,
+            49,
+            22,
+            56
+          ],
+          [
+            20,
+            67,
+            34,
+            37
+          ],
+          [
+            57,
+            82,
+            51,
+            77
+          ],
+          [
+            42,
+            13,
+            60,
+            48,
+            21
+          ],
+          [
+            68,
+            52,
+            19,
+            92
+          ],
+          [
+            11,
+            99,
+            96,
+            53,
+            39,
+            12
+          ],
+          [
+            30,
+            79
+          ],
+          [
+            18,
+            80,
+            3,
+            4
+          ],
+          [
+            78,
+            7,
+            95,
+            69
+          ],
+          [
+            17,
+            72,
+            62
+          ],
+          [
+            91,
+            63,
+            33
+          ],
+          [
+            85,
+            16,
+            36,
+            47
+          ],
+          [
+            9,
+            28,
+            84
+          ],
+          [
+            23,
+            41,
+            76
+          ]
+        ],
+        "score": 2928.1,
+        "distance": 2928.1,
+        "vehicles_used": 24,
+        "unserved": 0,
+        "feasible": true,
+        "violations": {}
+      },
+      "time_s": 10.029059499996947
+    }
+  ],
+  "tokens_in": 22240,
+  "tokens_out": 1481,
+  "api_cost": 0.0029645,
+  "api_cost_eur": 0.002682319942091929,
+  "price_table_version": "2026-11-14",
+  "stop_reason": "end_turn",
+  "self_reported_score": 2928.1,
+  "wall_time_s": 48.93070580001222,
+  "solution": {
+    "routes": [
+      [
+        65,
+        15,
+        2,
+        25
+      ],
+      [
+        50,
+        54,
+        44,
+        32
+      ],
+      [
+        70,
+        55,
+        89,
+        75,
+        58
+      ],
+      [
+        86,
+        90,
+        66,
+        81,
+        59
+      ],
+      [
+        46,
+        26,
+        94,
+        40
+      ],
+      [
+        100,
+        29,
+        98,
+        71,
+        24,
+        6
+      ],
+      [
+        1,
+        74,
+        87,
+        83,
+        88
+      ],
+      [
+        27,
+        93,
+        43,
+        97
+      ],
+      [
+        31,
+        73,
+        14,
+        10,
+        64
+      ],
+      [
+        45,
+        35,
+        61,
+        38,
+        5
+      ],
+      [
+        8,
+        49,
+        22,
+        56
+      ],
+      [
+        20,
+        67,
+        34,
+        37
+      ],
+      [
+        57,
+        82,
+        51,
+        77
+      ],
+      [
+        42,
+        13,
+        60,
+        48,
+        21
+      ],
+      [
+        68,
+        52,
+        19,
+        92
+      ],
+      [
+        11,
+        99,
+        96,
+        53,
+        39,
+        12
+      ],
+      [
+        30,
+        79
+      ],
+      [
+        18,
+        80,
+        3,
+        4
+      ],
+      [
+        78,
+        7,
+        95,
+        69
+      ],
+      [
+        17,
+        72,
+        62
+      ],
+      [
+        91,
+        63,
+        33
+      ],
+      [
+        85,
+        16,
+        36,
+        47
+      ],
+      [
+        9,
+        28,
+        84
+      ],
+      [
+        23,
+        41,
+        76
+      ]
+    ]
+  },
+  "evaluation": {
+    "stops": [
+      [
+        {
+          "customer": 65,
+          "arrival": 321.5,
+          "start": 379.0,
+          "wait": 57.5,
+          "late": 0.0,
+          "load": 80.0
+        },
+        {
+          "customer": 15,
+          "arrival": 407.0,
+          "start": 407.0,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 100.0
+        },
+        {
+          "customer": 2,
+          "arrival": 437.2,
+          "start": 468.0,
+          "wait": 30.80000000000001,
+          "late": 0.0,
+          "load": 112.0
+        },
+        {
+          "customer": 25,
+          "arrival": 482.4,
+          "start": 482.4,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 204.0
+        }
+      ],
+      [
+        {
+          "customer": 50,
+          "arrival": 305.1,
+          "start": 383.0,
+          "wait": 77.89999999999998,
+          "late": 0.0,
+          "load": 92.0
+        },
+        {
+          "customer": 54,
+          "arrival": 429.2,
+          "start": 429.2,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 132.0
+        },
+        {
+          "customer": 44,
+          "arrival": 467.0,
+          "start": 467.0,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 184.0
+        },
+        {
+          "customer": 32,
+          "arrival": 492.6,
+          "start": 492.6,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 196.0
+        }
+      ],
+      [
+        {
+          "customer": 70,
+          "arrival": 308.5,
+          "start": 365.0,
+          "wait": 56.5,
+          "late": 0.0,
+          "load": 60.0
+        },
+        {
+          "customer": 55,
+          "arrival": 387.0,
+          "start": 387.0,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 172.0
+        },
+        {
+          "customer": 89,
+          "arrival": 415.0,
+          "start": 415.0,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 312.0
+        },
+        {
+          "customer": 75,
+          "arrival": 438.6,
+          "start": 440.0,
+          "wait": 1.3999999999999773,
+          "late": 0.0,
+          "load": 392.0
+        },
+        {
+          "customer": 58,
+          "arrival": 460.6,
+          "start": 460.6,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 420.0
+        }
+      ],
+      [
+        {
+          "customer": 86,
+          "arrival": 330.4,
+          "start": 330.4,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 76.0
+        },
+        {
+          "customer": 90,
+          "arrival": 356.2,
+          "start": 362.0,
+          "wait": 5.800000000000011,
+          "late": 0.0,
+          "load": 140.0
+        },
+        {
+          "customer": 66,
+          "arrival": 407.3,
+          "start": 407.3,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 260.0
+        },
+        {
+          "customer": 81,
+          "arrival": 448.40000000000003,
+          "start": 448.40000000000003,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 324.0
+        },
+        {
+          "customer": 59,
+          "arrival": 470.00000000000006,
+          "start": 480.0,
+          "wait": 9.999999999999943,
+          "late": 0.0,
+          "load": 376.0
+        }
+      ],
+      [
+        {
+          "customer": 46,
+          "arrival": 327.2,
+          "start": 346.0,
+          "wait": 18.80000000000001,
+          "late": 0.0,
+          "load": 80.0
+        },
+        {
+          "customer": 26,
+          "arrival": 373.0,
+          "start": 378.0,
+          "wait": 5.0,
+          "late": 0.0,
+          "load": 188.0
+        },
+        {
+          "customer": 94,
+          "arrival": 435.1,
+          "start": 435.1,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 252.0
+        },
+        {
+          "customer": 40,
+          "arrival": 460.1,
+          "start": 460.1,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 336.0
+        }
+      ],
+      [
+        {
+          "customer": 100,
+          "arrival": 302.7,
+          "start": 330.0,
+          "wait": 27.30000000000001,
+          "late": 0.0,
+          "load": 36.0
+        },
+        {
+          "customer": 29,
+          "arrival": 362.2,
+          "start": 362.2,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 104.0
+        },
+        {
+          "customer": 98,
+          "arrival": 386.3,
+          "start": 386.3,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 180.0
+        },
+        {
+          "customer": 71,
+          "arrival": 411.5,
+          "start": 411.5,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 220.0
+        },
+        {
+          "customer": 24,
+          "arrival": 428.5,
+          "start": 439.0,
+          "wait": 10.5,
+          "late": 0.0,
+          "load": 260.0
+        },
+        {
+          "customer": 6,
+          "arrival": 456.0,
+          "start": 456.0,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 340.0
+        }
+      ],
+      [
+        {
+          "customer": 1,
+          "arrival": 302.7,
+          "start": 302.7,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 56.0
+        },
+        {
+          "customer": 74,
+          "arrival": 332.7,
+          "start": 332.7,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 112.0
+        },
+        {
+          "customer": 87,
+          "arrival": 373.0,
+          "start": 373.0,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 272.0
+        },
+        {
+          "customer": 83,
+          "arrival": 399.4,
+          "start": 399.4,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 324.0
+        },
+        {
+          "customer": 88,
+          "arrival": 449.59999999999997,
+          "start": 449.59999999999997,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 388.0
+        }
+      ],
+      [
+        {
+          "customer": 27,
+          "arrival": 313.0,
+          "start": 340.0,
+          "wait": 27.0,
+          "late": 0.0,
+          "load": 12.0
+        },
+        {
+          "customer": 93,
+          "arrival": 387.8,
+          "start": 387.8,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 32.0
+        },
+        {
+          "customer": 43,
+          "arrival": 431.7,
+          "start": 433.0,
+          "wait": 1.3000000000000114,
+          "late": 0.0,
+          "load": 112.0
+        },
+        {
+          "customer": 97,
+          "arrival": 450.0,
+          "start": 450.0,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 272.0
+        }
+      ],
+      [
+        {
+          "customer": 31,
+          "arrival": 308.6,
+          "start": 322.0,
+          "wait": 13.399999999999977,
+          "late": 0.0,
+          "load": 24.0
+        },
+        {
+          "customer": 73,
+          "arrival": 341.2,
+          "start": 341.2,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 36.0
+        },
+        {
+          "customer": 14,
+          "arrival": 376.2,
+          "start": 376.2,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 76.0
+        },
+        {
+          "customer": 10,
+          "arrival": 391.2,
+          "start": 399.0,
+          "wait": 7.800000000000011,
+          "late": 0.0,
+          "load": 196.0
+        },
+        {
+          "customer": 64,
+          "arrival": 444.5,
+          "start": 444.5,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 300.0
+        }
+      ],
+      [
+        {
+          "customer": 45,
+          "arrival": 331.0,
+          "start": 331.0,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 160.0
+        },
+        {
+          "customer": 35,
+          "arrival": 348.0,
+          "start": 348.0,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 200.0
+        },
+        {
+          "customer": 61,
+          "arrival": 363.3,
+          "start": 380.0,
+          "wait": 16.69999999999999,
+          "late": 0.0,
+          "load": 280.0
+        },
+        {
+          "customer": 38,
+          "arrival": 403.4,
+          "start": 427.0,
+          "wait": 23.600000000000023,
+          "late": 0.0,
+          "load": 360.0
+        },
+        {
+          "customer": 5,
+          "arrival": 440.6,
+          "start": 440.6,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 400.0
+        }
+      ],
+      [
+        {
+          "customer": 8,
+          "arrival": 313.4,
+          "start": 353.0,
+          "wait": 39.60000000000002,
+          "late": 0.0,
+          "load": 56.0
+        },
+        {
+          "customer": 49,
+          "arrival": 379.2,
+          "start": 379.2,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 96.0
+        },
+        {
+          "customer": 22,
+          "arrival": 438.8,
+          "start": 438.8,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 136.0
+        },
+        {
+          "customer": 56,
+          "arrival": 459.90000000000003,
+          "start": 459.90000000000003,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 216.0
+        }
+      ],
+      [
+        {
+          "customer": 20,
+          "arrival": 333.0,
+          "start": 353.0,
+          "wait": 20.0,
+          "late": 0.0,
+          "load": 120.0
+        },
+        {
+          "customer": 67,
+          "arrival": 373.1,
+          "start": 380.0,
+          "wait": 6.899999999999977,
+          "late": 0.0,
+          "load": 280.0
+        },
+        {
+          "customer": 34,
+          "arrival": 400.7,
+          "start": 400.7,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 360.0
+        },
+        {
+          "customer": 37,
+          "arrival": 433.7,
+          "start": 433.7,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 460.0
+        }
+      ],
+      [
+        {
+          "customer": 57,
+          "arrival": 329.2,
+          "start": 360.0,
+          "wait": 30.80000000000001,
+          "late": 0.0,
+          "load": 80.0
+        },
+        {
+          "customer": 82,
+          "arrival": 409.3,
+          "start": 409.3,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 160.0
+        },
+        {
+          "customer": 51,
+          "arrival": 424.3,
+          "start": 424.3,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 200.0
+        },
+        {
+          "customer": 77,
+          "arrival": 454.5,
+          "start": 454.5,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 268.0
+        }
+      ],
+      [
+        {
+          "customer": 42,
+          "arrival": 339.4,
+          "start": 339.4,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 40.0
+        },
+        {
+          "customer": 13,
+          "arrival": 358.0,
+          "start": 358.0,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 80.0
+        },
+        {
+          "customer": 60,
+          "arrival": 373.8,
+          "start": 373.8,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 160.0
+        },
+        {
+          "customer": 48,
+          "arrival": 388.8,
+          "start": 403.0,
+          "wait": 14.199999999999989,
+          "late": 0.0,
+          "load": 280.0
+        },
+        {
+          "customer": 21,
+          "arrival": 421.0,
+          "start": 421.0,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 320.0
+        }
+      ],
+      [
+        {
+          "customer": 68,
+          "arrival": 320.3,
+          "start": 352.0,
+          "wait": 31.69999999999999,
+          "late": 0.0,
+          "load": 80.0
+        },
+        {
+          "customer": 52,
+          "arrival": 392.8,
+          "start": 392.8,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 160.0
+        },
+        {
+          "customer": 19,
+          "arrival": 407.8,
+          "start": 407.8,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 200.0
+        },
+        {
+          "customer": 92,
+          "arrival": 426.40000000000003,
+          "start": 426.40000000000003,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 240.0
+        }
+      ],
+      [
+        {
+          "customer": 11,
+          "arrival": 299.1,
+          "start": 299.1,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 64.0
+        },
+        {
+          "customer": 99,
+          "arrival": 339.5,
+          "start": 339.5,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 104.0
+        },
+        {
+          "customer": 96,
+          "arrival": 352.5,
+          "start": 352.5,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 144.0
+        },
+        {
+          "customer": 53,
+          "arrival": 396.9,
+          "start": 396.9,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 236.0
+        },
+        {
+          "customer": 39,
+          "arrival": 429.2,
+          "start": 429.2,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 312.0
+        },
+        {
+          "customer": 12,
+          "arrival": 462.5,
+          "start": 462.5,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 352.0
+        }
+      ],
+      [
+        {
+          "customer": 30,
+          "arrival": 330.9,
+          "start": 363.0,
+          "wait": 32.10000000000002,
+          "late": 0.0,
+          "load": 124.0
+        },
+        {
+          "customer": 79,
+          "arrival": 398.9,
+          "start": 404.0,
+          "wait": 5.100000000000023,
+          "late": 0.0,
+          "load": 244.0
+        }
+      ],
+      [
+        {
+          "customer": 18,
+          "arrival": 325.7,
+          "start": 325.7,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 40.0
+        },
+        {
+          "customer": 80,
+          "arrival": 338.7,
+          "start": 338.7,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 120.0
+        },
+        {
+          "customer": 3,
+          "arrival": 380.7,
+          "start": 380.7,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 156.0
+        },
+        {
+          "customer": 4,
+          "arrival": 413.0,
+          "start": 416.0,
+          "wait": 3.0,
+          "late": 0.0,
+          "load": 236.0
+        }
+      ],
+      [
+        {
+          "customer": 78,
+          "arrival": 302.1,
+          "start": 334.0,
+          "wait": 31.899999999999977,
+          "late": 0.0,
+          "load": 36.0
+        },
+        {
+          "customer": 7,
+          "arrival": 350.3,
+          "start": 355.0,
+          "wait": 4.699999999999989,
+          "late": 0.0,
+          "load": 112.0
+        },
+        {
+          "customer": 95,
+          "arrival": 382.0,
+          "start": 382.0,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 136.0
+        },
+        {
+          "customer": 69,
+          "arrival": 423.9,
+          "start": 429.0,
+          "wait": 5.100000000000023,
+          "late": 0.0,
+          "load": 168.0
+        }
+      ],
+      [
+        {
+          "customer": 17,
+          "arrival": 321.5,
+          "start": 321.5,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 40.0
+        },
+        {
+          "customer": 72,
+          "arrival": 370.5,
+          "start": 370.5,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 76.0
+        },
+        {
+          "customer": 62,
+          "arrival": 395.2,
+          "start": 395.2,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 148.0
+        }
+      ],
+      [
+        {
+          "customer": 91,
+          "arrival": 338.2,
+          "start": 349.0,
+          "wait": 10.800000000000011,
+          "late": 0.0,
+          "load": 80.0
+        },
+        {
+          "customer": 63,
+          "arrival": 364.0,
+          "start": 364.0,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 120.0
+        },
+        {
+          "customer": 33,
+          "arrival": 399.9,
+          "start": 399.9,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 128.0
+        }
+      ],
+      [
+        {
+          "customer": 85,
+          "arrival": 315.4,
+          "start": 318.0,
+          "wait": 2.6000000000000227,
+          "late": 0.0,
+          "load": 32.0
+        },
+        {
+          "customer": 16,
+          "arrival": 343.0,
+          "start": 363.0,
+          "wait": 20.0,
+          "late": 0.0,
+          "load": 152.0
+        },
+        {
+          "customer": 36,
+          "arrival": 380.2,
+          "start": 380.2,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 192.0
+        },
+        {
+          "customer": 47,
+          "arrival": 396.0,
+          "start": 396.0,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 312.0
+        }
+      ],
+      [
+        {
+          "customer": 9,
+          "arrival": 327.0,
+          "start": 327.0,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 24.0
+        },
+        {
+          "customer": 28,
+          "arrival": 366.1,
+          "start": 366.1,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 64.0
+        },
+        {
+          "customer": 84,
+          "arrival": 381.40000000000003,
+          "start": 381.40000000000003,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 224.0
+        }
+      ],
+      [
+        {
+          "customer": 23,
+          "arrival": 297.2,
+          "start": 329.0,
+          "wait": 31.80000000000001,
+          "late": 0.0,
+          "load": 108.0
+        },
+        {
+          "customer": 41,
+          "arrival": 363.6,
+          "start": 363.6,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 228.0
+        },
+        {
+          "customer": 76,
+          "arrival": 391.0,
+          "start": 391.0,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 348.0
+        }
+      ]
+    ],
+    "distance": 2928.1,
+    "total_wait": 681.6,
+    "total_late": 0.0,
+    "vehicles_used": 24,
+    "unserved": 0,
+    "overload": 0.0,
+    "score": 2928.1,
+    "violations": [],
+    "feasible": true
+  },
+  "parse_status": "ok"
+}

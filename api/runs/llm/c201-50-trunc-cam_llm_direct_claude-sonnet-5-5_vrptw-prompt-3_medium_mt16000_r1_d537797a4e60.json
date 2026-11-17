@@ -1,0 +1,530 @@
+{
+  "run_id": "1467634454194abc82ecac35e7d9ca6c",
+  "date": "2026-11-16T23:09:37.654395Z",
+  "git_sha": "115ddeb86af1408feb9554ac40142e51892a5293",
+  "hardware": "Windows-11-10.0.26200-SP0",
+  "instance_id": "c201-50-trunc-cam",
+  "instance_hash": "d537797a4e60874d0133c1acd3d3956c5cebbc0c3779a71424e28b0e99ed61db",
+  "method": "llm_direct",
+  "role": "llm_direct",
+  "seed": 0,
+  "params": {
+    "max_tokens": 16000,
+    "recheck": false,
+    "effort": "medium",
+    "tier": 3,
+    "rep": 1
+  },
+  "provider": "anthropic",
+  "model_requested": "claude-sonnet-5-5",
+  "model_returned": "claude-sonnet-5-5",
+  "prompt_version": "vrptw-prompt-3",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Don't give example, hypothetical or sample answers. The audience is academic.\nToday you are going to be an expert in solving VRPTW problems. You need to solve a VRPTW problem.\nNext, you have the description of the problem:\nWe have 50 customers, located with their (X,Y) coordinates, all measured in distance units from the origin. The vehicles start from the depot (Customer 0) in the position (63,93), and need to attend to the customers. We can use at most 25 vehicles, all leaving the depot at time 451; they must be back at the depot no later than 3841; arriving later counts as LATE ARRIVAL TIME at the depot. Each vehicle has a capacity of 4200, and each customer has a DEMAND that is loaded in the vehicle that serves it. The sum of the demands of the customers of one route must not exceed the capacity. The vehicles altogether must reach all customers.\nWe are looking for the optimal routes in terms of the score that the vehicles must take in order to deliver to all customers, if possible. The calculation of the score is explained later.\nTo simplify the problem, we will consider a uniform vehicle velocity of 1 distance unit per time unit, so the travel time between two points equals the travel distance. Key concepts: The time window of the customer is explicit in the READY TIME and DUE TIME columns, meaning that the customer is only available for delivery between the READY TIME value and the DUE TIME value. These values are expressed in time units. The SERVICE TIME column is the other critical one, it represents the time that the vehicles need to deliver to the customer and it is also expressed in time units. In other words, the delivery must start between READY TIME and DUE TIME and the delivery lasts SERVICE TIME time units.\nIf it is not possible to reach all customers, the better solution would be the one where most customers are attended.\nYou can use modern approaches to solve VRPTW problem, such as: Branch and Price, Branch and Cut, Dynamic Programming with State Space Relaxation, Lagrangian Relaxation, Heuristic Search with Relaxation.\nFor each vehicle, compute the visits one after another with these quantities, as floats:\n- TRAVEL STARTS AT: the time the vehicle leaves the previous point (the depot or the previous customer).\n- TRAVEL DISTANCE: the distance from the previous point to the customer.\n- ARRIVAL TIME = TRAVEL STARTS AT + TRAVEL DISTANCE.\n- WAITING TIME: if ARRIVAL TIME < READY TIME then READY TIME - ARRIVAL TIME, otherwise 0. The vehicle waits until READY TIME.\n- LATE ARRIVAL TIME: if ARRIVAL TIME > DUE TIME then ARRIVAL TIME - DUE TIME, otherwise 0.\n- ENDS DELIVERY AT = max(ARRIVAL TIME, READY TIME) + SERVICE TIME.\n- ACCUMULATED DISTANCE: the distance travelled by the vehicle so far.\nRemember that, for next travel, TRAVEL STARTS AT = ENDS DELIVERY AT. And all vehicles must return to the depot once they have finished the routes. This TRAVEL DISTANCE must be taken into account in the ACCUMULATED DISTANCE.\nGive the Score of the solution. Final score = 10000 x unattended customers + sum of the ACCUMULATED DISTANCE of each vehicle + 1000 x sum of LATE ARRIVAL TIME + 1000 x units of load above the vehicle capacity. As you see, for calculating the score, the most heavily penalized items are the ones with the largest weights above. These items have no cost in the score: the number of vehicles used, WAITING TIME. Distances are Euclidean distances truncated to one decimal: each leg between two points measures floor(10 x d) / 10 distance units, where d is the exact Euclidean distance. Use these truncated leg distances in every calculation.\nTime windows and vehicle capacity are hard constraints: the delivery must start no later than DUE TIME, and the load of each vehicle cannot exceed its capacity. A solution with any late arrival or any excess load is infeasible, and the penalty weights above only discourage that, they do not make it acceptable. Among feasible solutions, the best one is the one with the smallest total distance (truncated to one decimal).\nA vehicle can visit one or more than one customer, not all vehicles must visit the same number of customers, and vehicles that visit no customer are not used. Have in mind that it can be better not using all vehicles, because this could lead to a better solution than using all vehicles.\nRead all information carefully in order to give the solution.\nIt is mandatory for you that you dont have to provide any code.\nIt is mandatory for you to give a solution that you can afford computationally.\nDo not give example, hypothetical or sample answers.\nThe data of the problem follows, one customer per row (the depot is Customer 0 and is not in the table):\nCUSTOMER,X,Y,DEMAND,READY_TIME,DUE_TIME,SERVICE_TIME\n1,83,83,60,2556,2716,90\n2,43,98,180,664,824,90\n3,73,55,120,1422,1582,90\n4,93,85,60,2364,2524,90\n5,81,88,60,3209,3369,90\n6,38,71,120,2762,2922,90\n7,58,57,120,1898,2058,90\n8,71,69,120,948,1108,90\n9,81,79,60,2743,2903,90\n10,73,61,240,1136,1296,90\n11,63,83,60,461,621,90\n12,43,111,120,1524,1684,90\n13,38,75,180,2856,3016,90\n14,61,81,120,473,633,90\n15,88,87,180,2460,2620,90\n16,57,83,120,3434,3594,90\n17,43,81,60,3052,3212,90\n18,61,76,60,660,820,90\n19,33,68,60,2288,2448,90\n20,63,78,60,567,727,90\n21,63,73,60,849,1009,90\n22,73,63,180,1044,1204,90\n23,78,63,120,1232,1392,90\n24,68,58,60,1704,1864,90\n25,28,73,240,2385,2545,90\n26,73,53,180,1514,1674,90\n27,68,61,120,1797,1957,90\n28,47,75,240,2955,3115,90\n29,47,88,60,3242,3402,90\n30,58,73,60,754,914,90\n31,47,67,60,2094,2254,90\n32,38,68,120,2193,2353,90\n33,68,53,120,1609,1769,90\n34,38,105,60,762,922,90\n35,48,95,60,476,636,90\n36,78,86,60,3024,3184,90\n37,78,83,60,2931,3091,90\n38,33,73,240,2667,2827,90\n39,44,88,60,3149,3309,90\n40,28,75,60,2477,2637,90\n41,95,89,60,2270,2430,90\n42,51,61,60,1996,2156,90\n43,47,113,60,1712,1872,90\n44,28,78,120,2570,2730,90\n45,93,101,60,1418,1578,90\n46,78,58,60,1327,1487,90\n47,53,87,120,3338,3498,90\n48,44,115,60,1618,1778,90\n49,73,89,60,3307,3467,90\n50,81,86,120,3117,3277,90\nRemember the goals: vehicle route data and the score of the problem.\nIt is mandatory that your answer ends with a single JSON block, and nothing after it, with exactly this format: {\"routes\": [[...], ...], \"score\": number}. \"routes\" has one list per vehicle used, with the CUSTOMER numbers of the customers in the order they are visited (do not include the depot, Customer 0), and \"score\" is the final score of that solution.\n"
+    },
+    {
+      "role": "assistant",
+      "content": "I built this solution by hand with a time-ordered chain heuristic, not an exact method such as Branch and Price, so it is feasible but I have not proved it optimal. The two routes were sequenced by READY TIME and then simulated leg by leg with the truncated distances.\n\n**Approach**\n- Total service time is 50 × 90 = 4500, which exceeds the 3390-unit horizon (451 to 3841), so at least two vehicles are needed.\n- The time windows are narrow and the service times long. Customers that are close together and ordered by READY TIME can therefore be chained into one route, with waiting absorbing small timing slack.\n- The only exception is customer 45, which sits far to the east in the early period (window 1418–1578). It was inserted between 34 and 12 in the northern-western chain.\n\n**Route 1 (32 customers)**\n- Sequence: 11, 20, 18, 30, 21, 8, 22, 10, 23, 46, 3, 26, 33, 24, 27, 7, 42, 31, 32, 19, 25, 40, 44, 38, 6, 13, 28, 17, 39, 29, 47, 16.\n- Load is 3660, within the 4200 capacity.\n- Every arrival is within its window. Examples: 11 at 461.0 (window 461–621), 30 at 754.2 (754–914), 31 at 2093.7 with a 0.3 wait, and 16 at 3434.1 (3434–3594).\n- It returns to the depot at 3535.7, before 3841.\n- Distance is 192.9.\n\n**Route 2 (18 customers)**\n- Sequence: 14, 35, 2, 34, 45, 12, 48, 43, 41, 4, 15, 1, 9, 37, 36, 50, 5, 49.\n- Load is 1500, within capacity.\n- Every arrival is within its window. Examples: 14 at 463.1 (wait to 473), 45 at 921.6 (wait to 1418), 12 at 1558.9 (window 1524–1684), 41 at 1890.2 (wait to 2270), and 49 at 3307.0 (window 3307–3467).\n- It returns to the depot at 3407.7, before 3841.\n- Distance is 265.1.\n\n**Score**\n- All 50 customers are served, so there is no 10000 penalty.\n- There is no late arrival and no excess load.\n- Score = 192.9 + 265.1 = 458.0.\n\n{\"routes\": [[11,20,18,30,21,8,22,10,23,46,3,26,33,24,27,7,42,31,32,19,25,40,44,38,6,13,28,17,39,29,47,16],[14,35,2,34,45,12,48,43,41,4,15,1,9,37,36,50,5,49]], \"score\": 458.0}",
+      "tool_calls": [],
+      "raw": [
+        {
+          "signature": "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",
+          "thinking": "",
+          "type": "thinking"
+        },
+        {
+          "text": "I built this solution by hand with a time-ordered chain heuristic, not an exact method such as Branch and Price, so it is feasible but I have not proved it optimal. The two routes were sequenced by READY TIME and then simulated leg by leg with the truncated distances.\n\n**Approach**\n- Total service time is 50 × 90 = 4500, which exceeds the 3390-unit horizon (451 to 3841), so at least two vehicles are needed.\n- The time windows are narrow and the service times long. Customers that are close together and ordered by READY TIME can therefore be chained into one route, with waiting absorbing small timing slack.\n- The only exception is customer 45, which sits far to the east in the early period (window 1418–1578). It was inserted between 34 and 12 in the northern-western chain.\n\n**Route 1 (32 customers)**\n- Sequence: 11, 20, 18, 30, 21, 8, 22, 10, 23, 46, 3, 26, 33, 24, 27, 7, 42, 31, 32, 19, 25, 40, 44, 38, 6, 13, 28, 17, 39, 29, 47, 16.\n- Load is 3660, within the 4200 capacity.\n- Every arrival is within its window. Examples: 11 at 461.0 (window 461–621), 30 at 754.2 (754–914), 31 at 2093.7 with a 0.3 wait, and 16 at 3434.1 (3434–3594).\n- It returns to the depot at 3535.7, before 3841.\n- Distance is 192.9.\n\n**Route 2 (18 customers)**\n- Sequence: 14, 35, 2, 34, 45, 12, 48, 43, 41, 4, 15, 1, 9, 37, 36, 50, 5, 49.\n- Load is 1500, within capacity.\n- Every arrival is within its window. Examples: 14 at 463.1 (wait to 473), 45 at 921.6 (wait to 1418), 12 at 1558.9 (window 1524–1684), 41 at 1890.2 (wait to 2270), and 49 at 3307.0 (window 3307–3467).\n- It returns to the depot at 3407.7, before 3841.\n- Distance is 265.1.\n\n**Score**\n- All 50 customers are served, so there is no 10000 penalty.\n- There is no late arrival and no excess load.\n- Score = 192.9 + 265.1 = 458.0.\n\n{\"routes\": [[11,20,18,30,21,8,22,10,23,46,3,26,33,24,27,7,42,31,32,19,25,40,44,38,6,13,28,17,39,29,47,16],[14,35,2,34,45,12,48,43,41,4,15,1,9,37,36,50,5,49]], \"score\": 458.0}",
+          "type": "text"
+        }
+      ]
+    }
+  ],
+  "raw_response": "I built this solution by hand with a time-ordered chain heuristic, not an exact method such as Branch and Price, so it is feasible but I have not proved it optimal. The two routes were sequenced by READY TIME and then simulated leg by leg with the truncated distances.\n\n**Approach**\n- Total service time is 50 × 90 = 4500, which exceeds the 3390-unit horizon (451 to 3841), so at least two vehicles are needed.\n- The time windows are narrow and the service times long. Customers that are close together and ordered by READY TIME can therefore be chained into one route, with waiting absorbing small timing slack.\n- The only exception is customer 45, which sits far to the east in the early period (window 1418–1578). It was inserted between 34 and 12 in the northern-western chain.\n\n**Route 1 (32 customers)**\n- Sequence: 11, 20, 18, 30, 21, 8, 22, 10, 23, 46, 3, 26, 33, 24, 27, 7, 42, 31, 32, 19, 25, 40, 44, 38, 6, 13, 28, 17, 39, 29, 47, 16.\n- Load is 3660, within the 4200 capacity.\n- Every arrival is within its window. Examples: 11 at 461.0 (window 461–621), 30 at 754.2 (754–914), 31 at 2093.7 with a 0.3 wait, and 16 at 3434.1 (3434–3594).\n- It returns to the depot at 3535.7, before 3841.\n- Distance is 192.9.\n\n**Route 2 (18 customers)**\n- Sequence: 14, 35, 2, 34, 45, 12, 48, 43, 41, 4, 15, 1, 9, 37, 36, 50, 5, 49.\n- Load is 1500, within capacity.\n- Every arrival is within its window. Examples: 14 at 463.1 (wait to 473), 45 at 921.6 (wait to 1418), 12 at 1558.9 (window 1524–1684), 41 at 1890.2 (wait to 2270), and 49 at 3307.0 (window 3307–3467).\n- It returns to the depot at 3407.7, before 3841.\n- Distance is 265.1.\n\n**Score**\n- All 50 customers are served, so there is no 10000 penalty.\n- There is no late arrival and no excess load.\n- Score = 192.9 + 265.1 = 458.0.\n\n{\"routes\": [[11,20,18,30,21,8,22,10,23,46,3,26,33,24,27,7,42,31,32,19,25,40,44,38,6,13,28,17,39,29,47,16],[14,35,2,34,45,12,48,43,41,4,15,1,9,37,36,50,5,49]], \"score\": 458.0}",
+  "tool_calls": null,
+  "tokens_in": 2627,
+  "tokens_out": 5456,
+  "api_cost": 0.059814,
+  "api_cost_eur": 0.054120521172638436,
+  "price_table_version": "2026-11-14",
+  "stop_reason": "end_turn",
+  "self_reported_score": 458.0,
+  "wall_time_s": 31.767092800000682,
+  "solution": {
+    "routes": [
+      [
+        11,
+        20,
+        18,
+        30,
+        21,
+        8,
+        22,
+        10,
+        23,
+        46,
+        3,
+        26,
+        33,
+        24,
+        27,
+        7,
+        42,
+        31,
+        32,
+        19,
+        25,
+        40,
+        44,
+        38,
+        6,
+        13,
+        28,
+        17,
+        39,
+        29,
+        47,
+        16
+      ],
+      [
+        14,
+        35,
+        2,
+        34,
+        45,
+        12,
+        48,
+        43,
+        41,
+        4,
+        15,
+        1,
+        9,
+        37,
+        36,
+        50,
+        5,
+        49
+      ]
+    ]
+  },
+  "evaluation": {
+    "stops": [
+      [
+        {
+          "customer": 11,
+          "arrival": 461.0,
+          "start": 461.0,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 60.0
+        },
+        {
+          "customer": 20,
+          "arrival": 556.0,
+          "start": 567.0,
+          "wait": 11.0,
+          "late": 0.0,
+          "load": 120.0
+        },
+        {
+          "customer": 18,
+          "arrival": 659.8,
+          "start": 660.0,
+          "wait": 0.20000000000004547,
+          "late": 0.0,
+          "load": 180.0
+        },
+        {
+          "customer": 30,
+          "arrival": 754.2,
+          "start": 754.2,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 240.0
+        },
+        {
+          "customer": 21,
+          "arrival": 849.2,
+          "start": 849.2,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 300.0
+        },
+        {
+          "customer": 8,
+          "arrival": 948.1,
+          "start": 948.1,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 420.0
+        },
+        {
+          "customer": 22,
+          "arrival": 1044.3999999999999,
+          "start": 1044.3999999999999,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 600.0
+        },
+        {
+          "customer": 10,
+          "arrival": 1136.3999999999999,
+          "start": 1136.3999999999999,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 840.0
+        },
+        {
+          "customer": 23,
+          "arrival": 1231.6999999999998,
+          "start": 1232.0,
+          "wait": 0.3000000000001819,
+          "late": 0.0,
+          "load": 960.0
+        },
+        {
+          "customer": 46,
+          "arrival": 1327.0,
+          "start": 1327.0,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 1020.0
+        },
+        {
+          "customer": 3,
+          "arrival": 1422.8,
+          "start": 1422.8,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 1140.0
+        },
+        {
+          "customer": 26,
+          "arrival": 1514.8,
+          "start": 1514.8,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 1320.0
+        },
+        {
+          "customer": 33,
+          "arrival": 1609.8,
+          "start": 1609.8,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 1440.0
+        },
+        {
+          "customer": 24,
+          "arrival": 1704.8,
+          "start": 1704.8,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 1500.0
+        },
+        {
+          "customer": 27,
+          "arrival": 1797.8,
+          "start": 1797.8,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 1620.0
+        },
+        {
+          "customer": 7,
+          "arrival": 1898.5,
+          "start": 1898.5,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 1740.0
+        },
+        {
+          "customer": 42,
+          "arrival": 1996.5,
+          "start": 1996.5,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 1800.0
+        },
+        {
+          "customer": 31,
+          "arrival": 2093.7,
+          "start": 2094.0,
+          "wait": 0.3000000000001819,
+          "late": 0.0,
+          "load": 1860.0
+        },
+        {
+          "customer": 32,
+          "arrival": 2193.0,
+          "start": 2193.0,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 1980.0
+        },
+        {
+          "customer": 19,
+          "arrival": 2288.0,
+          "start": 2288.0,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 2040.0
+        },
+        {
+          "customer": 25,
+          "arrival": 2385.0,
+          "start": 2385.0,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 2280.0
+        },
+        {
+          "customer": 40,
+          "arrival": 2477.0,
+          "start": 2477.0,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 2340.0
+        },
+        {
+          "customer": 44,
+          "arrival": 2570.0,
+          "start": 2570.0,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 2460.0
+        },
+        {
+          "customer": 38,
+          "arrival": 2667.0,
+          "start": 2667.0,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 2700.0
+        },
+        {
+          "customer": 6,
+          "arrival": 2762.3,
+          "start": 2762.3,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 2820.0
+        },
+        {
+          "customer": 13,
+          "arrival": 2856.3,
+          "start": 2856.3,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 3000.0
+        },
+        {
+          "customer": 28,
+          "arrival": 2955.3,
+          "start": 2955.3,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 3240.0
+        },
+        {
+          "customer": 17,
+          "arrival": 3052.5,
+          "start": 3052.5,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 3300.0
+        },
+        {
+          "customer": 39,
+          "arrival": 3149.5,
+          "start": 3149.5,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 3360.0
+        },
+        {
+          "customer": 29,
+          "arrival": 3242.5,
+          "start": 3242.5,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 3420.0
+        },
+        {
+          "customer": 47,
+          "arrival": 3338.5,
+          "start": 3338.5,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 3540.0
+        },
+        {
+          "customer": 16,
+          "arrival": 3434.1,
+          "start": 3434.1,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 3660.0
+        }
+      ],
+      [
+        {
+          "customer": 14,
+          "arrival": 463.1,
+          "start": 473.0,
+          "wait": 9.899999999999977,
+          "late": 0.0,
+          "load": 120.0
+        },
+        {
+          "customer": 35,
+          "arrival": 582.1,
+          "start": 582.1,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 180.0
+        },
+        {
+          "customer": 2,
+          "arrival": 677.9,
+          "start": 677.9,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 360.0
+        },
+        {
+          "customer": 34,
+          "arrival": 776.5,
+          "start": 776.5,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 420.0
+        },
+        {
+          "customer": 45,
+          "arrival": 921.6,
+          "start": 1418.0,
+          "wait": 496.4,
+          "late": 0.0,
+          "load": 480.0
+        },
+        {
+          "customer": 12,
+          "arrival": 1558.9,
+          "start": 1558.9,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 600.0
+        },
+        {
+          "customer": 48,
+          "arrival": 1653.0,
+          "start": 1653.0,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 660.0
+        },
+        {
+          "customer": 43,
+          "arrival": 1746.6,
+          "start": 1746.6,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 720.0
+        },
+        {
+          "customer": 41,
+          "arrival": 1890.1999999999998,
+          "start": 2270.0,
+          "wait": 379.8000000000002,
+          "late": 0.0,
+          "load": 780.0
+        },
+        {
+          "customer": 4,
+          "arrival": 2364.4,
+          "start": 2364.4,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 840.0
+        },
+        {
+          "customer": 15,
+          "arrival": 2459.7000000000003,
+          "start": 2460.0,
+          "wait": 0.29999999999972715,
+          "late": 0.0,
+          "load": 1020.0
+        },
+        {
+          "customer": 1,
+          "arrival": 2556.4,
+          "start": 2556.4,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 1080.0
+        },
+        {
+          "customer": 9,
+          "arrival": 2650.8,
+          "start": 2743.0,
+          "wait": 92.19999999999982,
+          "late": 0.0,
+          "load": 1140.0
+        },
+        {
+          "customer": 37,
+          "arrival": 2838.0,
+          "start": 2931.0,
+          "wait": 93.0,
+          "late": 0.0,
+          "load": 1200.0
+        },
+        {
+          "customer": 36,
+          "arrival": 3024.0,
+          "start": 3024.0,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 1260.0
+        },
+        {
+          "customer": 50,
+          "arrival": 3117.0,
+          "start": 3117.0,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 1380.0
+        },
+        {
+          "customer": 5,
+          "arrival": 3209.0,
+          "start": 3209.0,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 1440.0
+        },
+        {
+          "customer": 49,
+          "arrival": 3307.0,
+          "start": 3307.0,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 1500.0
+        }
+      ]
+    ],
+    "distance": 458.0,
+    "total_wait": 1083.4,
+    "total_late": 0.0,
+    "vehicles_used": 2,
+    "unserved": 0,
+    "overload": 0.0,
+    "score": 458.0,
+    "violations": [],
+    "feasible": true
+  },
+  "parse_status": "ok"
+}

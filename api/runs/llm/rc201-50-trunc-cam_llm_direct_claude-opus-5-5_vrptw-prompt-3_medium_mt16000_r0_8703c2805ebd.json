@@ -1,0 +1,542 @@
+{
+  "run_id": "91bb7d29ff9c44c7a191bc10ff5f00b9",
+  "date": "2026-11-16T23:02:51.929672Z",
+  "git_sha": "115ddeb86af1408feb9554ac40142e51892a5293",
+  "hardware": "Windows-11-10.0.26200-SP0",
+  "instance_id": "rc201-50-trunc-cam",
+  "instance_hash": "8703c2805ebd0b441fb357c0e39cc781f695afdc1c96614ccaa08e89679baa60",
+  "method": "llm_direct",
+  "role": "llm_direct",
+  "seed": 0,
+  "params": {
+    "max_tokens": 16000,
+    "recheck": false,
+    "effort": "medium",
+    "tier": 3,
+    "rep": 0
+  },
+  "provider": "anthropic",
+  "model_requested": "claude-opus-5-5",
+  "model_returned": "claude-opus-5-5",
+  "prompt_version": "vrptw-prompt-3",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Don't give example, hypothetical or sample answers. The audience is academic.\nToday you are going to be an expert in solving VRPTW problems. You need to solve a VRPTW problem.\nNext, you have the description of the problem:\nWe have 50 customers, located with their (X,Y) coordinates, all measured in distance units from the origin. The vehicles start from the depot (Customer 0) in the position (108,72), and need to attend to the customers. We can use at most 25 vehicles, all leaving the depot at time 278; they must be back at the depot no later than 1238; arriving later counts as LATE ARRIVAL TIME at the depot. Each vehicle has a capacity of 8000, and each customer has a DEMAND that is loaded in the vehicle that serves it. The sum of the demands of the customers of one route must not exceed the capacity. The vehicles altogether must reach all customers.\nWe are looking for the optimal routes in terms of the score that the vehicles must take in order to deliver to all customers, if possible. The calculation of the score is explained later.\nTo simplify the problem, we will consider a uniform vehicle velocity of 1 distance unit per time unit, so the travel time between two points equals the travel distance. Key concepts: The time window of the customer is explicit in the READY TIME and DUE TIME columns, meaning that the customer is only available for delivery between the READY TIME value and the DUE TIME value. These values are expressed in time units. The SERVICE TIME column is the other critical one, it represents the time that the vehicles need to deliver to the customer and it is also expressed in time units. In other words, the delivery must start between READY TIME and DUE TIME and the delivery lasts SERVICE TIME time units.\nIf it is not possible to reach all customers, the better solution would be the one where most customers are attended.\nYou can use modern approaches to solve VRPTW problem, such as: Branch and Price, Branch and Cut, Dynamic Programming with State Space Relaxation, Lagrangian Relaxation, Heuristic Search with Relaxation.\nFor each vehicle, compute the visits one after another with these quantities, as floats:\n- TRAVEL STARTS AT: the time the vehicle leaves the previous point (the depot or the previous customer).\n- TRAVEL DISTANCE: the distance from the previous point to the customer.\n- ARRIVAL TIME = TRAVEL STARTS AT + TRAVEL DISTANCE.\n- WAITING TIME: if ARRIVAL TIME < READY TIME then READY TIME - ARRIVAL TIME, otherwise 0. The vehicle waits until READY TIME.\n- LATE ARRIVAL TIME: if ARRIVAL TIME > DUE TIME then ARRIVAL TIME - DUE TIME, otherwise 0.\n- ENDS DELIVERY AT = max(ARRIVAL TIME, READY TIME) + SERVICE TIME.\n- ACCUMULATED DISTANCE: the distance travelled by the vehicle so far.\nRemember that, for next travel, TRAVEL STARTS AT = ENDS DELIVERY AT. And all vehicles must return to the depot once they have finished the routes. This TRAVEL DISTANCE must be taken into account in the ACCUMULATED DISTANCE.\nGive the Score of the solution. Final score = 10000 x unattended customers + sum of the ACCUMULATED DISTANCE of each vehicle + 1000 x sum of LATE ARRIVAL TIME + 1000 x units of load above the vehicle capacity. As you see, for calculating the score, the most heavily penalized items are the ones with the largest weights above. These items have no cost in the score: the number of vehicles used, WAITING TIME. Distances are Euclidean distances truncated to one decimal: each leg between two points measures floor(10 x d) / 10 distance units, where d is the exact Euclidean distance. Use these truncated leg distances in every calculation.\nTime windows and vehicle capacity are hard constraints: the delivery must start no later than DUE TIME, and the load of each vehicle cannot exceed its capacity. A solution with any late arrival or any excess load is infeasible, and the penalty weights above only discourage that, they do not make it acceptable. Among feasible solutions, the best one is the one with the smallest total distance (truncated to one decimal).\nA vehicle can visit one or more than one customer, not all vehicles must visit the same number of customers, and vehicles that visit no customer are not used. Have in mind that it can be better not using all vehicles, because this could lead to a better solution than using all vehicles.\nRead all information carefully in order to give the solution.\nIt is mandatory for you that you dont have to provide any code.\nIt is mandatory for you to give a solution that you can afford computationally.\nDo not give example, hypothetical or sample answers.\nThe data of the problem follows, one customer per row (the depot is Customer 0 and is not in the table):\nCUSTOMER,X,Y,DEMAND,READY_TIME,DUE_TIME,SERVICE_TIME\n1,78,52,320,922,1042,10\n2,143,72,320,653,773,10\n3,83,54,240,430,550,10\n4,123,120,160,443,563,10\n5,123,37,80,931,1051,10\n6,76,52,80,315,435,10\n7,78,50,80,767,887,10\n8,78,92,80,342,462,10\n9,123,104,240,785,905,10\n10,118,34,160,452,572,10\n11,76,87,80,495,615,10\n12,73,97,320,321,441,10\n13,118,42,240,797,917,10\n14,128,119,80,899,1019,10\n15,73,87,160,852,972,10\n16,118,40,320,473,593,10\n17,73,54,80,749,869,10\n18,113,34,80,383,503,10\n19,73,99,160,935,1055,10\n20,73,52,160,351,471,10\n21,128,127,240,807,927,10\n22,123,117,240,765,885,10\n23,128,124,80,427,547,10\n24,78,87,80,311,431,10\n25,123,122,80,472,592,10\n26,143,74,80,815,935,10\n27,118,32,160,533,653,10\n28,153,70,240,479,599,10\n29,83,47,160,578,698,10\n30,76,97,80,835,955,10\n31,113,40,160,501,621,10\n32,146,74,80,718,838,10\n33,128,120,80,524,644,10\n34,83,90,160,654,774,10\n35,153,76,160,613,733,10\n36,113,37,80,313,433,10\n37,78,94,240,556,676,10\n38,78,47,80,645,765,10\n39,73,57,160,951,1071,10\n40,153,74,80,1010,1130,10\n41,153,67,160,1062,1182,10\n42,123,127,160,424,544,10\n43,83,50,160,666,786,10\n44,148,74,320,532,652,10\n45,73,92,240,607,727,10\n46,143,70,80,959,1079,10\n47,153,72,80,493,613,10\n48,113,32,160,981,1101,10\n49,123,42,160,649,769,10\n50,133,117,80,358,478,10\nRemember the goals: vehicle route data and the score of the problem.\nIt is mandatory that your answer ends with a single JSON block, and nothing after it, with exactly this format: {\"routes\": [[...], ...], \"score\": number}. \"routes\" has one list per vehicle used, with the CUSTOMER numbers of the customers in the order they are visited (do not include the depot, Customer 0), and \"score\" is the final score of that solution.\n"
+    },
+    {
+      "role": "assistant",
+      "content": "# VRPTW Solution: 50 Customers, Depot at (108,72)\n\n## Method\n\n1. **Clustering.** The customers fall into five clear geographic clusters: West‑South, West‑North, South, North and East. Each cluster has about 10 customers, and their time windows span the whole horizon.\n2. **Route construction.** I built one route per cluster by sequencing customers in time‑window order.\n3. **Local improvement.** I applied relocate and 2‑opt style moves within routes:\n   - In West‑North, reordering to 30 → 19 → 15 saved 13.0.\n   - In North, reordering to 50 → 23 → 42 → 25 → 4 → 33 saved 7.2.\n   - In North, reordering to 22 → 9 → 14 → 21 saved 0.2.\n4. **Inter‑cluster merges tested and rejected.** These merges all increased distance:\n   - South + East: 387.0 versus 280.0 for two separate routes.\n   - West‑South + West‑North: 453.0 versus 275.6.\n   - North + East: 352.1 or 373.2 versus 320.7.\n\n   They fail because the time windows of each cluster span the full horizon, so merging forces repeated long crossings between clusters.\n\n**Feasibility.** Capacity is never binding: each route carries at most 1840 of the 8000 capacity. No route has any late arrival.\n\n## Route schedules\n\nEach customer is listed as arrival → service start → service end.\n\n**Vehicle 1 (West‑South)**\n- Customer sequence: 6, 20, 3, 29, 38, 43, 17, 7, 1, 39\n- Schedule:\n  - 6: 315.7 → 315.7 → 325.7\n  - 20: 328.7 → 351 → 361\n  - 3: 371.1 → 430 → 440\n  - 29: 447 → 578 → 588\n  - 38: 593 → 645 → 655\n  - 43: 660.8 → 666 → 676\n  - 17: 686.7 → 749 → 759\n  - 7: 765.4 → 767 → 777\n  - 1: 779 → 922 → 932\n  - 39: 939 → 951 → 961\n- Return to depot at 999.0.\n- Distance: **132.7**\n\n**Vehicle 2 (West‑North)**\n- Customer sequence: 24, 12, 8, 11, 37, 45, 34, 30, 19, 15\n- Schedule:\n  - 24: 311.5 → 311.5 → 321.5\n  - 12: 332.6 → 332.6 → 342.6\n  - 8: 349.6 → 349.6 → 359.6\n  - 11: 364.9 → 495 → 505\n  - 37: 512.2 → 556 → 566\n  - 45: 571.3 → 607 → 617\n  - 34: 627.1 → 654 → 664\n  - 30: 673.8 → 835 → 845\n  - 19: 848.6 → 935 → 945\n  - 15: 957 → 957 → 967\n- Return to depot at 1005.0.\n- Distance: **142.9**\n\n**Vehicle 3 (South)**\n- Customer sequence: 36, 18, 10, 16, 31, 27, 49, 13, 5, 48\n- Schedule:\n  - 36: 313.3 → 313.3 → 323.3\n  - 18: 326.3 → 383 → 393\n  - 10: 398 → 452 → 462\n  - 16: 468 → 473 → 483\n  - 31: 488 → 501 → 511\n  - 27: 520.4 → 533 → 543\n  - 49: 554.1 → 649 → 659\n  - 13: 664 → 797 → 807\n  - 5: 814 → 931 → 941\n  - 48: 952.1 → 981 → 991\n- Return to depot at 1031.3.\n- Distance: **138.2**\n\n**Vehicle 4 (North)**\n- Customer sequence: 50, 23, 42, 25, 4, 33, 22, 9, 14, 21\n- Schedule:\n  - 50: 329.4 → 358 → 368\n  - 23: 376.6 → 427 → 437\n  - 42: 442.8 → 442.8 → 452.8\n  - 25: 457.8 → 472 → 482\n  - 4: 484 → 484 → 494\n  - 33: 499 → 524 → 534\n  - 22: 539.8 → 765 → 775\n  - 9: 788 → 788 → 798\n  - 14: 813.8 → 899 → 909\n  - 21: 917 → 917 → 927\n- Return to depot at 985.5.\n- Distance: **178.9**\n\n**Vehicle 5 (East)**\n- Customer sequence: 28, 47, 44, 35, 2, 32, 26, 46, 40, 41\n- Schedule:\n  - 28: 323 → 479 → 489\n  - 47: 491 → 493 → 503\n  - 44: 508.3 → 532 → 542\n  - 35: 547.3 → 613 → 623\n  - 2: 633.7 → 653 → 663\n  - 32: 666.6 → 718 → 728\n  - 26: 731 → 815 → 825\n  - 46: 829 → 959 → 969\n  - 40: 979.7 → 1010 → 1020\n  - 41: 1027 → 1062 → 1072\n- Return to depot at 1117.2.\n- Distance: **141.8**\n\n## Score\n\nAll 50 customers are served, with no late arrivals and no excess load.\n\nTotal distance = 132.7 + 142.9 + 138.2 + 178.9 + 141.8 = **734.5**\n\nScore = 0 (unattended) + 734.5 (distance) + 0 (lateness) + 0 (excess load) = **734.5**\n\n{\"routes\": [[6, 20, 3, 29, 38, 43, 17, 7, 1, 39], [24, 12, 8, 11, 37, 45, 34, 30, 19, 15], [36, 18, 10, 16, 31, 27, 49, 13, 5, 48], [50, 23, 42, 25, 4, 33, 22, 9, 14, 21], [28, 47, 44, 35, 2, 32, 26, 46, 40, 41]], \"score\": 734.5}",
+      "tool_calls": [],
+      "raw": [
+        {
+          "signature": "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",
+          "thinking": "",
+          "type": "thinking"
+        },
+        {
+          "text": "# VRPTW Solution: 50 Customers, Depot at (108,72)\n\n## Method\n\n1. **Clustering.** The customers fall into five clear geographic clusters: West‑South, West‑North, South, North and East. Each cluster has about 10 customers, and their time windows span the whole horizon.\n2. **Route construction.** I built one route per cluster by sequencing customers in time‑window order.\n3. **Local improvement.** I applied relocate and 2‑opt style moves within routes:\n   - In West‑North, reordering to 30 → 19 → 15 saved 13.0.\n   - In North, reordering to 50 → 23 → 42 → 25 → 4 → 33 saved 7.2.\n   - In North, reordering to 22 → 9 → 14 → 21 saved 0.2.\n4. **Inter‑cluster merges tested and rejected.** These merges all increased distance:\n   - South + East: 387.0 versus 280.0 for two separate routes.\n   - West‑South + West‑North: 453.0 versus 275.6.\n   - North + East: 352.1 or 373.2 versus 320.7.\n\n   They fail because the time windows of each cluster span the full horizon, so merging forces repeated long crossings between clusters.\n\n**Feasibility.** Capacity is never binding: each route carries at most 1840 of the 8000 capacity. No route has any late arrival.\n\n## Route schedules\n\nEach customer is listed as arrival → service start → service end.\n\n**Vehicle 1 (West‑South)**\n- Customer sequence: 6, 20, 3, 29, 38, 43, 17, 7, 1, 39\n- Schedule:\n  - 6: 315.7 → 315.7 → 325.7\n  - 20: 328.7 → 351 → 361\n  - 3: 371.1 → 430 → 440\n  - 29: 447 → 578 → 588\n  - 38: 593 → 645 → 655\n  - 43: 660.8 → 666 → 676\n  - 17: 686.7 → 749 → 759\n  - 7: 765.4 → 767 → 777\n  - 1: 779 → 922 → 932\n  - 39: 939 → 951 → 961\n- Return to depot at 999.0.\n- Distance: **132.7**\n\n**Vehicle 2 (West‑North)**\n- Customer sequence: 24, 12, 8, 11, 37, 45, 34, 30, 19, 15\n- Schedule:\n  - 24: 311.5 → 311.5 → 321.5\n  - 12: 332.6 → 332.6 → 342.6\n  - 8: 349.6 → 349.6 → 359.6\n  - 11: 364.9 → 495 → 505\n  - 37: 512.2 → 556 → 566\n  - 45: 571.3 → 607 → 617\n  - 34: 627.1 → 654 → 664\n  - 30: 673.8 → 835 → 845\n  - 19: 848.6 → 935 → 945\n  - 15: 957 → 957 → 967\n- Return to depot at 1005.0.\n- Distance: **142.9**\n\n**Vehicle 3 (South)**\n- Customer sequence: 36, 18, 10, 16, 31, 27, 49, 13, 5, 48\n- Schedule:\n  - 36: 313.3 → 313.3 → 323.3\n  - 18: 326.3 → 383 → 393\n  - 10: 398 → 452 → 462\n  - 16: 468 → 473 → 483\n  - 31: 488 → 501 → 511\n  - 27: 520.4 → 533 → 543\n  - 49: 554.1 → 649 → 659\n  - 13: 664 → 797 → 807\n  - 5: 814 → 931 → 941\n  - 48: 952.1 → 981 → 991\n- Return to depot at 1031.3.\n- Distance: **138.2**\n\n**Vehicle 4 (North)**\n- Customer sequence: 50, 23, 42, 25, 4, 33, 22, 9, 14, 21\n- Schedule:\n  - 50: 329.4 → 358 → 368\n  - 23: 376.6 → 427 → 437\n  - 42: 442.8 → 442.8 → 452.8\n  - 25: 457.8 → 472 → 482\n  - 4: 484 → 484 → 494\n  - 33: 499 → 524 → 534\n  - 22: 539.8 → 765 → 775\n  - 9: 788 → 788 → 798\n  - 14: 813.8 → 899 → 909\n  - 21: 917 → 917 → 927\n- Return to depot at 985.5.\n- Distance: **178.9**\n\n**Vehicle 5 (East)**\n- Customer sequence: 28, 47, 44, 35, 2, 32, 26, 46, 40, 41\n- Schedule:\n  - 28: 323 → 479 → 489\n  - 47: 491 → 493 → 503\n  - 44: 508.3 → 532 → 542\n  - 35: 547.3 → 613 → 623\n  - 2: 633.7 → 653 → 663\n  - 32: 666.6 → 718 → 728\n  - 26: 731 → 815 → 825\n  - 46: 829 → 959 → 969\n  - 40: 979.7 → 1010 → 1020\n  - 41: 1027 → 1062 → 1072\n- Return to depot at 1117.2.\n- Distance: **141.8**\n\n## Score\n\nAll 50 customers are served, with no late arrivals and no excess load.\n\nTotal distance = 132.7 + 142.9 + 138.2 + 178.9 + 141.8 = **734.5**\n\nScore = 0 (unattended) + 734.5 (distance) + 0 (lateness) + 0 (excess load) = **734.5**\n\n{\"routes\": [[6, 20, 3, 29, 38, 43, 17, 7, 1, 39], [24, 12, 8, 11, 37, 45, 34, 30, 19, 15], [36, 18, 10, 16, 31, 27, 49, 13, 5, 48], [50, 23, 42, 25, 4, 33, 22, 9, 14, 21], [28, 47, 44, 35, 2, 32, 26, 46, 40, 41]], \"score\": 734.5}",
+          "type": "text"
+        }
+      ]
+    }
+  ],
+  "raw_response": "# VRPTW Solution: 50 Customers, Depot at (108,72)\n\n## Method\n\n1. **Clustering.** The customers fall into five clear geographic clusters: West‑South, West‑North, South, North and East. Each cluster has about 10 customers, and their time windows span the whole horizon.\n2. **Route construction.** I built one route per cluster by sequencing customers in time‑window order.\n3. **Local improvement.** I applied relocate and 2‑opt style moves within routes:\n   - In West‑North, reordering to 30 → 19 → 15 saved 13.0.\n   - In North, reordering to 50 → 23 → 42 → 25 → 4 → 33 saved 7.2.\n   - In North, reordering to 22 → 9 → 14 → 21 saved 0.2.\n4. **Inter‑cluster merges tested and rejected.** These merges all increased distance:\n   - South + East: 387.0 versus 280.0 for two separate routes.\n   - West‑South + West‑North: 453.0 versus 275.6.\n   - North + East: 352.1 or 373.2 versus 320.7.\n\n   They fail because the time windows of each cluster span the full horizon, so merging forces repeated long crossings between clusters.\n\n**Feasibility.** Capacity is never binding: each route carries at most 1840 of the 8000 capacity. No route has any late arrival.\n\n## Route schedules\n\nEach customer is listed as arrival → service start → service end.\n\n**Vehicle 1 (West‑South)**\n- Customer sequence: 6, 20, 3, 29, 38, 43, 17, 7, 1, 39\n- Schedule:\n  - 6: 315.7 → 315.7 → 325.7\n  - 20: 328.7 → 351 → 361\n  - 3: 371.1 → 430 → 440\n  - 29: 447 → 578 → 588\n  - 38: 593 → 645 → 655\n  - 43: 660.8 → 666 → 676\n  - 17: 686.7 → 749 → 759\n  - 7: 765.4 → 767 → 777\n  - 1: 779 → 922 → 932\n  - 39: 939 → 951 → 961\n- Return to depot at 999.0.\n- Distance: **132.7**\n\n**Vehicle 2 (West‑North)**\n- Customer sequence: 24, 12, 8, 11, 37, 45, 34, 30, 19, 15\n- Schedule:\n  - 24: 311.5 → 311.5 → 321.5\n  - 12: 332.6 → 332.6 → 342.6\n  - 8: 349.6 → 349.6 → 359.6\n  - 11: 364.9 → 495 → 505\n  - 37: 512.2 → 556 → 566\n  - 45: 571.3 → 607 → 617\n  - 34: 627.1 → 654 → 664\n  - 30: 673.8 → 835 → 845\n  - 19: 848.6 → 935 → 945\n  - 15: 957 → 957 → 967\n- Return to depot at 1005.0.\n- Distance: **142.9**\n\n**Vehicle 3 (South)**\n- Customer sequence: 36, 18, 10, 16, 31, 27, 49, 13, 5, 48\n- Schedule:\n  - 36: 313.3 → 313.3 → 323.3\n  - 18: 326.3 → 383 → 393\n  - 10: 398 → 452 → 462\n  - 16: 468 → 473 → 483\n  - 31: 488 → 501 → 511\n  - 27: 520.4 → 533 → 543\n  - 49: 554.1 → 649 → 659\n  - 13: 664 → 797 → 807\n  - 5: 814 → 931 → 941\n  - 48: 952.1 → 981 → 991\n- Return to depot at 1031.3.\n- Distance: **138.2**\n\n**Vehicle 4 (North)**\n- Customer sequence: 50, 23, 42, 25, 4, 33, 22, 9, 14, 21\n- Schedule:\n  - 50: 329.4 → 358 → 368\n  - 23: 376.6 → 427 → 437\n  - 42: 442.8 → 442.8 → 452.8\n  - 25: 457.8 → 472 → 482\n  - 4: 484 → 484 → 494\n  - 33: 499 → 524 → 534\n  - 22: 539.8 → 765 → 775\n  - 9: 788 → 788 → 798\n  - 14: 813.8 → 899 → 909\n  - 21: 917 → 917 → 927\n- Return to depot at 985.5.\n- Distance: **178.9**\n\n**Vehicle 5 (East)**\n- Customer sequence: 28, 47, 44, 35, 2, 32, 26, 46, 40, 41\n- Schedule:\n  - 28: 323 → 479 → 489\n  - 47: 491 → 493 → 503\n  - 44: 508.3 → 532 → 542\n  - 35: 547.3 → 613 → 623\n  - 2: 633.7 → 653 → 663\n  - 32: 666.6 → 718 → 728\n  - 26: 731 → 815 → 825\n  - 46: 829 → 959 → 969\n  - 40: 979.7 → 1010 → 1020\n  - 41: 1027 → 1062 → 1072\n- Return to depot at 1117.2.\n- Distance: **141.8**\n\n## Score\n\nAll 50 customers are served, with no late arrivals and no excess load.\n\nTotal distance = 132.7 + 142.9 + 138.2 + 178.9 + 141.8 = **734.5**\n\nScore = 0 (unattended) + 734.5 (distance) + 0 (lateness) + 0 (excess load) = **734.5**\n\n{\"routes\": [[6, 20, 3, 29, 38, 43, 17, 7, 1, 39], [24, 12, 8, 11, 37, 45, 34, 30, 19, 15], [36, 18, 10, 16, 31, 27, 49, 13, 5, 48], [50, 23, 42, 25, 4, 33, 22, 9, 14, 21], [28, 47, 44, 35, 2, 32, 26, 46, 40, 41]], \"score\": 734.5}",
+  "tool_calls": null,
+  "tokens_in": 2556,
+  "tokens_out": 12392,
+  "api_cost": 0.258064,
+  "api_cost_eur": 0.23349981903727834,
+  "price_table_version": "2026-11-14",
+  "stop_reason": "end_turn",
+  "self_reported_score": 734.5,
+  "wall_time_s": 108.98571969999466,
+  "solution": {
+    "routes": [
+      [
+        6,
+        20,
+        3,
+        29,
+        38,
+        43,
+        17,
+        7,
+        1,
+        39
+      ],
+      [
+        24,
+        12,
+        8,
+        11,
+        37,
+        45,
+        34,
+        30,
+        19,
+        15
+      ],
+      [
+        36,
+        18,
+        10,
+        16,
+        31,
+        27,
+        49,
+        13,
+        5,
+        48
+      ],
+      [
+        50,
+        23,
+        42,
+        25,
+        4,
+        33,
+        22,
+        9,
+        14,
+        21
+      ],
+      [
+        28,
+        47,
+        44,
+        35,
+        2,
+        32,
+        26,
+        46,
+        40,
+        41
+      ]
+    ]
+  },
+  "evaluation": {
+    "stops": [
+      [
+        {
+          "customer": 6,
+          "arrival": 315.7,
+          "start": 315.7,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 80.0
+        },
+        {
+          "customer": 20,
+          "arrival": 328.7,
+          "start": 351.0,
+          "wait": 22.30000000000001,
+          "late": 0.0,
+          "load": 240.0
+        },
+        {
+          "customer": 3,
+          "arrival": 371.1,
+          "start": 430.0,
+          "wait": 58.89999999999998,
+          "late": 0.0,
+          "load": 480.0
+        },
+        {
+          "customer": 29,
+          "arrival": 447.0,
+          "start": 578.0,
+          "wait": 131.0,
+          "late": 0.0,
+          "load": 640.0
+        },
+        {
+          "customer": 38,
+          "arrival": 593.0,
+          "start": 645.0,
+          "wait": 52.0,
+          "late": 0.0,
+          "load": 720.0
+        },
+        {
+          "customer": 43,
+          "arrival": 660.8,
+          "start": 666.0,
+          "wait": 5.2000000000000455,
+          "late": 0.0,
+          "load": 880.0
+        },
+        {
+          "customer": 17,
+          "arrival": 686.7,
+          "start": 749.0,
+          "wait": 62.299999999999955,
+          "late": 0.0,
+          "load": 960.0
+        },
+        {
+          "customer": 7,
+          "arrival": 765.4,
+          "start": 767.0,
+          "wait": 1.6000000000000227,
+          "late": 0.0,
+          "load": 1040.0
+        },
+        {
+          "customer": 1,
+          "arrival": 779.0,
+          "start": 922.0,
+          "wait": 143.0,
+          "late": 0.0,
+          "load": 1360.0
+        },
+        {
+          "customer": 39,
+          "arrival": 939.0,
+          "start": 951.0,
+          "wait": 12.0,
+          "late": 0.0,
+          "load": 1520.0
+        }
+      ],
+      [
+        {
+          "customer": 24,
+          "arrival": 311.5,
+          "start": 311.5,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 80.0
+        },
+        {
+          "customer": 12,
+          "arrival": 332.6,
+          "start": 332.6,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 400.0
+        },
+        {
+          "customer": 8,
+          "arrival": 349.6,
+          "start": 349.6,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 480.0
+        },
+        {
+          "customer": 11,
+          "arrival": 364.90000000000003,
+          "start": 495.0,
+          "wait": 130.09999999999997,
+          "late": 0.0,
+          "load": 560.0
+        },
+        {
+          "customer": 37,
+          "arrival": 512.2,
+          "start": 556.0,
+          "wait": 43.799999999999955,
+          "late": 0.0,
+          "load": 800.0
+        },
+        {
+          "customer": 45,
+          "arrival": 571.3,
+          "start": 607.0,
+          "wait": 35.700000000000045,
+          "late": 0.0,
+          "load": 1040.0
+        },
+        {
+          "customer": 34,
+          "arrival": 627.1,
+          "start": 654.0,
+          "wait": 26.899999999999977,
+          "late": 0.0,
+          "load": 1200.0
+        },
+        {
+          "customer": 30,
+          "arrival": 673.8,
+          "start": 835.0,
+          "wait": 161.20000000000005,
+          "late": 0.0,
+          "load": 1280.0
+        },
+        {
+          "customer": 19,
+          "arrival": 848.6,
+          "start": 935.0,
+          "wait": 86.39999999999998,
+          "late": 0.0,
+          "load": 1440.0
+        },
+        {
+          "customer": 15,
+          "arrival": 957.0,
+          "start": 957.0,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 1600.0
+        }
+      ],
+      [
+        {
+          "customer": 36,
+          "arrival": 313.3,
+          "start": 313.3,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 80.0
+        },
+        {
+          "customer": 18,
+          "arrival": 326.3,
+          "start": 383.0,
+          "wait": 56.69999999999999,
+          "late": 0.0,
+          "load": 160.0
+        },
+        {
+          "customer": 10,
+          "arrival": 398.0,
+          "start": 452.0,
+          "wait": 54.0,
+          "late": 0.0,
+          "load": 320.0
+        },
+        {
+          "customer": 16,
+          "arrival": 468.0,
+          "start": 473.0,
+          "wait": 5.0,
+          "late": 0.0,
+          "load": 640.0
+        },
+        {
+          "customer": 31,
+          "arrival": 488.0,
+          "start": 501.0,
+          "wait": 13.0,
+          "late": 0.0,
+          "load": 800.0
+        },
+        {
+          "customer": 27,
+          "arrival": 520.4,
+          "start": 533.0,
+          "wait": 12.600000000000023,
+          "late": 0.0,
+          "load": 960.0
+        },
+        {
+          "customer": 49,
+          "arrival": 554.1,
+          "start": 649.0,
+          "wait": 94.89999999999998,
+          "late": 0.0,
+          "load": 1120.0
+        },
+        {
+          "customer": 13,
+          "arrival": 664.0,
+          "start": 797.0,
+          "wait": 133.0,
+          "late": 0.0,
+          "load": 1360.0
+        },
+        {
+          "customer": 5,
+          "arrival": 814.0,
+          "start": 931.0,
+          "wait": 117.0,
+          "late": 0.0,
+          "load": 1440.0
+        },
+        {
+          "customer": 48,
+          "arrival": 952.1,
+          "start": 981.0,
+          "wait": 28.899999999999977,
+          "late": 0.0,
+          "load": 1600.0
+        }
+      ],
+      [
+        {
+          "customer": 50,
+          "arrival": 329.4,
+          "start": 358.0,
+          "wait": 28.600000000000023,
+          "late": 0.0,
+          "load": 80.0
+        },
+        {
+          "customer": 23,
+          "arrival": 376.6,
+          "start": 427.0,
+          "wait": 50.39999999999998,
+          "late": 0.0,
+          "load": 160.0
+        },
+        {
+          "customer": 42,
+          "arrival": 442.8,
+          "start": 442.8,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 320.0
+        },
+        {
+          "customer": 25,
+          "arrival": 457.8,
+          "start": 472.0,
+          "wait": 14.199999999999989,
+          "late": 0.0,
+          "load": 400.0
+        },
+        {
+          "customer": 4,
+          "arrival": 484.0,
+          "start": 484.0,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 560.0
+        },
+        {
+          "customer": 33,
+          "arrival": 499.0,
+          "start": 524.0,
+          "wait": 25.0,
+          "late": 0.0,
+          "load": 640.0
+        },
+        {
+          "customer": 22,
+          "arrival": 539.8,
+          "start": 765.0,
+          "wait": 225.20000000000005,
+          "late": 0.0,
+          "load": 880.0
+        },
+        {
+          "customer": 9,
+          "arrival": 788.0,
+          "start": 788.0,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 1120.0
+        },
+        {
+          "customer": 14,
+          "arrival": 813.8,
+          "start": 899.0,
+          "wait": 85.20000000000005,
+          "late": 0.0,
+          "load": 1200.0
+        },
+        {
+          "customer": 21,
+          "arrival": 917.0,
+          "start": 917.0,
+          "wait": 0.0,
+          "late": 0.0,
+          "load": 1440.0
+        }
+      ],
+      [
+        {
+          "customer": 28,
+          "arrival": 323.0,
+          "start": 479.0,
+          "wait": 156.0,
+          "late": 0.0,
+          "load": 240.0
+        },
+        {
+          "customer": 47,
+          "arrival": 491.0,
+          "start": 493.0,
+          "wait": 2.0,
+          "late": 0.0,
+          "load": 320.0
+        },
+        {
+          "customer": 44,
+          "arrival": 508.3,
+          "start": 532.0,
+          "wait": 23.69999999999999,
+          "late": 0.0,
+          "load": 640.0
+        },
+        {
+          "customer": 35,
+          "arrival": 547.3,
+          "start": 613.0,
+          "wait": 65.70000000000005,
+          "late": 0.0,
+          "load": 800.0
+        },
+        {
+          "customer": 2,
+          "arrival": 633.7,
+          "start": 653.0,
+          "wait": 19.299999999999955,
+          "late": 0.0,
+          "load": 1120.0
+        },
+        {
+          "customer": 32,
+          "arrival": 666.6,
+          "start": 718.0,
+          "wait": 51.39999999999998,
+          "late": 0.0,
+          "load": 1200.0
+        },
+        {
+          "customer": 26,
+          "arrival": 731.0,
+          "start": 815.0,
+          "wait": 84.0,
+          "late": 0.0,
+          "load": 1280.0
+        },
+        {
+          "customer": 46,
+          "arrival": 829.0,
+          "start": 959.0,
+          "wait": 130.0,
+          "late": 0.0,
+          "load": 1360.0
+        },
+        {
+          "customer": 40,
+          "arrival": 979.7,
+          "start": 1010.0,
+          "wait": 30.299999999999955,
+          "late": 0.0,
+          "load": 1440.0
+        },
+        {
+          "customer": 41,
+          "arrival": 1027.0,
+          "start": 1062.0,
+          "wait": 35.0,
+          "late": 0.0,
+          "load": 1600.0
+        }
+      ]
+    ],
+    "distance": 734.5,
+    "total_wait": 2513.5,
+    "total_late": 0.0,
+    "vehicles_used": 5,
+    "unserved": 0,
+    "overload": 0.0,
+    "score": 734.5,
+    "violations": [],
+    "feasible": true
+  },
+  "parse_status": "ok"
+}
