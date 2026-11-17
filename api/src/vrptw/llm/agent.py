@@ -3,9 +3,12 @@
 El modelo recibe `agent_prompt` y dos herramientas (`TOOLS`):
 
 - `solve_classic(method, time_limit_s)`: ejecuta `SOLVERS[method]` con la semilla
-  de la ejecución y un tiempo acotado por `MAX_TOOL_TIME_S`. Al método solo le
-  llegan `seed` y `time_limit_s`: ningún otro parámetro (como `legacy` del GA o
-  `iterations`) es alcanzable desde el modelo.
+  de la ejecución y un tiempo acotado por `max_tool_time_s` (por defecto
+  `MAX_TOOL_TIME_S`). Al método solo le llegan `seed` y `time_limit_s`: ningún
+  otro parámetro (como `legacy` del GA o `iterations`) es alcanzable desde el
+  modelo. Con `max_tool_time_s=None` la herramienta es `solve_classic(method)`: el
+  método hace todas sus iteraciones, sin corte por tiempo, y el resultado no
+  depende de la carga de la máquina.
 - `evaluate_routes(routes)`: evalúa unas rutas con `evaluate`.
 
 Las dos devuelven JSON compacto con un resumen de la evaluación, y
@@ -64,58 +67,70 @@ MAX_TOOL_TIME_S = 10.0
 # `budget_tokens` de razonamiento.
 MIN_CALL_TOKENS = 1024
 
-# Las descripciones las lee el modelo: cambiarlas exige subir PROMPT_VERSION (la
-# instantánea `tests/data/prompts/agent-tools.txt` lo comprueba).
-TOOLS: list[dict[str, Any]] = [
-    {
-        "name": "solve_classic",
-        "description": (
-            "Runs a classic VRPTW method on the instance of the problem and returns "
-            "its routes and their evaluation, as JSON. heuristic is a fast greedy "
-            "construction (nearest feasible customer); aco (ant colony), ga "
-            "(genetic algorithm) and tabu (tabu search) are metaheuristics that stop "
-            "after time_limit_s seconds or earlier."
-        ),
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "method": {"type": "string", "enum": sorted(SOLVERS)},
-                "time_limit_s": {
-                    "type": "number",
-                    "exclusiveMinimum": 0,
-                    "description": (
-                        f"Time limit in seconds, capped at {MAX_TOOL_TIME_S:g}."
-                    ),
-                },
+_SOLVE_DESCRIPTION = (
+    "Runs a classic VRPTW method on the instance of the problem and returns "
+    "its routes and their evaluation, as JSON. heuristic is a fast greedy "
+    "construction (nearest feasible customer); aco (ant colony), ga "
+    "(genetic algorithm) and tabu (tabu search) are metaheuristics that "
+)
+
+
+def tools(max_tool_time_s: float | None = MAX_TOOL_TIME_S) -> list[dict[str, Any]]:
+    """Herramientas del agente; sin tope de tiempo, `solve_classic` no lo recibe.
+
+    Las descripciones las lee el modelo: cambiarlas exige subir PROMPT_VERSION (las
+    instantáneas `tests/data/prompts/agent-tools*.txt` lo comprueban). La variante
+    sin tope no cambia PROMPT_VERSION: la distingue `max_tool_time_s` en `params`.
+    """
+    properties: dict[str, Any] = {"method": {"type": "string", "enum": sorted(SOLVERS)}}
+    if max_tool_time_s is None:
+        description = _SOLVE_DESCRIPTION + ("run their full number of iterations.")
+    else:
+        description = _SOLVE_DESCRIPTION + "stop after time_limit_s seconds or earlier."
+        properties["time_limit_s"] = {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "description": f"Time limit in seconds, capped at {max_tool_time_s:g}.",
+        }
+    return [
+        {
+            "name": "solve_classic",
+            "description": description,
+            "parameters": {
+                "type": "object",
+                "properties": properties,
+                "required": list(properties),
+                "additionalProperties": False,
             },
-            "required": ["method", "time_limit_s"],
-            "additionalProperties": False,
         },
-    },
-    {
-        "name": "evaluate_routes",
-        "description": (
-            "Evaluates the given routes on the instance of the problem, with the "
-            "same evaluator that judges the final answer, and returns the "
-            "evaluation as JSON."
-        ),
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "routes": {
-                    "type": "array",
-                    "items": {"type": "array", "items": {"type": "integer"}},
-                    "description": (
-                        "One list per vehicle with the CUSTOMER numbers in the order "
-                        "they are visited, without the depot (Customer 0)."
-                    ),
-                },
+        EVALUATE_TOOL,
+    ]
+
+
+EVALUATE_TOOL: dict[str, Any] = {
+    "name": "evaluate_routes",
+    "description": (
+        "Evaluates the given routes on the instance of the problem, with the "
+        "same evaluator that judges the final answer, and returns the "
+        "evaluation as JSON."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "routes": {
+                "type": "array",
+                "items": {"type": "array", "items": {"type": "integer"}},
+                "description": (
+                    "One list per vehicle with the CUSTOMER numbers in the order "
+                    "they are visited, without the depot (Customer 0)."
+                ),
             },
-            "required": ["routes"],
-            "additionalProperties": False,
         },
+        "required": ["routes"],
+        "additionalProperties": False,
     },
-]
+}
+TOOLS = tools()
 
 
 def _summary(evaluation: Evaluation) -> dict[str, Any]:
@@ -143,29 +158,35 @@ def _check_names(arguments: dict[str, Any], names: tuple[str, ...]) -> str | Non
 
 
 def _run_tool(
-    instance: Instance, seed: int, call: ToolCall
+    instance: Instance,
+    seed: int,
+    call: ToolCall,
+    max_tool_time_s: float | None = MAX_TOOL_TIME_S,
 ) -> tuple[dict[str, Any] | str, bool]:
     """Ejecuta una llamada. Devuelve (resultado, es_error); un error es un mensaje."""
     args = call.arguments
     if call.name == "solve_classic":
-        error = _check_names(args, ("method", "time_limit_s"))
+        allowed = ("method",) if max_tool_time_s is None else ("method", "time_limit_s")
+        error = _check_names(args, allowed)
         if error:
             return error, True
-        method, limit = args["method"], args["time_limit_s"]
+        method = args["method"]
         if not isinstance(method, str) or method not in SOLVERS:
             valid = ", ".join(sorted(SOLVERS))
             return f"unknown method {method!r}; valid methods: {valid}", True
-        # `not limit > 0` también rechaza NaN
-        if (
-            not isinstance(limit, int | float)
-            or isinstance(limit, bool)
-            or not limit > 0
-        ):
-            return "time_limit_s must be a positive number", True
-        # `min` antes de `float`: un entero enorme no desborda
-        solution = SOLVERS[method](
-            instance, seed=seed, time_limit_s=float(min(limit, MAX_TOOL_TIME_S))
-        )
+        time_limit: float | None = None
+        if max_tool_time_s is not None:
+            limit = args["time_limit_s"]
+            # `not limit > 0` también rechaza NaN
+            if (
+                not isinstance(limit, int | float)
+                or isinstance(limit, bool)
+                or not limit > 0
+            ):
+                return "time_limit_s must be a positive number", True
+            # `min` antes de `float`: un entero enorme no desborda
+            time_limit = float(min(limit, max_tool_time_s))
+        solution = SOLVERS[method](instance, seed=seed, time_limit_s=time_limit)
         return {
             "routes": solution.routes,
             **_summary(evaluate(instance, solution)),
@@ -191,10 +212,12 @@ def solve_agent(
     max_turns: int = MAX_TURNS,
     call: Provider | None = None,
     output_budget: int | None = None,
+    max_tool_time_s: float | None = MAX_TOOL_TIME_S,
 ) -> RunRecord:
     """Una ejecución del LLM como agente con los métodos clásicos como herramientas.
 
-    `seed` es la semilla de los métodos que ejecuta `solve_classic`. El registro
+    `seed` es la semilla de los métodos que ejecuta `solve_classic`, y
+    `max_tool_time_s` su tope de tiempo (`None`: sin corte). El registro
     guarda la conversación completa y, en `tool_calls`, una entrada por llamada
     ejecutada (`id`, `name`, `arguments`, `is_error`, `result` y `time_s`). Una
     negativa da `parse_status="refused"` y un `ProviderError` de tiempo agotado,
@@ -205,6 +228,7 @@ def solve_agent(
     """
     if call is None:
         call = PROVIDERS[provider]
+    agent_tools = tools(max_tool_time_s)
     messages: list[dict[str, Any]] = [
         {"role": "user", "content": agent_prompt(instance, max_turns)}
     ]
@@ -228,7 +252,7 @@ def solve_agent(
             if out_of_budget():
                 early_stop = "output_budget"
                 break
-            response = call(messages, TOOLS, model, api_key, next_max_tokens())
+            response = call(messages, agent_tools, model, api_key, next_max_tokens())
             responses.append(response)
             messages.append(response.message())
             if response.stop_reason == "refusal":
@@ -245,7 +269,7 @@ def solve_agent(
                 break  # tampoco hay turno siguiente
             for tool_call in response.tool_calls:
                 tool_start = time.perf_counter()
-                result, is_error = _run_tool(instance, seed, tool_call)
+                result, is_error = _run_tool(instance, seed, tool_call, max_tool_time_s)
                 tool_time = time.perf_counter() - tool_start
                 content = (
                     result
@@ -278,7 +302,7 @@ def solve_agent(
     params: dict[str, Any] = {
         "max_tokens": max_tokens,
         "max_turns": max_turns,
-        "max_tool_time_s": MAX_TOOL_TIME_S,
+        "max_tool_time_s": max_tool_time_s,
     }
     if output_budget is not None:
         params["output_budget"] = output_budget

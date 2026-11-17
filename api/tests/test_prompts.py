@@ -7,7 +7,7 @@ import pytest
 
 from vrptw.instances.solomon import load_solomon
 from vrptw.instances.tfe2024 import load_tfe2024
-from vrptw.llm.agent import MAX_TURNS, TOOLS
+from vrptw.llm.agent import MAX_TURNS, TOOLS, tools
 from vrptw.llm.prompts import (
     HARD_CONSTRAINTS,
     PROMPT_VERSION,
@@ -50,6 +50,10 @@ def test_snapshot_agent_10c1() -> None:
 def test_snapshot_agent_tools() -> None:
     # las descripciones de las herramientas también las lee el modelo
     _check("agent-tools.txt", json.dumps(TOOLS, indent=2) + "\n")
+
+
+def test_snapshot_agent_tools_without_time_limit() -> None:
+    _check("agent-tools-full.txt", json.dumps(tools(None), indent=2) + "\n")
 
 
 def test_agent_prompt_extends_solve_prompt() -> None:

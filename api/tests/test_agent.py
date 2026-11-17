@@ -283,6 +283,34 @@ def test_time_limit_is_capped(
     assert record.seed == 7 and not trace(record)[0]["is_error"]
 
 
+def test_without_time_limit_solvers_run_to_completion(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    received: list[dict[str, Any]] = []
+    monkeypatch.setitem(SOLVERS, "tabu", spy_solver(received))
+    offered: list[Messages] = []
+
+    def decide(messages: Messages, tools: Messages) -> LLMResponse:
+        offered.append(tools)
+        if len(messages) == 1:
+            return turn(
+                tool("solve_classic", method="tabu", time_limit_s=10),
+                tool("solve_classic", method="tabu"),
+            )
+        return answer(HEURISTIC)
+
+    record = run(decide, monkeypatch, seed=3, max_tool_time_s=None)
+    with_limit, without = trace(record)
+    # la herramienta ya no admite tiempo, y el método no recibe tope
+    assert with_limit["is_error"] and "time_limit_s" in with_limit["result"]
+    assert not without["is_error"]
+    assert received == [{"seed": 3, "time_limit_s": None}]
+    schema = offered[0][0]["parameters"]
+    assert schema["required"] == ["method"] and "time_limit_s" not in str(offered[0])
+    assert offered[0] != TOOLS and all(t == offered[0] for t in offered)
+    assert record.params["max_tool_time_s"] is None
+
+
 def test_refusal_after_a_tool_turn(monkeypatch: pytest.MonkeyPatch) -> None:
     refusal = LLMResponse(text="", stop_reason="refusal", tokens_in=50)
     script = [turn(tool("solve_classic", method="heuristic", time_limit_s=1)), refusal]

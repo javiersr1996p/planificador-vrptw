@@ -248,6 +248,26 @@ def test_max_tokens_override_is_another_cache_key(api: FakeAPI, tmp_path: Path) 
     assert third["cached"] == second["done"] and api.calls == 2 * TIER_CALLS
 
 
+def test_tool_time_limit_is_another_cache_key_only_for_the_agent(
+    api: FakeAPI, tmp_path: Path
+) -> None:
+    """Sin corte por tiempo solo se repiten las tres ejecuciones del agente; el
+    directo y las claves de siempre no cambian."""
+    first = run(tmp_path)
+    second = run(tmp_path, max_tool_time_s=None)
+    assert sorted(second["cached"]) == sorted(
+        s for s in first["done"] if "_llm_direct_" in s
+    )
+    assert len(second["done"]) == 3
+    assert all("_llm_agent_" in s and "_mt8000_ttfull_r0_" in s for s in second["done"])
+    assert not any("_tt" in s for s in first["done"])
+    assert api.calls == TIER_CALLS + 3 * AGENT_CALLS
+    agents = [r for r in records(tmp_path) if r.role == "llm_agent"]
+    assert sorted(str(r.params["max_tool_time_s"]) for r in agents) == (
+        ["10.0"] * 3 + ["None"] * 3
+    )
+
+
 def test_jobs_select_instances_reps_and_max_tokens() -> None:
     default = llm_run.jobs(4)
     assert len(default) == 3 * 2 * 3 * 2  # instancias, repeticiones, modelos, papeles
@@ -356,6 +376,21 @@ def test_cli_plan_applies_instances_reps_and_max_tokens(
     assert api.calls == calls and sorted(tmp_path.rglob("*")) == files
     assert "12 ejecuciones, 0 ya hechas" in out and "12 pendientes" in out
     assert "max_tokens 16000" in out and "repeticiones: 2" in out
+    assert "con un tope de 10 s" in out
+
+
+def test_cli_plan_without_tool_time_limit(
+    api: FakeAPI,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    run(tmp_path)  # el escalón 0 ya hecho con el tope de siempre
+    capsys.readouterr()
+    assert cli(tmp_path, monkeypatch, "--no-tool-time-limit") == 0
+    out = capsys.readouterr().out
+    assert "6 ejecuciones, 3 ya hechas" in out and "3 pendientes" in out
+    assert "sin corte por tiempo" in out
 
 
 def test_cli_without_key_exits_1(

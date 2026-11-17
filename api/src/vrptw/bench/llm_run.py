@@ -32,7 +32,8 @@ al `max_tokens` del resolvedor directo en esa instancia.
 
 Caché: el RunRecord de una ejecución terminada se escribe en `out_dir` con un
 nombre que lleva la clave (instancia y su hash, papel, modelo, `PROMPT_VERSION`,
-`EFFORT`, `max_tokens` y repetición); si ya existe, no se repite. Una ejecución detenida por
+`EFFORT`, `max_tokens`, repetición y, en el agente, el tope de tiempo de sus
+herramientas si no es `MAX_TOOL_TIME_S`); si ya existe, no se repite. Una ejecución detenida por
 tope o por un `ProviderError` no deja RunRecord: se apunta en `out_dir/failed.json`
 y se reintenta al reanudar. Libro, RunRecord y `failed.json` se escriben de forma
 atómica (fichero temporal, volcado a disco y `os.replace`).
@@ -62,7 +63,7 @@ from vrptw.bench.estimate import (
     run_calls,
 )
 from vrptw.cli import API_DIR
-from vrptw.llm.agent import solve_agent
+from vrptw.llm.agent import MAX_TOOL_TIME_S, solve_agent
 from vrptw.llm.direct import solve_direct
 from vrptw.llm.pricing import USD_PER_EUR, call_cost
 from vrptw.llm.prompts import PROMPT_VERSION
@@ -122,13 +123,22 @@ class Job(NamedTuple):
     role: str
     rep: int
     max_tokens: int
+    # tope de tiempo de `solve_classic` en el agente; None, sin corte
+    max_tool_time_s: float | None = MAX_TOOL_TIME_S
 
     @property
     def stem(self) -> str:
-        """Nombre del RunRecord, que es la clave de caché."""
+        """Nombre del RunRecord, que es la clave de caché. El tope de tiempo de las
+        herramientas solo entra si no es el de siempre: las claves ya guardadas
+        siguen valiendo."""
+        tool_time = ""
+        if self.max_tool_time_s != MAX_TOOL_TIME_S:
+            tt = self.max_tool_time_s
+            tool_time = "_ttfull" if tt is None else f"_tt{tt:g}"
         return (
             f"{self.instance.id}_{self.role}_{self.model}_{PROMPT_VERSION}_{EFFORT}"
-            f"_mt{self.max_tokens}_r{self.rep}_{self.instance.content_hash()[:12]}"
+            f"_mt{self.max_tokens}{tool_time}_r{self.rep}"
+            f"_{self.instance.content_hash()[:12]}"
         )
 
 
@@ -276,6 +286,7 @@ def jobs(
     instances: Sequence[str] | None = None,
     reps: int | None = None,
     max_tokens: int | None = None,
+    max_tool_time_s: float | None = MAX_TOOL_TIME_S,
 ) -> list[Job]:
     """Ejecuciones del escalón, repetición a repetición: si un tope lo detiene,
     las repeticiones ya hechas quedan completas. Sin los casos reales (`REAL_NOTE`).
@@ -283,7 +294,8 @@ def jobs(
     Si se dan, `instances` (etiquetas de `LLM_TIERS`) se queda con esas
     instancias del escalón, `reps` sustituye sus repeticiones y `max_tokens` el
     propuesto por tamaño (`max_tokens_for`), que es también el presupuesto de
-    salida del agente.
+    salida del agente. `max_tool_time_s` solo se aplica al agente (`None`: sus
+    herramientas sin corte por tiempo).
     """
     spec = LLM_TIERS[tier]
     loaded = [
@@ -299,6 +311,7 @@ def jobs(
             role,
             rep,
             max_tokens or max_tokens_for(len(instance.customers)),
+            max_tool_time_s if role == "llm_agent" else MAX_TOOL_TIME_S,
         )
         for rep in range(spec.reps if reps is None else reps)
         for instance in loaded
@@ -322,6 +335,7 @@ def _solve(job: Job, api_key: str, call: Provider) -> RunRecord:
             seed=job.rep,
             output_budget=job.max_tokens,
             call=call,
+            max_tool_time_s=job.max_tool_time_s,
         )
     params = {**record.params, "tier": job.tier, "rep": job.rep}
     return record.model_copy(update={"params": params})
@@ -342,11 +356,12 @@ def run_llm_tier(
     instances: Sequence[str] | None = None,
     reps: int | None = None,
     max_tokens: int | None = None,
+    max_tool_time_s: float | None = MAX_TOOL_TIME_S,
 ) -> dict[str, list[str]]:
     """Lanza las ejecuciones pendientes del escalón y devuelve sus nombres por
     estado: `done`, `cached`, `failed` (tope o `ProviderError`) y `skipped` (no
     lanzadas porque chocarían con un tope ya alcanzado en esta pasada).
-    `instances`, `reps` y `max_tokens`, como en `jobs`.
+    `instances`, `reps`, `max_tokens` y `max_tool_time_s`, como en `jobs`.
 
     Un `ProviderError` de `FATAL` se apunta en `failed.json` y se propaga.
     """
@@ -357,7 +372,7 @@ def run_llm_tier(
         "skipped": [],
     }
     blocked: set[str] = set()
-    plan = jobs(tier, models, roles, instances, reps, max_tokens)
+    plan = jobs(tier, models, roles, instances, reps, max_tokens, max_tool_time_s)
     for i, job in enumerate(plan, 1):
         stem = job.stem
         path = out_dir / f"{stem}.json"
@@ -419,12 +434,13 @@ def render_plan(
     instances: Sequence[str] | None = None,
     reps: int | None = None,
     max_tokens: int | None = None,
+    max_tool_time_s: float | None = MAX_TOOL_TIME_S,
 ) -> str:
     """Qué haría `run_llm_tier` y el peor caso de lo pendiente según `estimate.py`
     (escenario alto), sin llamar a nadie."""
     spec = LLM_TIERS[tier]
     reps = spec.reps if reps is None else reps
-    plan = jobs(tier, models, roles, instances, reps, max_tokens)
+    plan = jobs(tier, models, roles, instances, reps, max_tokens, max_tool_time_s)
     pending = [j for j in plan if not (out_dir / f"{j.stem}.json").exists()]
     sizes: dict[str, PromptSize] = {}
     worst: dict[tuple[str, str], list[float]] = {}
@@ -454,7 +470,12 @@ def render_plan(
         f"papeles: {', '.join(roles)}.",
         (
             f"Esfuerzo {EFFORT}; el agente tiene como presupuesto de salida por "
-            "ejecución el max_tokens de su instancia."
+            "ejecución el max_tokens de su instancia y ejecuta los métodos clásicos "
+            + (
+                "sin corte por tiempo."
+                if max_tool_time_s is None
+                else f"con un tope de {max_tool_time_s:g} s."
+            )
         ),
     ]
     if any(name == "real" for name, _ in spec.instances):

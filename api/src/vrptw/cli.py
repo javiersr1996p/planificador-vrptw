@@ -129,7 +129,7 @@ def _bench_estimate(args: argparse.Namespace) -> int:
 def _bench_llm(args: argparse.Namespace) -> int:
     from vrptw.bench import llm_run  # import tardío, como bench.run
     from vrptw.bench.estimate import LLM_TIERS, MODELS, ROLES
-    from vrptw.llm.agent import MIN_CALL_TOKENS
+    from vrptw.llm.agent import MAX_TOOL_TIME_S, MIN_CALL_TOKENS
     from vrptw.llm.providers import MAX_NONSTREAMING_TOKENS, ProviderError
 
     models = args.models or list(MODELS)
@@ -166,6 +166,7 @@ def _bench_llm(args: argparse.Namespace) -> int:
         return 1
     out_dir = Path(args.out_dir) if args.out_dir else llm_run.DEFAULT_OUT_DIR
     ledger = llm_run.LEDGER_PATH
+    tool_time = None if args.no_tool_time_limit else MAX_TOOL_TIME_S
     if not args.confirm:
         print(
             llm_run.render_plan(
@@ -177,6 +178,7 @@ def _bench_llm(args: argparse.Namespace) -> int:
                 instances=args.instances,
                 reps=args.reps,
                 max_tokens=args.max_tokens,
+                max_tool_time_s=tool_time,
             )
         )
         return 0
@@ -199,6 +201,7 @@ def _bench_llm(args: argparse.Namespace) -> int:
             instances=args.instances,
             reps=args.reps,
             max_tokens=args.max_tokens,
+            max_tool_time_s=tool_time,
         )
     except ProviderError as exc:
         print(f"error: {exc}", file=sys.stderr)
@@ -275,6 +278,12 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         help="max_tokens de todas las llamadas y presupuesto de salida del agente "
         "(por defecto, el propuesto por tamaño)",
+    )
+    llm.add_argument(
+        "--no-tool-time-limit",
+        action="store_true",
+        help="el agente ejecuta los métodos clásicos sin corte por tiempo (todas sus "
+        "iteraciones); por defecto, con un tope por llamada",
     )
     llm.add_argument(
         "--confirm",
