@@ -32,7 +32,7 @@ Todo lo demás es supuesto; `ASSUMPTIONS` lo imprime `vrptw bench estimate`:
   `llm_direct`; el agente hace tres llamadas (la mitad de esa salida y dos de
   `AGENT_FOLLOWUP_TOKENS`, dentro del presupuesto) con un resultado de
   `solve_classic` por turno.
-- Casos reales: aún no existen; se sustituyen por R101 recortado a 12 y 25
+- Casos reales: el benchmark LLM no los incluye; se sustituyen por R101 recortado a 12 y 25
   clientes, sin coordenadas y con la matriz euclídea en el prompt.
 - Sin caché: toda la entrada a precio base (si la API cachea, cuesta menos).
 """
@@ -216,7 +216,8 @@ def real_substitute(n: int) -> Instance:
 def load_llm_instance(name: str, n: int | None) -> Instance:
     """Instancia de una entrada de `LLM_TIERS`.
 
-    `("real", n)` da, hasta la fase 4, un sustituto que solo sirve para estimar.
+    `("real", n)` da un sustituto que solo sirve para estimar: el benchmark LLM
+    no incluye casos reales.
     Las de Solomon van camufladas (`camouflage`): el modelo podría reconocerlas
     y dar de memoria su óptimo publicado.
     """

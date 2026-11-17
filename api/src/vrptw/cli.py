@@ -41,10 +41,17 @@ def _git_sha() -> str:
     return result.stdout.strip() if result.returncode == 0 else "unknown"
 
 
-def run_method(instance: Instance, method: str, seed: int) -> RunRecord:
-    """Resuelve, evalúa con `evaluate` y devuelve el RunRecord (sin escribirlo)."""
+def run_method(
+    instance: Instance, method: str, seed: int, time_limit_s: float | None = None
+) -> RunRecord:
+    """Resuelve, evalúa con `evaluate` y devuelve el RunRecord (sin escribirlo).
+
+    Con `time_limit_s` el solver recibe ese plazo y el registro lo guarda en
+    `params`; sin él, `params` queda vacío.
+    """
+    limit = {} if time_limit_s is None else {"time_limit_s": time_limit_s}
     start = time.perf_counter()
-    solution = SOLVERS[method](instance, seed=seed)
+    solution = SOLVERS[method](instance, seed=seed, **limit)
     wall_time = time.perf_counter() - start
     return RunRecord(
         run_id=uuid.uuid4().hex,
@@ -56,7 +63,7 @@ def run_method(instance: Instance, method: str, seed: int) -> RunRecord:
         method=method,
         role="classic",
         seed=seed,
-        params={},
+        params=limit,
         wall_time_s=wall_time,
         solution=solution,
         evaluation=evaluate(instance, solution),
@@ -210,6 +217,16 @@ def _bench_llm(args: argparse.Namespace) -> int:
     return 0
 
 
+def _openapi(args: argparse.Namespace) -> int:
+    from vrptw.api.main import app  # import tardío: no cargar FastAPI en los demás
+
+    out = Path(args.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    text = json.dumps(app.openapi(), indent=2, sort_keys=True, ensure_ascii=False)
+    out.write_bytes((text + "\n").encode("utf-8"))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="vrptw", description="Planificador VRPTW")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -294,9 +311,17 @@ def build_parser() -> argparse.ArgumentParser:
         "--out-dir", help="directorio de los RunRecord (por defecto api/runs/llm/)"
     )
     llm.set_defaults(func=_bench_llm)
+    openapi = sub.add_parser(
+        "openapi", help="escribe el esquema OpenAPI de la API sin arrancar el servidor"
+    )
+    openapi.add_argument("--out", required=True, help="ruta del JSON de salida")
+    openapi.set_defaults(func=_openapi)
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8")
     args = build_parser().parse_args(argv)
     return int(args.func(args))

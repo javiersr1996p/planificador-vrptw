@@ -1,8 +1,12 @@
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
 
-from vrptw.cli import main
+from vrptw.cli import main, run_method
+from vrptw.instances.tfe2024 import load_tfe2024
 from vrptw.model import RunRecord
 
 
@@ -116,3 +120,33 @@ def test_unsupported_n_exits_with_usage_error() -> None:
     with pytest.raises(SystemExit) as exc:
         main(["solve", "--instance", "C101", "--n", "10", "--method", "heuristic"])
     assert exc.value.code != 0
+
+
+def test_run_method_records_time_limit() -> None:
+    instance = load_tfe2024("10c-1")
+    assert run_method(instance, "heuristic", 0, time_limit_s=5).params == {
+        "time_limit_s": 5
+    }
+    assert run_method(instance, "heuristic", 0).params == {}
+
+
+def test_solve_output_is_utf8_when_piped(tmp_path: Path) -> None:
+    env = {k: v for k, v in os.environ.items() if k != "PYTHONIOENCODING"}
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import sys; from vrptw.cli import main; sys.exit(main())",
+            "solve",
+            "--instance",
+            "tfe2024-10c-1",
+            "--method",
+            "heuristic",
+            "--out",
+            str(tmp_path / "x.json"),
+        ],
+        capture_output=True,
+        env=env,
+        check=True,
+    )
+    assert "método" in result.stdout.decode("utf-8")

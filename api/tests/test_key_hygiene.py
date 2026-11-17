@@ -125,6 +125,18 @@ def success_bodies(role: Role) -> list[dict[str, Any]]:
     return [api_message([tool_use], "tool_use"), api_message([final], "end_turn")]
 
 
+class CurrentStderr:
+    """Flujo que escribe en la `sys.stderr` de cada momento: `capfd` cierra y
+    recrea los flujos en cada fase de la prueba y uno fijado al preparar quedaría
+    apuntando a un flujo cerrado durante la llamada."""
+
+    def write(self, text: str) -> int:
+        return sys.stderr.write(text)
+
+    def flush(self) -> None:
+        sys.stderr.flush()
+
+
 @pytest.fixture
 def hygiene(
     monkeypatch: pytest.MonkeyPatch,
@@ -136,7 +148,7 @@ def hygiene(
     caplog.set_level(logging.DEBUG)
     root = logging.getLogger()
     monkeypatch.setattr(root, "level", logging.DEBUG)
-    handler = logging.StreamHandler(sys.stderr)
+    handler = logging.StreamHandler(CurrentStderr())
     handler.setLevel(logging.DEBUG)
     root.addHandler(handler)
     try:

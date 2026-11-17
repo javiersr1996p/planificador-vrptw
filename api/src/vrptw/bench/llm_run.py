@@ -90,8 +90,8 @@ FATAL = ("auth", "rate_limit")
 REPLACE_ATTEMPTS = 50
 REPLACE_WAIT_S = 0.1
 REAL_NOTE = (
-    "Casos reales omitidos: aún no existen (fase 4) y su sustituto solo sirve "
-    "para estimar."
+    "Casos reales omitidos: el benchmark LLM no los incluye (no se hicieron "
+    "ejecuciones de pago sobre ellos) y su sustituto solo sirve para estimar."
 )
 
 
