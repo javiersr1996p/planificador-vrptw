@@ -76,12 +76,13 @@ LLM_TIERS: dict[int, LLMTier] = {
     3: LLMTier("Solomon 50", tuple(TIERS[3]), 2, 4.0),
     4: LLMTier("Solomon 100", tuple(TIERS[4]), 2, 4.0),
 }
-# Tope global duro en USD, lo que factura Anthropic (decisión del usuario: 20 USD
-# hasta la minicalibración; luego 25 USD y, con los costes reales del escalón 1,
-# 30 USD).
+# Tope global duro en USD, lo que factura Anthropic (decisión del autor: 20 USD
+# hasta la minicalibración; luego 25 USD; con los costes reales del escalón 1,
+# 30 USD, y 40 USD como tope final para repetir el agente de 100 clientes sin
+# corte por tiempo).
 # Los topes de escalón y los subtopes por modelo en EUR quedan como referencia de
 # esta estimación; el runner ya no los aplica.
-GLOBAL_CAP_USD = 30.0
+GLOBAL_CAP_USD = 40.0
 # Subtope por modelo (suma 18 EUR): ver `MODEL_CAPS_NOTE`.
 MODEL_CAPS_EUR = {
     "claude-haiku-5-5": 0.5,
@@ -90,7 +91,7 @@ MODEL_CAPS_EUR = {
 }
 MODEL_CAPS_NOTE = (
     "Subtopes (Opus 11, Sonnet 6,5, Haiku 0,5 EUR; suma 18 EUR = "
-    f"{18 * USD_PER_EUR:.2f} USD, dentro del tope global de 20 USD): se fijaron "
+    f"{18 * USD_PER_EUR:.2f} USD, dentro del tope global de 20 USD que regía entonces): se fijaron "
     "proporcionales al escenario bajo de la estimación anterior (Sonnet a "
     "esfuerzo high), para que, si el presupuesto obliga a parar, los tres "
     "modelos pierdan la misma fracción de ejecuciones, y se mantienen. Se "

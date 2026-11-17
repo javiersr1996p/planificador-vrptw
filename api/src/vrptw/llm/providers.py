@@ -247,6 +247,11 @@ def call_anthropic(
         error = _status_error(exc.status_code)
     except anthropic.AnthropicError:
         error = ProviderError("api", "anthropic: respuesta no válida")
+    except Exception:  # noqa: BLE001 (ver el comentario)
+        # Una respuesta 200 que el SDK no sabe leer (cuerpo que no es JSON o con
+        # otra forma) pudo cobrarse: como `api`, quien llama la apunta con su
+        # peor caso. Sin el mensaje original, que podría citar la petición.
+        error = ProviderError("api", "anthropic: respuesta ilegible")
     # Fuera del `except`: así no arrastra la excepción original en `__context__`.
     raise error
 

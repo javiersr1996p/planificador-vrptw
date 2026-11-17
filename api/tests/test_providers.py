@@ -415,3 +415,24 @@ def test_registry() -> None:
     assert set(PROVIDERS) == {"anthropic", "fake"}
     echo = PROVIDERS["fake"]([{"role": "user", "content": "eco"}], [], "m", "", 100)
     assert echo == LLMResponse(text="eco")
+
+
+@pytest.mark.parametrize(
+    "response",
+    [
+        httpx2.Response(200, text="<html>no es JSON</html>"),
+        httpx2.Response(200, json={"inesperado": True}),
+    ],
+)
+def test_unreadable_200_is_a_billable_api_error(
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+    response: httpx2.Response,
+) -> None:
+    """Una respuesta 200 que el SDK no sabe leer pudo cobrarse: sale como `api`
+    (que el runner apunta con su peor caso), no como una excepción cualquiera."""
+    use_network(monkeypatch, lambda request: response)
+    with pytest.raises(ProviderError) as info:
+        call_anthropic([{"role": "user", "content": "hola"}], [], MODEL, KEY, 100)
+    assert info.value.kind == "api"
+    assert_no_key(info.value, caplog)

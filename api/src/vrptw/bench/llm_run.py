@@ -45,6 +45,7 @@ envoltorio ni aparece en ningún fichero ni mensaje.
 import json
 import os
 import sys
+import time
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
@@ -85,6 +86,9 @@ FAILED_NAME = "failed.json"
 MAYBE_BILLED = ("timeout", "network", "api")
 # Fallos de la cuenta, no de la petición: con ellos fallaría todo lo que queda.
 FATAL = ("auth", "rate_limit")
+# Reintentos de `os.replace` en `write_atomic`: 50 x 0,1 s
+REPLACE_ATTEMPTS = 50
+REPLACE_WAIT_S = 0.1
 REAL_NOTE = (
     "Casos reales omitidos: aún no existen (fase 4) y su sustituto solo sirve "
     "para estimar."
@@ -99,7 +103,7 @@ class Caps(NamedTuple):
     total: float
 
 
-# Solo el tope global: los de escalón y modelo se quitaron por decisión del usuario
+# Solo el tope global: los de escalón y modelo se quitaron por decisión del autor
 # tras medir los costes reales con la minicalibración.
 CAPS = Caps({}, {}, GLOBAL_CAP_USD)
 
@@ -198,14 +202,26 @@ def read_ledger(path: Path) -> list[dict[str, Any]]:
 
 
 def write_atomic(path: Path, text: str) -> None:
-    """Escribe `text` sin dejar nunca el fichero a medias."""
+    """Escribe `text` sin dejar nunca el fichero a medias.
+
+    En Windows, `os.replace` lanza `PermissionError` si otro proceso tiene abierto
+    el destino (por ejemplo, leyendo el libro): se reintenta durante unos
+    segundos, para no perder la anotación de una llamada ya pagada.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(path.name + ".tmp")
     with tmp.open("w", encoding="utf-8") as f:
         f.write(text)
         f.flush()
         os.fsync(f.fileno())
-    os.replace(tmp, path)
+    for attempt in range(REPLACE_ATTEMPTS):
+        try:
+            os.replace(tmp, path)
+            return
+        except PermissionError:
+            if attempt == REPLACE_ATTEMPTS - 1:
+                raise
+            time.sleep(REPLACE_WAIT_S)
 
 
 def _append(path: Path, entry: dict[str, Any]) -> None:

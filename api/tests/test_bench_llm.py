@@ -163,7 +163,7 @@ def test_global_cap_counts_previous_spend(api: FakeAPI, tmp_path: Path) -> None:
 
 
 def test_default_caps_are_only_the_global_one() -> None:
-    assert CAPS == (({}, {}, 30.0))
+    assert CAPS == (({}, {}, 40.0))
 
 
 def test_guard_counts_previous_output_as_input(api: FakeAPI, tmp_path: Path) -> None:
@@ -429,3 +429,27 @@ def test_key_is_not_written_nor_printed(
     for path in files:
         assert KEY.encode() not in path.read_bytes(), path
     assert KEY not in out and KEY not in err
+
+
+def test_write_atomic_retries_a_locked_destination(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """En Windows, otro proceso leyendo el libro hace fallar `os.replace` con
+    PermissionError: se reintenta y la anotación no se pierde."""
+    real = llm_run.os.replace
+    failures = iter([True, True, True])
+
+    def flaky(src: Any, dst: Any) -> None:
+        if next(failures, False):
+            raise PermissionError(13, "Acceso denegado")
+        real(src, dst)
+
+    monkeypatch.setattr(llm_run.os, "replace", flaky)
+    monkeypatch.setattr(llm_run.time, "sleep", lambda s: None)
+    path = tmp_path / "ledger.json"
+    llm_run.write_atomic(path, "[]")
+    assert path.read_text(encoding="utf-8") == "[]"
+
+    failures = iter([True] * llm_run.REPLACE_ATTEMPTS)
+    with pytest.raises(PermissionError):
+        llm_run.write_atomic(path, "[1]")

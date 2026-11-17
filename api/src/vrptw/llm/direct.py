@@ -112,7 +112,12 @@ def build_llm_record(
     if provider == "anthropic":
         params = {**(params or {}), "effort": EFFORT}
         try:
-            usd, eur, version = call_cost(model, tokens_in, tokens_out)
+            # llamada a llamada: el tramo de prompt largo de Haiku es por petición
+            costs = [call_cost(model, r.tokens_in, r.tokens_out) for r in responses]
+            costs = costs or [call_cost(model, 0, 0)]
+            usd = sum(c.usd for c in costs)
+            eur = sum(c.eur for c in costs)
+            version = costs[0].price_table_version
         except ValueError:
             pass  # sin precio para el modelo: no se pierde el registro de la llamada
     last = responses[-1] if responses else None

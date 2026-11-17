@@ -10,6 +10,7 @@ from vrptw.evaluate import evaluate
 from vrptw.instances.tfe2024 import load_tfe2024
 from vrptw.llm import direct
 from vrptw.llm.direct import extract_routes, solve_direct
+from vrptw.llm.pricing import call_cost
 from vrptw.llm.prompts import PROMPT_VERSION, recheck_prompt, solve_prompt
 from vrptw.llm.providers import PROVIDERS, LLMResponse, ProviderError, make_fake
 from vrptw.model import Solution
@@ -212,3 +213,24 @@ def test_key_is_not_recorded_nor_logged(
     assert KEY not in record.model_dump_json()
     assert KEY not in caplog.text
     assert KEY not in repr(vars(direct))
+
+
+def test_cost_is_priced_call_by_call() -> None:
+    """El tramo de prompt largo de Haiku (más de 100 000 tokens) es por petición:
+    dos llamadas de 60 000 tokens se cobran a precio base."""
+    haiku = "claude-haiku-5-5"
+    calls = [LLMResponse(text="", tokens_in=60_000, tokens_out=500)] * 2
+    record = direct.build_llm_record(
+        INSTANCE,
+        role="llm_agent",
+        provider="anthropic",
+        model=haiku,
+        messages=[],
+        responses=calls,
+        parse_status="unparseable",
+        solution=None,
+        wall_time_s=0.0,
+    )
+    per_call = call_cost(haiku, 60_000, 500)
+    assert record.api_cost == pytest.approx(2 * per_call.usd)
+    assert record.api_cost != pytest.approx(call_cost(haiku, 120_000, 1000).usd)
