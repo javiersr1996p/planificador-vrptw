@@ -1,9 +1,11 @@
 """Algoritmo genético con DEAP, portado de GA.ipynb (2024) y corregido.
 
 El individuo es una lista de rutas de `customer.id`. El bucle equivale a
-`eaSimple` (torneo de 3 y `varAnd`, mismo orden de llamadas al generador) y se
-corta entre generaciones si se agota `time_limit_s`. La aptitud es `score`, o
-infinito si algún cliente aparece dos veces. La mutación es la de 2024 tal cual.
+`eaSimple` (torneo de 3 y `varAnd`, mismo orden de llamadas al generador). Si se
+agota `time_limit_s`, se deja de crear la población inicial (siempre hay al menos
+un individuo) o se descarta la generación en curso antes del siguiente cruce, y
+se devuelve el mejor individuo evaluado. La aptitud es `score`, o infinito si
+algún cliente aparece dos veces. La mutación es la de 2024 tal cual.
 
 Modo corregido (por defecto), siempre con `fleet.vehicles` rutas (vacías o no):
 
@@ -41,6 +43,10 @@ creator.create("GaFitness", base.Fitness, weights=(-1.0,))
 creator.create("GaIndividual", list, fitness=creator.GaFitness)
 
 _LOCK = threading.Lock()
+
+
+class _Expired(Exception):
+    """Se agotó el plazo a mitad de una generación."""
 
 
 def _end(
@@ -163,9 +169,12 @@ def _crossover(
     nodes: dict[int, int],
     cache: dict[tuple[int, ...], float],
     legacy: bool,
+    deadline: float,
     ind1: Any,
     ind2: Any,
 ) -> tuple[Any, Any]:
+    if time.perf_counter() > deadline:
+        raise _Expired
     if legacy:
         split1 = random.randint(1, len(ind1) - 1)
         split2 = random.randint(1, len(ind2) - 1)
@@ -210,8 +219,6 @@ def solve(
     time_limit_s: float | None = None,
     **params: Any,
 ) -> Solution:
-    now = time.perf_counter()
-    deadline = math.inf if time_limit_s is None else now + time_limit_s
     size = params.get("population", 100)
     cxpb = params.get("cxpb", 0.7)
     mutpb = params.get("mutpb", 0.01)
@@ -221,19 +228,29 @@ def solve(
     cache: dict[tuple[int, ...], float] = {}
 
     toolbox = base.Toolbox()
-    toolbox.register("mate", _crossover, instance, nodes, cache, legacy)
     toolbox.register("mutate", _mutate)
 
     with _LOCK:
+        deadline = (
+            math.inf if time_limit_s is None else time.perf_counter() + time_limit_s
+        )
+        toolbox.register("mate", _crossover, instance, nodes, cache, legacy, deadline)
         random.seed(seed)
-        population = [_individual(instance, nodes, cache, legacy) for _ in range(size)]
+        population: list[Any] = []
+        for _ in range(size):
+            if population and time.perf_counter() > deadline:
+                break
+            population.append(_individual(instance, nodes, cache, legacy))
         best = tools.HallOfFame(1)
         for generation in range(generations + 1):
             if generation:
                 if time.perf_counter() > deadline:
                     break
                 offspring = tools.selTournament(population, len(population), 3)
-                population = algorithms.varAnd(offspring, toolbox, cxpb, mutpb)
+                try:
+                    population = algorithms.varAnd(offspring, toolbox, cxpb, mutpb)
+                except _Expired:
+                    break
             for individual in population:
                 if not individual.fitness.valid:
                     individual.fitness.values = _fitness(instance, cache, individual)

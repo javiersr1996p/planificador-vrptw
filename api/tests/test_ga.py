@@ -1,3 +1,4 @@
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 
@@ -6,7 +7,8 @@ import pytest
 from vrptw.evaluate import evaluate
 from vrptw.instances.solomon import load_solomon
 from vrptw.instances.tfe2024 import load_tfe2024
-from vrptw.model import Fleet, Instance, Matrix, Solution
+from vrptw.model import TFE, Fleet, Instance, Matrix, Solution
+from vrptw.solvers import ga
 from vrptw.solvers.ga import solve
 
 FAST = {"population": 20, "generations": 20}
@@ -75,6 +77,131 @@ def test_time_limit() -> None:
     solution = solve(instance, time_limit_s=0.3, generations=10**6)
     assert time.perf_counter() - start < 1.0
     assert solution.routes
+
+
+def _depot_closed_at_start() -> Instance:
+    # Con `depot.due == depot.ready` ningún cliente es factible y, en perfil `tfe`,
+    # cada uno pasa por la inserción más barata: crear un individuo cuesta décimas.
+    r101 = load_solomon("r101", 100)
+    depot = r101.depot.model_copy(update={"due": r101.depot.ready})
+    return r101.model_copy(update={"depot": depot, "cost_profile": TFE})
+
+
+@pytest.mark.parametrize(
+    "instance",
+    [load_solomon("r101", 100), _depot_closed_at_start()],
+    ids=["r101-100", "depot-due-eq-ready"],
+)
+def test_time_limit_includes_initial_population(instance: Instance) -> None:
+    # Antes, la población inicial ignoraba el plazo: 7 s y 20-60 s con 1 s de
+    # límite. Ahora se pasa como mucho un individuo o un cruce (unas décimas);
+    # 3 s deja margen a una máquina lenta sin dejar pasar el fallo.
+    start = time.perf_counter()
+    solution = solve(instance, time_limit_s=1)
+    assert time.perf_counter() - start < 3
+    ids = _ids(solution)
+    assert len(ids) == len(set(ids))
+    assert set(ids) <= {c.id for c in instance.customers}
+
+
+@pytest.mark.parametrize(
+    ("instance", "seed", "legacy", "expected"),
+    [
+        (
+            "20c-1",
+            0,
+            False,
+            [
+                [11, 17],
+                [19, 15, 12],
+                [1, 4],
+                [18, 3, 6],
+                [20, 10, 8],
+                [14, 16, 9],
+                [5, 13],
+                [7, 2],
+            ],
+        ),
+        (
+            "20c-1",
+            1,
+            False,
+            [
+                [16, 12, 9],
+                [1, 17],
+                [20, 10, 8],
+                [14, 6, 11],
+                [19, 15],
+                [7, 2],
+                [3, 4],
+                [18],
+                [5, 13],
+            ],
+        ),
+        (
+            "c101",
+            0,
+            False,
+            [
+                [13, 18, 6, 22, 21],
+                [25, 19, 15, 16, 14, 12, 2, 1],
+                [20, 24, 8, 10, 11, 23],
+                [3, 7, 9, 4],
+                [5, 17],
+            ],
+        ),
+        (
+            "c101",
+            1,
+            False,
+            [
+                [25, 4, 2, 21],
+                [3, 15, 12, 23, 22],
+                [24, 8, 9, 6, 1],
+                [13, 17, 16, 14],
+                [18, 19, 11],
+                [20, 7, 10],
+                [5],
+            ],
+        ),
+        ("10c-1", 0, True, [[1, 8], [3, 5], [9, 10], [4, 7], [2, 6]]),
+        ("10c-1", 1, True, [[7, 8], [3, 6], [1, 10], [4, 2], [9, 5]]),
+    ],
+)
+def test_routes_without_time_limit_are_pinned(
+    instance: str, seed: int, legacy: bool, expected: list[list[int]]
+) -> None:
+    # Rutas fijadas para que cortar por tiempo no cambie las ejecuciones sin corte
+    # (las del benchmark publicado).
+    loaded = (
+        load_solomon("c101", 25, truncated=True)
+        if instance == "c101"
+        else load_tfe2024(instance)
+    )
+    assert solve(loaded, seed=seed, legacy=legacy, **FAST).routes == expected
+    assert solve(loaded, seed=seed, time_limit_s=60, legacy=legacy, **FAST).routes == (
+        expected
+    )
+
+
+def test_deadline_starts_after_acquiring_lock() -> None:
+    instance = load_tfe2024("10c-1")
+    expected = solve(instance, generations=2).routes
+    held = threading.Event()
+
+    def hold() -> None:
+        with ga._LOCK:
+            held.set()
+            time.sleep(1.0)
+
+    holder = threading.Thread(target=hold)
+    holder.start()
+    held.wait()
+    try:
+        routes = solve(instance, time_limit_s=0.5, generations=2).routes
+    finally:
+        holder.join()
+    assert routes == expected
 
 
 @pytest.mark.parametrize(

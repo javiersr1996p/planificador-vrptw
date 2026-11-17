@@ -239,6 +239,41 @@ def test_invalid_arguments_are_tool_errors(
     assert record.parse_status == "ok"
 
 
+def _boom(*args: Any, **kwargs: Any) -> Any:
+    raise ZeroDivisionError("detalle interno")
+
+
+@pytest.mark.parametrize(
+    ("call", "target", "message"),
+    [
+        (
+            tool("solve_classic", method="aco", time_limit_s=1),
+            "solver",
+            "aco failed with ZeroDivisionError",
+        ),
+        (
+            tool("evaluate_routes", routes=HEURISTIC),
+            "evaluate",
+            "evaluation failed with ZeroDivisionError",
+        ),
+    ],
+)
+def test_tool_exception_is_a_tool_error(
+    call: ToolCall, target: str, message: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    if target == "solver":
+        monkeypatch.setitem(SOLVERS, "aco", _boom)
+    else:
+        monkeypatch.setattr(agent, "evaluate", _boom)
+    record = run([turn(call), answer(HEURISTIC)], monkeypatch)
+    [entry] = trace(record)
+    # el modelo ve el tipo, no el mensaje, y la ejecución sigue hasta su registro
+    assert entry["is_error"] is True and entry["result"] == message
+    assert record.messages is not None and record.messages[2]["content"] == message
+    assert record.messages[2]["is_error"] is True
+    assert record.parse_status == "ok"
+
+
 def test_solver_params_are_not_reachable(monkeypatch: pytest.MonkeyPatch) -> None:
     received: list[dict[str, Any]] = []
     monkeypatch.setitem(SOLVERS, "ga", spy_solver(received))

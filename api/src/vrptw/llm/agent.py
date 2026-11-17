@@ -14,7 +14,8 @@ El modelo recibe `agent_prompt` y dos herramientas (`TOOLS`):
 Las dos devuelven JSON compacto con un resumen de la evaluación, y
 `solve_classic` añade las rutas. Un argumento no válido (herramienta o método
 desconocidos, tipo erróneo, argumento que falta o que sobra) da un resultado con
-`is_error` y el bucle sigue.
+`is_error` y el bucle sigue; también una excepción del método o del evaluador,
+de la que el resultado solo dice el tipo (el mensaje puede llevar datos internos).
 
 Hay como mucho `max_turns` llamadas al modelo. La respuesta final es la primera
 sin llamadas a herramientas; su bloque JSON se interpreta con `extract_routes`,
@@ -186,18 +187,22 @@ def _run_tool(
                 return "time_limit_s must be a positive number", True
             # `min` antes de `float`: un entero enorme no desborda
             time_limit = float(min(limit, max_tool_time_s))
-        solution = SOLVERS[method](instance, seed=seed, time_limit_s=time_limit)
-        return {
-            "routes": solution.routes,
-            **_summary(evaluate(instance, solution)),
-        }, False
+        try:
+            solution = SOLVERS[method](instance, seed=seed, time_limit_s=time_limit)
+            summary = _summary(evaluate(instance, solution))
+        except Exception as exc:  # noqa: BLE001 (ver el docstring del módulo)
+            return f"{method} failed with {type(exc).__name__}", True
+        return {"routes": solution.routes, **summary}, False
     if call.name == "evaluate_routes":
         error = _check_names(args, ("routes",))
         if error:
             return error, True
         if not is_routes(args["routes"]):
             return "routes must be a list of lists of integer CUSTOMER numbers", True
-        return _summary(evaluate(instance, Solution(routes=args["routes"]))), False
+        try:
+            return _summary(evaluate(instance, Solution(routes=args["routes"]))), False
+        except Exception as exc:  # noqa: BLE001 (ver el docstring del módulo)
+            return f"evaluation failed with {type(exc).__name__}", True
     names = ", ".join(t["name"] for t in TOOLS)
     return f"unknown tool {call.name!r}; available tools: {names}", True
 

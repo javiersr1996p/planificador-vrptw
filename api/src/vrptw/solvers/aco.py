@@ -11,7 +11,7 @@ Cambios respecto a 2024: generador local con semilla; si todos los candidatos
 están a distancia 0 se elige uno al azar (el original dividía por cero; como
 entonces, un candidato a distancia 0 tiene probabilidad 0 mientras haya otro);
 factibilidad con `feasible_stop`, que añade capacidad y regreso al depósito
-antes de su `due`.
+antes de su `due`; una hormiga con score no positivo no deposita feromona.
 """
 
 import math
@@ -105,6 +105,8 @@ def solve(
             break
         pheromone *= 1 - p["rho"]
         for cost, routes in sorted(ants, key=lambda ant: ant[0])[: p["n_best"]]:
+            if cost <= 0:
+                continue  # `q / cost` no está definido o daría feromona negativa
             for route in routes:
                 for a, b in zip([0, *route], [*route, 0], strict=True):
                     pheromone[a, b] += p["q"] / cost

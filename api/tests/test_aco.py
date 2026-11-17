@@ -5,7 +5,16 @@ import pytest
 from vrptw.evaluate import evaluate
 from vrptw.instances.solomon import coordinates, euclidean_matrix, load_solomon
 from vrptw.instances.tfe2024 import load_tfe2024
-from vrptw.model import TFE, Customer, Depot, Fleet, Instance, Matrix, Solution
+from vrptw.model import (
+    SOLOMON,
+    TFE,
+    Customer,
+    Depot,
+    Fleet,
+    Instance,
+    Matrix,
+    Solution,
+)
 from vrptw.solvers import heuristic
 from vrptw.solvers.aco import solve
 
@@ -97,6 +106,96 @@ def test_all_candidates_at_distance_zero(point: tuple[float, float]) -> None:
     routes = solve(instance, **FAST).routes
     assert len(routes) == 1
     assert sorted(routes[0]) == [1, 2]
+
+
+def test_score_zero_deposits_no_pheromone() -> None:
+    # Todos en el depósito y perfil SOLOMON: score 0, y `q / score` dividía por cero.
+    depot = Depot(x=5, y=5, ready=0, due=100)
+    customers = [
+        Customer(id=i, x=5, y=5, demand=1, ready=0, due=100, service=0)
+        for i in (1, 2, 3)
+    ]
+    instance = Instance(
+        id="at-depot",
+        name="at-depot",
+        source="real",
+        depot=depot,
+        customers=customers,
+        fleet=Fleet(vehicles=2),
+        matrix=euclidean_matrix(coordinates(depot, customers)),
+        cost_profile=SOLOMON,
+    )
+    solution = solve(instance, **FAST)
+    assert evaluate(instance, solution).score == 0
+    assert sorted(cid for route in solution.routes for cid in route) == [1, 2, 3]
+
+
+@pytest.mark.parametrize(
+    ("instance", "seed", "expected"),
+    [
+        (
+            "20c-1",
+            0,
+            [
+                [18, 10, 8],
+                [5, 13, 11],
+                [19, 15, 9, 12],
+                [1, 16, 17],
+                [6, 3, 4],
+                [14],
+                [20],
+                [7, 2],
+            ],
+        ),
+        (
+            "20c-1",
+            1,
+            [
+                [18, 7, 4],
+                [5, 13, 6, 11],
+                [19, 15, 9, 12],
+                [14, 16, 17],
+                [20, 10, 8],
+                [1],
+                [3],
+                [2],
+            ],
+        ),
+        (
+            "c101",
+            0,
+            [
+                [20, 24, 25, 22, 21],
+                [13, 17, 18, 19, 15, 16, 14, 12, 1],
+                [7, 8, 11, 9, 6, 4, 2],
+                [5, 3, 10, 23],
+            ],
+        ),
+        (
+            "c101",
+            1,
+            [
+                [13, 17, 18, 19, 15, 16, 14, 12, 1],
+                [24, 25, 22, 21],
+                [10, 11, 9, 6, 4, 2],
+                [20, 23],
+                [5, 3, 7, 8],
+            ],
+        ),
+    ],
+)
+def test_routes_without_time_limit_are_pinned(
+    instance: str, seed: int, expected: list[list[int]]
+) -> None:
+    # Rutas fijadas para que los cambios no alteren las ejecuciones sin corte
+    # (las del benchmark publicado).
+    loaded = (
+        load_solomon("c101", 25, truncated=True)
+        if instance == "c101"
+        else load_tfe2024(instance)
+    )
+    assert solve(loaded, seed=seed, **FAST).routes == expected
+    assert solve(loaded, seed=seed, time_limit_s=60, **FAST).routes == expected
 
 
 def test_never_worse_than_heuristic_on_10c_1() -> None:
