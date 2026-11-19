@@ -217,6 +217,15 @@ def _bench_llm(args: argparse.Namespace) -> int:
     return 0
 
 
+def _bench_export(args: argparse.Namespace) -> int:
+    from vrptw.bench.export import DEFAULT_OUT, export  # import tardío, como bench.run
+
+    out = Path(args.out) if args.out else DEFAULT_OUT
+    for path in export(out):
+        print(path)
+    return 0
+
+
 def _openapi(args: argparse.Namespace) -> int:
     from vrptw.api.main import app  # import tardío: no cargar FastAPI en los demás
 
@@ -311,6 +320,14 @@ def build_parser() -> argparse.ArgumentParser:
         "--out-dir", help="directorio de los RunRecord (por defecto api/runs/llm/)"
     )
     llm.set_defaults(func=_bench_llm)
+    export = bench.add_parser(
+        "export",
+        help="exporta los casos de ejemplo de la web (sin red ni llamadas de pago)",
+    )
+    export.add_argument(
+        "--out", help="directorio de salida (por defecto web/public/data)"
+    )
+    export.set_defaults(func=_bench_export)
     openapi = sub.add_parser(
         "openapi", help="escribe el esquema OpenAPI de la API sin arrancar el servidor"
     )

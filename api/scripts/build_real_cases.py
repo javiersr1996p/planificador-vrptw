@@ -7,6 +7,8 @@ La geocodificación y la matriz se guardan en el propio fichero de salida y se
 reutilizan mientras las direcciones del CSV no cambien: ajustar ventanas,
 demandas, servicio o flota no gasta cuota. Con `--refresh` se vuelve a llamar a la
 red. Las claves se leen de `GEOAPIFY_API_KEY` y `ORS_API_KEY` y nunca se imprimen.
+Los registros de `runs` (los rellena `vrptw bench export`) se conservan si el hash de
+la instancia no cambia.
 
 Uso, desde `api/`:
     uv run --env-file .env python scripts/build_real_cases.py [madrid-12 ...] [--refresh]
@@ -21,6 +23,7 @@ import statistics
 import sys
 from datetime import date
 from pathlib import Path
+from typing import Any
 
 from vrptw import geo
 from vrptw.evaluate import evaluate
@@ -122,6 +125,15 @@ def _cached(path: Path, addresses: list[str]) -> Instance | None:
     return old if old_addresses == addresses and old.matrix is not None else None
 
 
+def _kept_runs(path: Path, instance: Instance) -> list[Any]:
+    """Registros ya exportados, si la instancia (por su hash) no ha cambiado."""
+    if not path.exists():
+        return []
+    old = json.loads(path.read_text(encoding="utf-8"))
+    same = Instance.model_validate(old["instance"]).content_hash()
+    return list(old["runs"]) if same == instance.content_hash() else []
+
+
 def build(case: str, refresh: bool) -> bool:
     """Construye un caso. Devuelve si ha llamado a la red."""
     print(f"== {case}")
@@ -166,7 +178,7 @@ def build(case: str, refresh: bool) -> bool:
     )
     payload = {
         "instance": instance.model_dump(mode="json", by_alias=True),
-        "runs": [],
+        "runs": _kept_runs(path, instance),
         "built_on": date.today().isoformat(),
         "attribution": ATTRIBUTION,
         "note": NOTE,

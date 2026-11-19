@@ -59,7 +59,7 @@ def test_instance_shape(case: str) -> None:
     assert inst.matrix is not None
     assert inst.matrix.source == "openrouteservice"
     assert (inst.matrix.distance_unit, inst.matrix.time_unit) == ("km", "min")
-    assert data["runs"] == []
+    assert {r["method"] for r in data["runs"]} <= {"heuristic", "aco", "ga", "tabu"}
     assert {"built_on", "attribution", "note"} <= data.keys()
     assert "Geoapify" in data["attribution"]
     assert "openrouteservice" in data["attribution"]
