@@ -155,6 +155,7 @@ def evaluate(instance: Instance, solution: Solution) -> Evaluation:
         ),
         violations=violations,
         feasible=not violations,
+        depot_arrival=[walk.depot_arrival for walk in walks],
     )
 
 

@@ -97,6 +97,7 @@ def test_hand_computed_tfe() -> None:
     assert ev.unserved == 0
     assert ev.overload == 0
     assert ev.score == 2113
+    assert ev.depot_arrival == [35, 21]
     # Waiting at 20 is not a violation; the only one is the late start at 30.
     assert ev.violations == [late(1, 30)]
     assert not ev.feasible
@@ -178,6 +179,7 @@ def test_unknown_customer_is_skipped() -> None:
 def test_empty_route_is_not_a_vehicle() -> None:
     ev = run([[10, 20], [], [30]])
     assert ev.stops[1] == []
+    assert ev.depot_arrival == [35, 0, 21]  # an empty route reports depot.ready
     assert ev.vehicles_used == 2
     assert ev.score == 2113
     assert ev.violations == [late(2, 30)]
@@ -244,6 +246,8 @@ def test_traffic_changes_times_not_distance() -> None:
     assert ev.total_wait == 0
     assert ev.total_late == 21
     assert ev.score == 2233
+    # Return legs depart at 27 and 21, outside the traffic window: factor 1.
+    assert ev.depot_arrival == [39, 31]
 
 
 def test_missing_matrix_raises() -> None:

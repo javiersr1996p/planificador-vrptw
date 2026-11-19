@@ -167,6 +167,10 @@ class Evaluation(BaseModel):
     score: float
     violations: list[Violation]
     feasible: bool
+    # Hora de llegada a la base de cada ruta, en el orden de `stops`. Una ruta sin
+    # clientes conocidos no vuelve a la base y trae la hora de salida (`depot.ready`).
+    # `None` en los registros anteriores a este campo.
+    depot_arrival: list[float] | None = None
 
 
 class RunRecord(BaseModel):

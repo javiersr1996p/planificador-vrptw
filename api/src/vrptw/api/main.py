@@ -138,6 +138,7 @@ app.add_middleware(
     allow_credentials=False,
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type", "X-LLM-Key"],
+    expose_headers=["Retry-After"],
 )
 
 # Un solo cálculo a la vez: los solvers ocupan un núcleo hasta su plazo.

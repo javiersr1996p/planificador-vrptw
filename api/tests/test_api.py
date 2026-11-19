@@ -203,6 +203,8 @@ def test_solve_classic(client: TestClient, instance: dict[str, Any]) -> None:
     body = r.json()
     assert body["role"] == "classic" and body["evaluation"]["feasible"] is not None
     assert body["params"] == {"time_limit_s": 2}
+    arrivals = body["evaluation"]["depot_arrival"]
+    assert len(arrivals) == len(body["evaluation"]["stops"]) and all(arrivals)
 
 
 def test_solve_rejects_free_params(
@@ -229,17 +231,22 @@ def test_solve_busy(client: TestClient, instance: dict[str, Any]) -> None:
     assert main._SOLVE_LOCK.acquire(blocking=False)
     try:
         r = client.post(
-            "/solve/classic", json={"instance": instance, "method": "heuristic"}
+            "/solve/classic",
+            json={"instance": instance, "method": "heuristic"},
+            headers={"Origin": "http://localhost:3000"},
         )
     finally:
         main._SOLVE_LOCK.release()
     assert r.status_code == 503 and r.headers["Retry-After"] == "5"
+    assert r.headers["access-control-expose-headers"] == "Retry-After"
 
 
 def test_evaluate(client: TestClient, instance: dict[str, Any]) -> None:
     ids = [c["id"] for c in instance["customers"]]
     r = client.post("/evaluate", json={"instance": instance, "routes": [ids]})
     assert r.status_code == 200 and "score" in r.json()
+    arrivals = r.json()["depot_arrival"]
+    assert len(arrivals) == 1 and arrivals[0] > 0
     too_many = {"instance": instance, "routes": [[1]] * 101}
     assert client.post("/evaluate", json=too_many).status_code == 422
     too_long = {"instance": instance, "routes": [[1] * 100] * 3}
