@@ -10,7 +10,7 @@ export function TourButton() {
     <button
       id={TOUR_BUTTON_ID}
       type="button"
-      className="btn max-md:btn-icon"
+      className="btn max-nav:btn-icon"
       data-testid="tour-start"
       data-attention={tour?.attention ? "true" : undefined}
       hidden={!tour}
@@ -20,7 +20,7 @@ export function TourButton() {
         <circle cx="12" cy="12" r="9" />
         <path d="m15.5 8.5-2 5-5 2 2-5z" />
       </svg>
-      <span className="max-md:sr-only">Recorrido guiado</span>
+      <span className="max-nav:sr-only">Recorrido guiado</span>
     </button>
   );
 }

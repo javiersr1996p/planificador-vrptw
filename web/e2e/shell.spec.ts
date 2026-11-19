@@ -103,10 +103,11 @@ test("el botón del recorrido se ve en la portada y se oculta donde no hay recor
   await expect(page.getByRole("link", { name: "Repositorio" })).toBeVisible();
 });
 
-test("la cabecera cabe en una línea con el recorrido conectado y «Aprende»", async ({ page }) => {
+test("la cabecera cabe en una línea con el recorrido conectado, «Aprende» y «Sobre el TFE»", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("tour-start")).toBeVisible();
   await expect(page.getByRole("navigation", { name: "Principal" }).getByRole("link", { name: "Aprende" })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Principal" }).getByRole("link", { name: "Sobre el TFE" })).toBeVisible();
   await page.evaluate(() => document.fonts.ready);
   await expectNoHorizontalOverflow(page);
   expect((await page.getByTestId("site-header").boundingBox())!.height).toBeLessThanOrEqual(64);
@@ -114,6 +115,24 @@ test("la cabecera cabe en una línea con el recorrido conectado y «Aprende»", 
   const title = (await page.getByRole("link", { name: "Planificador VRPTW, inicio" }).locator("span").first().boundingBox())!;
   expect(nav.x + nav.width).toBeLessThanOrEqual(page.viewportSize()!.width);
   expect(title.x + title.width).toBeLessThanOrEqual(nav.x);
+});
+
+test("de 768 a 1920 px, la marca y el lema no se solapan con la navegación", async ({ page }) => {
+  // Una sola carga: los cortes son de CSS y basta con cambiar el ancho de la ventana.
+  await page.goto("/");
+  await expect(page.getByTestId("tour-start")).toBeVisible();
+  await page.evaluate(() => document.fonts.ready);
+  for (const width of [768, 1024, 1280, 1419, 1420, 1920]) {
+    await page.setViewportSize({ width, height: 900 });
+    const { brandRight, navLeft, navRight } = await page.evaluate(() => {
+      const link = document.querySelector('a[aria-label="Planificador VRPTW, inicio"]')!;
+      const spans = Array.from(link.querySelectorAll("span"), (s) => s.getBoundingClientRect()).filter((b) => b.width > 1);
+      const nav = document.querySelector('nav[aria-label="Principal"]')!.getBoundingClientRect();
+      return { brandRight: Math.max(...spans.map((b) => b.right)), navLeft: nav.left, navRight: nav.right };
+    });
+    expect(brandRight, `${width} px`).toBeLessThanOrEqual(navLeft);
+    expect(navRight, `${width} px`).toBeLessThanOrEqual(width);
+  }
 });
 
 test("el «?» se abre y se cierra con teclado y su texto sale del glosario", async ({ page }) => {
