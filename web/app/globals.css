@@ -1,26 +1,547 @@
 @import "tailwindcss";
 
+/*
+  Sistema visual "Torre de control": noche azul profunda, rejilla de radar,
+  un único acento ámbar y colores de neón para las furgonetas. Un solo tema,
+  oscuro. El contraste de cada par de texto lo mide e2e/contraste.spec.ts
+  leyendo los valores hexadecimales de este bloque.
+*/
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: dark;
+
+  /* Fondos, del más profundo al más alto. */
+  --ink-0: #04070d;
+  --ink-1: #070d18;
+  --ink-2: #0b1424;
+  --ink-3: #111d33;
+  --glass: rgb(5 10 19 / 0.82);
+  --line: rgb(150 180 230 / 0.13);
+  --line-2: rgb(150 180 230 / 0.26);
+
+  /* Texto en tres niveles. */
+  --fg: #ecf1fa;
+  --fg-2: #b9c5d8;
+  --fg-3: #94a1b8;
+
+  /* Acento. */
+  --amber: #ffb547;
+  --amber-2: #ffd18a;
+  --amber-ink: #1c1200;
+
+  /* Estados de una parada: a tiempo, espera y retraso. */
+  --ok: #4ef0a2;
+  --wait: #ffb547;
+  --late: #ff6767;
+
+  /*
+    Diez furgonetas. Todas con 4,5:1 o más sobre --ink-0 y --ink-2 (se usan
+    también como texto, y --ink-0 sobre ellas en las paradas atendidas), y
+    lejos del verde, ámbar y rojo de los estados. Con más de diez se repite
+    el ciclo y las distingue la etiqueta F<n>.
+  */
+  --veh-1: #3fd6ff;
+  --veh-2: #ff6ec7;
+  --veh-3: #a993ff;
+  --veh-4: #c4f25c;
+  --veh-5: #5c9dff;
+  --veh-6: #f09cff;
+  --veh-7: #2fd4c0;
+  --veh-8: #d3dceb;
+  --veh-9: #ff9e7a;
+  --veh-10: #b3ad5f;
+
+  /* Radios. */
+  --r-panel: 16px;
+  --r-hud: 12px;
+  --r-chip: 10px;
+  --r-tag: 8px;
+
+  /* Rejilla de fondo y esquinas de visor. */
+  --grid-line: rgb(120 160 230 / 0.04);
+  --grid-size: 56px;
+  --corner-color: rgb(255 181 71 / 0.75);
+  --corner-size: 20px;
+  --corner-inset: 10px;
+
+  /* Brillos. */
+  --glow-amber: 0 0 24px -6px rgb(255 181 71 / 0.6);
+  --shadow-deep: 0 40px 90px -40px rgb(0 0 0 / 0.95);
+
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+
+  --page-max: 1440px;
+  --gutter: clamp(16px, 1.8vw, 28px);
+  --header-h: 64px;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-ink-0: var(--ink-0);
+  --color-ink-1: var(--ink-1);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-glass: var(--glass);
+  --color-line: var(--line);
+  --color-line-2: var(--line-2);
+  --color-fg: var(--fg);
+  --color-fg-2: var(--fg-2);
+  --color-fg-3: var(--fg-3);
+  --color-amber: var(--amber);
+  --color-amber-2: var(--amber-2);
+  --color-amber-ink: var(--amber-ink);
+  --color-ok: var(--ok);
+  --color-wait: var(--wait);
+  --color-late: var(--late);
+  --color-veh-1: var(--veh-1);
+  --color-veh-2: var(--veh-2);
+  --color-veh-3: var(--veh-3);
+  --color-veh-4: var(--veh-4);
+  --color-veh-5: var(--veh-5);
+  --color-veh-6: var(--veh-6);
+  --color-veh-7: var(--veh-7);
+  --color-veh-8: var(--veh-8);
+  --color-veh-9: var(--veh-9);
+  --color-veh-10: var(--veh-10);
+  --radius-panel: var(--r-panel);
+  --radius-hud: var(--r-hud);
+  --radius-chip: var(--r-chip);
+  --radius-tag: var(--r-tag);
+  --font-sans: var(--ff-body), system-ui, sans-serif;
+  --font-mono: var(--ff-mono), ui-monospace, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/*
+  Big Shoulders es una familia variable con eje de tamaño óptico (opsz 10 a 72);
+  su corte "Display" es opsz 72. Se fija aquí para titulares y cifras grandes.
+*/
+@utility font-display {
+  font-family: var(--ff-display), "Arial Narrow", sans-serif;
+  font-variation-settings: "opsz" 72;
+}
+
+/* Botón cuadrado de 44 px; como utilidad admite variantes (`max-md:btn-icon`). */
+@utility btn-icon {
+  width: 44px;
+  padding: 0;
+}
+
+@layer base {
+  html {
+    background: var(--ink-0);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    min-height: 100vh;
+    color: var(--fg);
+    font-family: var(--ff-body), system-ui, sans-serif;
+    font-size: 1rem;
+    line-height: 1.5;
+    overflow-x: hidden;
+    background:
+      radial-gradient(1100px 520px at 72% -12%, rgb(38 92 180 / 0.26), transparent 62%),
+      radial-gradient(800px 480px at -8% 46%, rgb(255 181 71 / 0.07), transparent 60%),
+      radial-gradient(900px 600px at 100% 100%, rgb(120 80 220 / 0.08), transparent 60%),
+      var(--ink-0);
+  }
+
+  /* Rejilla de radar, fija y desvanecida hacia los bordes. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: var(--grid-size) var(--grid-size);
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 20%, #000 20%, transparent 75%);
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--ff-display), "Arial Narrow", sans-serif;
+    font-variation-settings: "opsz" 72;
+    letter-spacing: 0.02em;
+    line-height: 1.05;
+  }
+
+  a {
+    color: var(--amber-2);
+    text-underline-offset: 3px;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--amber);
+    outline-offset: 3px;
+  }
+
+  ::selection {
+    background: rgb(255 181 71 / 0.35);
+    color: var(--fg);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Clases propias en una capa: las utilidades de Tailwind pueden sobrescribirlas. */
+@layer components {
+  /* Contenido por encima de la rejilla de fondo. */
+  .shell {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    min-height: 100vh;
+    flex-direction: column;
+  }
+
+  .wrap {
+    width: 100%;
+    max-width: var(--page-max);
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+  }
+
+  /* Cifras tabulares para costes, horas y distancias. */
+  .num {
+    font-family: var(--ff-mono), ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Etiqueta en mayúsculas sobre un título. */
+  .kicker {
+    display: block;
+    font: 600 12px/1 var(--ff-mono), ui-monospace, monospace;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--amber);
+  }
+
+  /* Botones en píldora: fantasma y ámbar. */
+  .btn {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 16px;
+    border: 1px solid var(--line-2);
+    border-radius: 999px;
+    background: rgb(255 255 255 / 0.03);
+    color: var(--fg);
+    font: 600 16px/1 var(--ff-body), system-ui, sans-serif;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+      background-color 200ms var(--ease-out),
+      border-color 200ms var(--ease-out),
+      transform 150ms var(--ease-out);
+  }
+  .btn svg {
+    width: 18px;
+    height: 18px;
+    flex: none;
+  }
+  .btn:active {
+    transform: scale(0.97);
+  }
+  .btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+  @media (hover: hover) {
+    .btn:hover:not(:disabled) {
+      border-color: rgb(255 181 71 / 0.55);
+      background: rgb(255 255 255 / 0.07);
+    }
+  }
+  .btn-amber {
+    border-color: transparent;
+    background: var(--amber);
+    color: var(--amber-ink);
+  }
+  @media (hover: hover) {
+    .btn-amber:hover:not(:disabled) {
+      border-color: transparent;
+      background: var(--amber-2);
+    }
+  }
+  /* Panel con filo ámbar arriba. */
+  .panel {
+    position: relative;
+    min-width: 0;
+    padding: 20px 24px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-panel);
+    background: linear-gradient(180deg, rgb(17 29 51 / 0.92), rgb(7 13 24 / 0.92));
+  }
+  .panel::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto;
+    height: 1px;
+    border-radius: var(--r-panel) var(--r-panel) 0 0;
+    background: linear-gradient(90deg, transparent, rgb(255 181 71 / 0.35), transparent);
+  }
+  .panel-title {
+    margin-top: 7px;
+    font-size: 26px;
+    font-weight: 700;
+  }
+  @media (max-width: 760px) {
+    .panel {
+      padding: 14px;
+    }
+  }
+
+  /* Capa de vidrio para controles sobre el mapa. */
+  .hud {
+    border: 1px solid var(--line-2);
+    border-radius: var(--r-hud);
+    background: var(--glass);
+    backdrop-filter: blur(10px);
+  }
+
+  /* Esquinas de visor: cuatro escuadras ámbar dentro de un contenedor relativo. */
+  .corner {
+    position: absolute;
+    z-index: 2;
+    width: var(--corner-size);
+    height: var(--corner-size);
+    border: 2px solid var(--corner-color);
+    pointer-events: none;
+  }
+  .corner-tl {
+    top: var(--corner-inset);
+    left: var(--corner-inset);
+    border-right: 0;
+    border-bottom: 0;
+    border-top-left-radius: 6px;
+  }
+  .corner-tr {
+    top: var(--corner-inset);
+    right: var(--corner-inset);
+    border-bottom: 0;
+    border-left: 0;
+    border-top-right-radius: 6px;
+  }
+  .corner-bl {
+    bottom: var(--corner-inset);
+    left: var(--corner-inset);
+    border-top: 0;
+    border-right: 0;
+    border-bottom-left-radius: 6px;
+  }
+  .corner-br {
+    right: var(--corner-inset);
+    bottom: var(--corner-inset);
+    border-top: 0;
+    border-left: 0;
+    border-bottom-right-radius: 6px;
+  }
+
+  /* Término subrayado con un trazo ámbar bajo (p. ej. "ventana horaria"). */
+  .term-mark {
+    background: linear-gradient(transparent 82%, rgb(255 181 71 / 0.55) 82%);
+    text-decoration: none;
+  }
+
+  /* Botón de ayuda "?" y su globo. */
+  .help {
+    position: relative;
+    display: inline-grid;
+    width: 28px;
+    height: 28px;
+    flex: none;
+    place-items: center;
+    padding: 0;
+    border: 1.5px solid var(--amber);
+    border-radius: 50%;
+    background: rgb(255 181 71 / 0.12);
+    color: var(--amber);
+    font: 700 17px/1 var(--ff-body), system-ui, sans-serif;
+    vertical-align: 0.18em;
+    cursor: pointer;
+    transition: background-color 200ms var(--ease-out);
+  }
+  /* Zona pulsable de 46 px alrededor del círculo. */
+  .help::before {
+    content: "";
+    position: absolute;
+    inset: -9px;
+  }
+  .help[aria-expanded="true"] {
+    background: rgb(255 181 71 / 0.28);
+  }
+  @media (hover: hover) {
+    .help:hover {
+      background: rgb(255 181 71 / 0.28);
+    }
+  }
+  .help-sm {
+    width: 24px;
+    height: 24px;
+    font-size: 16px;
+    vertical-align: middle;
+  }
+  .help-sm::before {
+    inset: -10px;
+  }
+
+  .pop {
+    position: fixed;
+    z-index: 60;
+    width: min(360px, calc(100vw - 32px));
+    padding: 16px 16px 14px;
+    border: 1px solid rgb(255 181 71 / 0.55);
+    border-radius: 14px;
+    background: var(--ink-3);
+    box-shadow:
+      0 30px 70px -20px rgb(0 0 0 / 0.9),
+      0 0 40px -12px rgb(255 181 71 / 0.35);
+    animation: pop 220ms var(--ease-out) both;
+  }
+  .pop h3 {
+    margin: 6px 0 8px;
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .pop p {
+    margin-top: 8px;
+    font-size: 16px;
+    line-height: 1.4;
+    color: var(--fg-2);
+  }
+  .pop svg {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .pop-close {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    display: grid;
+    width: 40px;
+    height: 40px;
+    place-items: center;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    color: var(--fg-2);
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  @media (hover: hover) {
+    .pop-close:hover {
+      background: rgb(255 255 255 / 0.07);
+      color: var(--fg);
+    }
+  }
+
+  /* Llamada discreta sobre un botón (p. ej. la primera visita al recorrido). */
+  .btn[data-attention="true"] {
+    border-color: rgb(255 181 71 / 0.65);
+    animation: callout 2.4s var(--ease-out) 1.2s 3;
+  }
+
+  /*
+    Animaciones decorativas: se detienen bajo un ancestro con
+    data-motion="off" ("Pausar movimiento") y con movimiento reducido.
+  */
+  [data-motion="off"] .decor,
+  .decor[data-motion="off"] {
+    animation: none !important;
+  }
+
+  /* Barra de una solución no válida: rayada, para no depender solo del color. */
+  .bar-invalid {
+    background: repeating-linear-gradient(135deg, var(--late) 0 4px, rgb(255 103 103 / 0.4) 4px 8px);
+  }
+}
+
+/* Entrada escalonada con --i. */
+.rise {
+  animation: rise 240ms var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 28ms);
+}
+.grow {
+  transform-origin: left;
+  animation: grow 300ms var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 28ms + 60ms);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+@keyframes grow {
+  from {
+    transform: scaleX(0);
+  }
+}
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+}
+/* Halo que se expande y se apaga (paradas en curso). */
+@keyframes ping {
+  from {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  to {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}
+/* Onda de radar (base). */
+@keyframes radar {
+  from {
+    transform: scale(0.9);
+    opacity: 0.85;
+  }
+  to {
+    transform: scale(3.4);
+    opacity: 0;
+  }
+}
+/* Parpadeo suave (luz de la radio, dos puntos del reloj). */
+@keyframes breathe {
+  to {
+    opacity: 0.3;
+  }
+}
+@keyframes sweep {
+  to {
+    transform: rotate(1turn);
+  }
+}
+@keyframes callout {
+  0% {
+    box-shadow: 0 0 0 0 rgb(255 181 71 / 0.6);
+  }
+  70% {
+    box-shadow: 0 0 0 14px rgb(255 181 71 / 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgb(255 181 71 / 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
