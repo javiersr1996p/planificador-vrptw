@@ -245,6 +245,8 @@ export interface components {
         };
         /** Evaluation */
         Evaluation: {
+            /** Depot Arrival */
+            depot_arrival?: number[] | null;
             /** Distance */
             distance: number;
             /** Feasible */
