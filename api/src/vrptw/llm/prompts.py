@@ -1,8 +1,7 @@
 """Prompts con los que un LLM resuelve instancias VRPTW.
 
 Adaptados del prompt definitivo del TFE de 2024 (p. 75 a 78) y de su segundo
-prompt de comprobación (p. 79). Los textos son en inglés, como los de 2024. Las
-diferencias respecto a 2024 están en `docs/prompts.md`.
+prompt de comprobación (p. 79). Los textos son en inglés, como los de 2024.
 """
 
 from vrptw.model import SOLOMON, Evaluation, Instance

@@ -72,14 +72,12 @@ Desde `api/`. Cada ejecución queda como un `RunRecord` en JSON en `api/runs/`.
 
 ## Documentación
 
-- `docs/tfe-reimplementacion.md`: qué consta en el TFE de 2024, qué se ha corregido y por qué.
-- `docs/prompts.md`: los prompts de los LLM y sus diferencias con los de 2024.
 - `docs/formato-csv.md`: la plantilla del CSV de casos reales.
 - `docs/fuentes/`: datos externos (precios, cuotas, instancias de Solomon, hosting, mapas y tipografías) con su URL y fecha de consulta.
 
 ## Origen
 
-Los métodos clásicos (heurística, colonia de hormigas, genético y búsqueda tabú) y los 20 problemas de `api/data/tfe2024/` se han portado, con correcciones, del código original del TFE de 2024: [oscarsr96/tfm_vrptw_osr_jsr](https://github.com/oscarsr96/tfm_vrptw_osr_jsr) (commit `c3ad94c`). Las diferencias respecto a aquel código se documentan en `docs/tfe-reimplementacion.md`.
+Los métodos clásicos (heurística, colonia de hormigas, genético y búsqueda tabú) y los 20 problemas de `api/data/tfe2024/` parten del código original del TFE de 2024: [oscarsr96/tfm_vrptw_osr_jsr](https://github.com/oscarsr96/tfm_vrptw_osr_jsr) (commit `c3ad94c`).
 
 ## Servicio
 

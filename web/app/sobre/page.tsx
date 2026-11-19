@@ -20,7 +20,7 @@ const CREDITS = [
 /**
  * La misma comparativa, actualizada: qué había en 2024 y qué hay ahora, sin juzgar el original.
  * Fuentes: modelos de 2024, apartado 4.8 del TFE; de ahora, `GET /models`. Métodos y problemas
- * de 2024, docs/tfe-reimplementacion.md; Solomon y su camuflaje, README (Benchmark y Servicio).
+ * de 2024, el código del TFE (`c3ad94c`); Solomon y su camuflaje, README (Benchmark y Servicio).
  */
 const CHANGES = [
   {
