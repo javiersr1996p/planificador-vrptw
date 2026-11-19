@@ -1,0 +1,27 @@
+# Servicio Python del planificador en Render, plan gratuito (0,1 CPU y 512 MB;
+# se duerme tras 15 min sin tráfico y tarda en torno a un minuto en despertar).
+# Las claves de Geoapify y openrouteservice se piden en el panel al crear el
+# Blueprint (sync: false). El servicio nunca lee una clave de Anthropic: cada
+# visitante envía la suya en la cabecera X-LLM-Key.
+services:
+  - type: web
+    name: planificador-vrptw-api
+    runtime: python
+    plan: free
+    region: frankfurt
+    rootDir: api
+    # Precompilar en el build: con 0,1 CPU, compilar el SDK de Anthropic al
+    # despertar alargaría cada arranque en frío.
+    buildCommand: uv sync --locked --no-dev --compile-bytecode
+    startCommand: uv run --no-sync uvicorn vrptw.api.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeployTrigger: commit
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.14.10
+      - key: VRPTW_CORS_ORIGINS
+        value: https://planificador-vrptw.vercel.app
+      - key: GEOAPIFY_API_KEY
+        sync: false
+      - key: ORS_API_KEY
+        sync: false
