@@ -1,6 +1,6 @@
 # Hosting y servicios de mapas gratuitos: fuentes verificadas
 
-Fecha de consulta de todas las filas: 2026-11-14, salvo la sección 6 y los datos marcados "(consulta 2026-11-17)". Cada dato procede de la página oficial indicada en la fila, abierta en esta sesión. Lo que no se pudo verificar figura como "PENDIENTE DE CONFIRMAR". Las cifras marcadas "(cálculo propio)" se derivan de fórmulas oficiales y no aparecen literalmente en ninguna página.
+Fecha de consulta de todas las filas: 2026-11-14, salvo la sección 6 y los datos marcados "(consulta 2026-11-17)". Cada dato procede de la página oficial indicada en la fila, consultada en su fecha. Lo que no se pudo verificar figura como "PENDIENTE DE CONFIRMAR". Las cifras marcadas "(cálculo propio)" se derivan de fórmulas oficiales y no aparecen literalmente en ninguna página.
 
 Requisitos del caso: FastAPI con numpy, hasta 100 clientes, peticiones de segundos a un par de minutos, matriz hasta 101 x 101 (10 201 celdas), app pública sin cuentas, tráfico bajo.
 
@@ -87,6 +87,18 @@ Texto de atribución de OpenStreetMap: debe citar "OpenStreetMap", y siguen sien
 
 Recomendación (teselas): **OpenFreeMap**, porque no tiene límites ni claves, permite el despliegue en una app pública y su atribución la gestiona MapLibre. Las teselas de OSMF quedan como respaldo, sin cumplir el requisito de no ser un servicio de mejor esfuerzo.
 Recomendación (biblioteca): **MapLibre GL JS con react-map-gl**, porque tiene licencia BSD verificada y consume directamente el estilo vectorial de OpenFreeMap; antes de fijarlo, confirmar la licencia de react-map-gl y su compatibilidad con la versión de React usada.
+
+### Versión y estilo usados en la interfaz (consulta 2026-11-17)
+
+La interfaz usa MapLibre GL JS directamente, sin react-map-gl: una sola dependencia y sin depender de su compatibilidad con React 19.
+
+| Dato | Valor verificado | URL |
+|---|---|---|
+| Versión de `maplibre-gl` | 6.19.0, etiqueta `latest` del registro de npm, publicada el 2026-11-17 (release `v6.19.0` de GitHub, no marcada como prerelease). Se instala con versión exacta | https://registry.npmjs.org/maplibre-gl/latest ; https://github.com/maplibre/maplibre-gl-js/releases/tag/v6.19.0 |
+| Licencia | `BSD-3-Clause` en el `package.json` publicado; `LICENSE.txt` del repositorio: "Copyright (c) 2023, MapLibre contributors", BSD de 3 cláusulas | https://github.com/maplibre/maplibre-gl-js/blob/main/LICENSE.txt |
+| Paquete | Solo ESM (`dist/maplibre-gl.mjs`), con el worker en un fichero aparte (`dist/maplibre-gl-worker.mjs`) que se indica con `setWorkerUrl` cuando se empaqueta, como en el ejemplo oficial de OpenFreeMap | https://openfreemap.org/quick_start/ |
+| Estilo | `https://tiles.openfreemap.org/styles/dark`. La guía rápida de OpenFreeMap lista cinco estilos en su selector: Positron, Bright, Liberty, Dark y Fiord (su ejemplo de código usa `liberty`). La URL responde 200 con un JSON de estilo (versión 8) cuya fuente vectorial `openmaptiles` apunta a `https://tiles.openfreemap.org/planet`; tipografías y sprites salen del mismo dominio. La interfaz lo descarga, lo recolorea en el navegador hacia su paleta nocturna (y le añade edificios en 3D con la capa `building` de esa misma fuente) y se lo pasa a MapLibre como objeto: no se aloja ninguna copia del estilo. La guía solo ofrece su herramienta "Customize" para Bright, Liberty y Positron; recolorear el JSON en el cliente no usa esa herramienta | https://openfreemap.org/quick_start/ ; https://tiles.openfreemap.org/styles/dark |
+| Atribución | La guía rápida muestra el texto "OpenFreeMap © OpenMapTiles Data from OpenStreetMap", y la fuente vectorial (`https://tiles.openfreemap.org/planet`) lo declara en su campo `attribution` con tres enlaces: https://openfreemap.org, https://www.openmaptiles.org/ y https://www.openstreetmap.org/copyright. La interfaz desactiva el control de atribución de MapLibre y pinta una línea propia, siempre visible sobre el mapa, con esos tres enlaces ("© OpenStreetMap · OpenMapTiles · OpenFreeMap"). Si el mapa base no carga y el caso se dibuja en plano, queda solo la de OpenStreetMap, de donde salen las coordenadas | https://tiles.openfreemap.org/planet ; https://openfreemap.org/quick_start/ |
 
 ## 6. Detalles de integración de Geoapify y OpenRouteService
 

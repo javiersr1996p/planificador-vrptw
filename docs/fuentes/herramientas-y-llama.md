@@ -1,6 +1,6 @@
 # Herramientas (tool calling) por proveedor y elección de proveedor de Llama
 
-Fecha de consulta de todas las fuentes: 2026-11-14. Todos los datos salen de páginas oficiales abiertas en esta sesión. Lo no verificado figura como "PENDIENTE DE CONFIRMAR".
+Fecha de consulta de todas las fuentes: 2026-11-14. Todos los datos salen de páginas oficiales consultadas en esa fecha. Lo no verificado figura como "PENDIENTE DE CONFIRMAR".
 
 Contexto: bucle agente de hasta 6 turnos con dos herramientas propias (`solve_classic`, `evaluate_routes`).
 

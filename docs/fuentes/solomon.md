@@ -166,7 +166,7 @@ de Solomon, que solo publica soluciones óptimas (convención a).
   (sección 6).
 - 25 y 50 clientes: una fuente primaria leída (IMM). Diez de las doce cifras coinciden con la Tabla 6 de
   un artículo de 2024 en acceso abierto (abajo). Las páginas de soluciones óptimas de Solomon, que serían
-  la cita canónica, tienen copias en el Wayback Machine pero no se han podido leer en esta sesión (la
+  la cita canónica, tienen copias en el Wayback Machine pero no se han podido leer al consultar las fuentes (la
   herramienta devolvía error 429):
   - <http://web.archive.org/web/20210731183659/http://web.cba.neu.edu/~msolomon/c1c2solu.htm>
   - <http://web.archive.org/web/20210731193817/http://web.cba.neu.edu/~msolomon/r1r2solu.htm>
@@ -194,7 +194,7 @@ Lección para el trabajo: no se deben copiar columnas "BKS" de artículos secund
 convención.
 
 Otra discrepancia, documentada por la propia SINTEF: para RC101 los autores originales (TBGGP) publicaron
-1696.94; SINTEF da 1696.95 y atribuye la diferencia a un error de redondeo. El recálculo de esta sesión
+1696.94; SINTEF da 1696.95 y atribuye la diferencia a un error de redondeo. El recálculo propio
 da 1696.949157, que redondea a 1696.95.
 
 ## 6. Soluciones de referencia con rutas

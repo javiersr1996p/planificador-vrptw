@@ -1,6 +1,6 @@
 # Modelos y precios para el benchmark (fecha de consulta: 2026-11-14)
 
-Todos los datos proceden de páginas oficiales abiertas en esta sesión. Lo no verificado figura como "PENDIENTE DE CONFIRMAR". Precios en USD por millón de tokens (MTok). Nota: las páginas se leyeron mediante una herramienta que resume el contenido; los datos clave deberían recontrastarse antes de gastar presupuesto.
+Todos los datos proceden de páginas oficiales consultadas para este documento. Lo no verificado figura como "PENDIENTE DE CONFIRMAR". Precios en USD por millón de tokens (MTok). Nota: las páginas se leyeron mediante una herramienta que resume el contenido; los datos clave deberían recontrastarse antes de gastar presupuesto.
 
 ## Tipo de cambio
 
