@@ -5,6 +5,78 @@ Planificador de rutas con ventanas de tiempo que compara métodos clásicos y LL
 - `api/`: backend en Python (solver, algoritmos y API).
 - `web/`: frontend en Next.js.
 
+## Requisitos
+
+- [uv](https://docs.astral.sh/uv/), con Python 3.12 o posterior (probado con 3.14).
+- Node.js 24 o posterior, con npm.
+
+## En local
+
+Servicio, desde `api/`. Las claves van en `api/.env` (plantilla: `.env.example` en la raíz) y ninguna es obligatoria: sin ellas, la geocodificación responde 503 y la matriz sale en línea recta.
+
+```
+uv sync
+uv run --env-file .env uvicorn vrptw.api.main:app
+```
+
+Web, desde `web/`. Llama al servicio en `http://127.0.0.1:8000` salvo que `NEXT_PUBLIC_API_URL` diga otra cosa.
+
+```
+npm ci
+npm run dev
+```
+
+Para probar las rutas con LLM sin clave ni coste, arrancar el servicio con `VRPTW_LLM_PROVIDER=fake` (ver "Modo de pruebas", más abajo).
+
+## Pruebas
+
+Desde `api/`:
+
+```
+uv sync --locked
+uv run ruff check .
+uv run ruff format --check .
+uv run mypy src
+uv run pytest -q
+uv run pytest -q -m legado
+uv run python -m compileall -q src
+```
+
+`-m legado` es la regresión contra los resultados de 2024 y tarda unos minutos.
+
+Desde `web/`. Playwright arranca por su cuenta el servicio con el proveedor falso (puerto 8010, sin claves) y la web (puerto 3100), así que necesita `uv` en el PATH y esos puertos libres:
+
+```
+npm ci
+npx playwright install chromium
+npm run lint
+npm run build
+npx tsc --noEmit
+npx playwright test --project=mobile-390 --project=desktop-1440
+```
+
+Contrato y datos: tras `npm run gen:types` (en `web/`) y `uv run vrptw bench export` (en `api/`), `git status` no debe mostrar cambios.
+
+## Benchmark
+
+Desde `api/`. Cada ejecución queda como un `RunRecord` en JSON en `api/runs/`.
+
+- Métodos clásicos, sin red: `uv run vrptw bench classic --tier N --reps 30`. Escalones: 1, cuatro problemas de 2024; 2 y 3, seis de Solomon con 25 y 50 clientes; 4, C101, R101 y RC101 con 100.
+- LLM: `uv run vrptw bench estimate` estima el coste sin llamadas. `uv run vrptw bench llm --tier N` muestra el plan y su peor caso de gasto sin llamar a nada; con `--confirm` y `ANTHROPIC_API_KEY` lo ejecuta, comprobando antes de cada llamada un tope global contra el libro de gasto (`api/runs/ledger.json`). Las ejecuciones ya hechas están en `api/runs/llm/` y se reutilizan.
+- Casos de la web: `uv run vrptw bench export` regenera `web/public/data/` a partir de esos registros, sin red ni gasto.
+
+## Despliegue
+
+- Servicio: Render, plan gratuito, con el Blueprint `render.yaml`. Las claves de Geoapify y openrouteservice se rellenan en el panel; `VRPTW_CORS_ORIGINS` es la URL de la web.
+- Web: Vercel, con raíz `web/` y `NEXT_PUBLIC_API_URL` igual a la URL pública del servicio. Sin esa variable, el build en Vercel falla.
+
+## Documentación
+
+- `docs/tfe-reimplementacion.md`: qué consta en el TFE de 2024, qué se ha corregido y por qué.
+- `docs/prompts.md`: los prompts de los LLM y sus diferencias con los de 2024.
+- `docs/formato-csv.md`: la plantilla del CSV de casos reales.
+- `docs/fuentes/`: datos externos (precios, cuotas, instancias de Solomon, hosting, mapas y tipografías) con su URL y fecha de consulta.
+
 ## Origen
 
 Los métodos clásicos (heurística, colonia de hormigas, genético y búsqueda tabú) y los 20 problemas de `api/data/tfe2024/` se han portado, con correcciones, del código original del TFE de 2024: [oscarsr96/tfm_vrptw_osr_jsr](https://github.com/oscarsr96/tfm_vrptw_osr_jsr) (commit `c3ad94c`). Las diferencias respecto a aquel código se documentan en `docs/tfe-reimplementacion.md`.
