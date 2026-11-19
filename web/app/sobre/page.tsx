@@ -5,9 +5,9 @@ import { Kicker } from "@/components/ui/Kicker";
 import { REPO_URL, TFE_CODE_COMMIT, TFE_CODE_URL, TFE_DOC_URL } from "@/lib/nav";
 
 export const metadata: Metadata = {
-  title: "Sobre el TFE: el trabajo de 2024, qué ha cambiado y sus limitaciones",
+  title: "Sobre el TFE: la comparativa de 2024 con los modelos de IA actuales",
   description:
-    "El Trabajo Fin de Estudios de 2024 del que parte este planificador: su código, lo que ha cambiado desde entonces, las limitaciones declaradas y los créditos.",
+    "El Trabajo Fin de Estudios de 2024 del que parte este planificador: su código, qué se ha actualizado con los modelos de IA actuales, las limitaciones y los créditos.",
 };
 
 const CREDITS = [
@@ -17,46 +17,49 @@ const CREDITS = [
   { name: "Hernán Díaz Rodríguez", role: "Codirector" },
 ];
 
-/** Fuentes: README (Origen), docs/tfe-reimplementacion.md, docs/prompts.md y docs/fuentes/solomon.md. */
+/**
+ * La misma comparativa, actualizada: qué había en 2024 y qué hay ahora, sin juzgar el original.
+ * Fuentes: modelos de 2024, apartado 4.8 del TFE; de ahora, `GET /models`. Métodos y problemas
+ * de 2024, docs/tfe-reimplementacion.md; Solomon y su camuflaje, README (Benchmark y Servicio).
+ */
 const CHANGES = [
   {
+    title: "Modelos de IA",
+    then: "Claude 3.5 Sonnet, Llama 3.1, GPT-4o y Perplexity AI.",
+    now: "Claude Haiku 5.5, Sonnet 5.5 y Opus 5.5, llamados por API.",
+  },
+  {
+    title: "Papel del modelo",
+    then: "Recibía el problema en un prompt y devolvía el plan.",
+    now: "Resuelve directo o como agente que usa los métodos clásicos.",
+  },
+  {
     title: "Métodos clásicos",
-    then: "El tabú no se movía y la heurística a veces no sumaba la vuelta a la base.",
-    now: "Corregidos; un modo legado reproduce los resultados de 2024.",
+    then: "Heurística, colonia de hormigas, genético y tabú, en notebooks.",
+    now: "Los mismos cuatro, en un servicio que la web ejecuta en vivo.",
   },
   {
-    title: "Coste",
-    then: "Cada notebook calculaba el coste con su propia función.",
-    now: "Los métodos solo dan rutas; un evaluador único calcula el coste.",
+    title: "Problemas de referencia",
+    then: "12 problemas generados de 10 y 20 clientes, más C101 y C102 de Solomon.",
+    now: "Solomon de 25 a 100 clientes, camuflado para que el LLM no lo reconozca.",
   },
   {
-    title: "Referencia externa",
-    then: "12 problemas propios; de Solomon, solo dos instancias y con un único LLM.",
-    now: "Solomon con su mejor solución publicada, camuflado ante el LLM.",
-  },
-  {
-    title: "IA generativa",
-    then: "El LLM devolvía el plan como una tabla por vehículo.",
-    now: "Dos papeles: resolver directo o agente que usa métodos y evaluador.",
-  },
-  {
-    title: "Capacidad",
-    then: "Sin capacidad: la demanda de los clientes no se usaba.",
-    now: "Cuenta la demanda: un plan que supera la capacidad no es válido.",
-  },
-  {
-    title: "Sobre el mapa",
+    title: "Casos reales",
     then: "Puntos en un plano, con distancias en línea recta.",
-    now: "Casos reales: direcciones geocodificadas y distancias por carretera.",
+    now: "Direcciones reales, distancias por carretera y tráfico por franjas.",
+  },
+  {
+    title: "Web pública",
+    then: "Resultados en el documento y en el repositorio de código.",
+    now: "Cualquiera repite la comparativa en la web con su propia clave.",
   },
 ];
 
 /** El perfil de tráfico es el de public/data/traffic-profiles.json. */
 const LIMITS = [
-  "Es una reimplementación, no el código de 2024: los resultados cambian.",
-  "Los tiempos no se comparan con 2024: otro código, y aquel tabú no iteraba.",
+  "Modelos y código nuevos: las cifras no se comparan una a una con las de 2024.",
   "Tráfico: perfil estático por franjas horarias, con factores ilustrativos.",
-  "El agente usa el protocolo de herramientas propio de Anthropic.",
+  "Solo modelos de Anthropic: el agente usa su protocolo de herramientas.",
 ];
 
 const VEHICLE_COLORS = ["var(--veh-1)", "var(--veh-2)", "var(--veh-3)", "var(--veh-4)"];
@@ -115,7 +118,7 @@ export default function AboutPage() {
           <h1 className="mt-2 text-[28px] font-extrabold sm:text-[clamp(30px,2.8vw,40px)]">Del TFE de 2024 a este planificador</h1>
         </div>
         <p className="max-w-[38rem] text-lg leading-snug text-fg-2">
-          Continuación de un Trabajo Fin de Estudios de 2024: el original, lo que ha cambiado y sus límites.
+          La comparativa del Trabajo Fin de Estudios de 2024, repetida con los modelos de IA actuales.
         </p>
       </div>
 
@@ -170,7 +173,7 @@ export default function AboutPage() {
 
       <section aria-labelledby="about-changes">
         <h2 id="about-changes" className="text-[clamp(26px,2.4vw,34px)] font-extrabold">
-          Qué ha cambiado desde 2024
+          Qué se ha actualizado
         </h2>
         <ol className="mt-4 grid gap-3 md:grid-cols-2 lg:gap-4 xl:grid-cols-3">
           {CHANGES.map((c, i) => (

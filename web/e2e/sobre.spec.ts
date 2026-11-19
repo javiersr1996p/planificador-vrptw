@@ -79,10 +79,10 @@ test("el código de 2024 y este repositorio se abren en otra pestaña; no hay en
   await expect(main.getByRole("link", { name: /pdf|documento/i })).toHaveCount(0);
 });
 
-test("qué ha cambiado y limitaciones: frases cortas", async ({ page }) => {
+test("qué se ha actualizado y limitaciones: frases cortas", async ({ page }) => {
   await page.goto("/sobre");
   await expect(page.getByTestId("about-change")).toHaveCount(6);
-  await expect(page.getByTestId("about-limit")).toHaveCount(4);
+  await expect(page.getByTestId("about-limit")).toHaveCount(3);
   // Ningún párrafo pasa de dos líneas en escritorio (ni de cinco en móvil).
   const maxLines = page.viewportSize()!.width >= 1440 ? 2 : 5;
   const lines = await page.getByRole("main").locator("p").evaluateAll((ps) =>
@@ -92,6 +92,11 @@ test("qué ha cambiado y limitaciones: frases cortas", async ({ page }) => {
     }),
   );
   for (const p of lines) expect(p.lines, `«${p.text}»`).toBeLessThanOrEqual(maxLines);
+});
+
+test("presenta una actualización, no una lista de errores del trabajo de 2024", async ({ page }) => {
+  await page.goto("/sobre");
+  await expect(page.getByRole("main")).not.toContainText(/corregid|correcci|errata|error|fallo|defecto|legado|no iteraba|no se mov/i);
 });
 
 test("cabe en su techo de altura, sin desbordamiento, con texto de 16 px, contraste AA y dianas de 44 px", async ({ page }) => {
