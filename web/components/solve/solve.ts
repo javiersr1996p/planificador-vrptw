@@ -1,4 +1,5 @@
 import { ApiError, solveClassic } from "@/lib/api";
+import type { Pair } from "@/lib/i18n";
 import type { components } from "@/lib/types";
 
 type S = components["schemas"];
@@ -16,21 +17,27 @@ export const MAX_RETRIES = 6;
 export const DEFAULT_RETRY_S = 5;
 const MAX_WAIT_S = 30;
 
-/** Texto legible de un error del servicio; nunca el cuerpo de la respuesta. */
-export function errorText(e: unknown): string {
-  if (!(e instanceof ApiError)) return "Algo falló al calcular. Inténtalo de nuevo.";
+/** Texto legible de un error del servicio, en los dos idiomas; nunca el cuerpo de la respuesta. */
+export function errorText(e: unknown): Pair {
+  if (!(e instanceof ApiError)) return { es: "Algo falló al calcular. Inténtalo de nuevo.", en: "Something went wrong while calculating. Try again." };
   switch (e.kind) {
     case "network":
-      return "No se pudo contactar con el servicio.";
+      return { es: "No se pudo contactar con el servicio.", en: "Could not reach the service." };
     case "unavailable":
-      return "El servicio sigue ocupado con otro cálculo. Inténtalo de nuevo en un momento.";
+      return {
+        es: "El servicio sigue ocupado con otro cálculo. Inténtalo de nuevo en un momento.",
+        en: "The service is still busy with another calculation. Try again in a moment.",
+      };
     case "validation":
     case "csv":
-      return `El servicio no aceptó este caso (error ${e.status}).`;
+      return { es: `El servicio no aceptó este caso (error ${e.status}).`, en: `The service did not accept this case (error ${e.status}).` };
     case "payload":
-      return "El caso es demasiado grande para el servicio.";
+      return { es: "El caso es demasiado grande para el servicio.", en: "The case is too large for the service." };
     default:
-      return `El servicio falló al calcular (error ${e.status}). Inténtalo de nuevo.`;
+      return {
+        es: `El servicio falló al calcular (error ${e.status}). Inténtalo de nuevo.`,
+        en: `The service failed while calculating (error ${e.status}). Try again.`,
+      };
   }
 }
 

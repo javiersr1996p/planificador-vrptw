@@ -6,7 +6,7 @@ import { bestRunKey, makeRun, usePlanner, type PlannerRun } from "@/components/p
 import { Button } from "@/components/ui/Button";
 import { ApiError } from "@/lib/api";
 import { useFormat } from "@/lib/format";
-import { useT } from "@/lib/i18n";
+import { useT, type Pair } from "@/lib/i18n";
 import { methodHint } from "@/lib/glossary";
 import { methodLabel } from "@/lib/labels";
 import type { components } from "@/lib/types";
@@ -22,7 +22,7 @@ type Status =
   | { kind: "running"; since: number }
   | { kind: "retry"; since: number; attempt: number }
   | { kind: "done"; record: S["RunRecord"] }
-  | { kind: "error"; message: string };
+  | { kind: "error"; message: Pair };
 
 const IDLE: Record<ClassicMethod, Status> = { heuristic: { kind: "idle" }, aco: { kind: "idle" }, ga: { kind: "idle" }, tabu: { kind: "idle" } };
 
@@ -35,42 +35,43 @@ function clock(ms: number): string {
 }
 
 function StatusText({ status, now }: { status: Status; now: number }) {
+  const t = useT();
   const { formatCost } = useFormat();
   switch (status.kind) {
     case "idle":
       return null;
     case "queued":
-      return <span className="text-fg-2">En cola</span>;
+      return <span className="text-fg-2">{t({ es: "En cola", en: "Queued" })}</span>;
     case "running":
       return (
         <span className="flex items-center gap-2 text-fg">
           <span aria-hidden="true" className="inline-block size-3.5 flex-none animate-spin rounded-full border-2 border-amber border-t-transparent" />
-          Calculando <span className="num" data-testid="solve-timer">{clock(now - status.since)}</span>
+          {t({ es: "Calculando", en: "Calculating" })} <span className="num" data-testid="solve-timer">{clock(now - status.since)}</span>
         </span>
       );
     case "retry":
       return (
         <span className="flex items-center gap-2 text-wait">
           <span aria-hidden="true" className="inline-block size-3.5 flex-none animate-spin rounded-full border-2 border-wait border-t-transparent" />
-          Servicio ocupado, reintentando ({status.attempt} de {MAX_RETRIES})
+          {t({ es: `Servicio ocupado, reintentando (${status.attempt} de ${MAX_RETRIES})`, en: `Service busy, retrying (${status.attempt} of ${MAX_RETRIES})` })}
         </span>
       );
     case "done": {
       const ev = status.record.evaluation;
-      if (!ev) return <span className="text-late">Hecho, sin solución legible</span>;
+      if (!ev) return <span className="text-late">{t({ es: "Hecho, sin solución legible", en: "Done, no readable plan" })}</span>;
       return (
         <span className="text-fg">
-          <span className="font-semibold text-ok">Hecho</span>
+          <span className="font-semibold text-ok">{t({ es: "Hecho", en: "Done" })}</span>
           {" · "}
           <span className="num">{formatCost(ev.score)}</span>
           {" · "}
-          <span className="num">{ev.vehicles_used}</span> {ev.vehicles_used === 1 ? "furgoneta" : "furgonetas"}
-          {!ev.feasible && <span className="font-semibold text-late"> · no válido</span>}
+          <span className="num">{ev.vehicles_used}</span> {ev.vehicles_used === 1 ? t({ es: "furgoneta", en: "van" }) : t({ es: "furgonetas", en: "vans" })}
+          {!ev.feasible && <span className="font-semibold text-late"> · {t({ es: "no válido", en: "not valid" })}</span>}
         </span>
       );
     }
     case "error":
-      return <span className="text-late">{status.message}</span>;
+      return <span className="text-late">{t(status.message)}</span>;
   }
 }
 
@@ -88,7 +89,7 @@ export function ClassicPanel() {
   const [picked, setPicked] = useState<Record<ClassicMethod, boolean>>({ heuristic: true, aco: true, ga: true, tabu: true });
   const [status, setStatus] = useState<Record<ClassicMethod, Status>>(IDLE);
   const [running, setRunning] = useState(false);
-  const [summary, setSummary] = useState<string | null>(null);
+  const [summary, setSummary] = useState<Pair | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const abort = useRef<AbortController | null>(null);
   const metaRef = useRef(state.meta);
@@ -182,8 +183,11 @@ export function ClassicPanel() {
       fresh.length === 0
         ? null
         : fresh.length === 1
-          ? "Plan nuevo en la comparativa y en el mapa."
-          : `${fresh.length} planes nuevos en la comparativa. El mejor está en el mapa.`,
+          ? { es: "Plan nuevo en la comparativa y en el mapa.", en: "New plan in the comparison and on the map." }
+          : {
+              es: `${fresh.length} planes nuevos en la comparativa. El mejor está en el mapa.`,
+              en: `${fresh.length} new plans in the comparison. The best is on the map.`,
+            },
     );
   }
 
@@ -192,14 +196,14 @@ export function ClassicPanel() {
     // esa fila, la página se alarga. El tope (altura de la fila menos la cabecera y las pestañas) lo evita.
     <div
       className="flex flex-col gap-4 min-[1180px]:max-h-[calc(clamp(560px,100svh-236px,760px)-230px)] min-[1180px]:overflow-y-auto min-[1180px]:overscroll-contain min-[1180px]:pr-1 [scrollbar-width:thin]"
-      data-testid="classic-panel" aria-label="Métodos clásicos en vivo" role="group">
+      data-testid="classic-panel" aria-label={t({ es: "Métodos clásicos en vivo", en: "Classic methods, live" })} role="group">
       <ServiceNotice id={REASON_ID} />
 
       <div className="flex flex-wrap items-center gap-3">
         {running ? (
           // El segundo clic de un doble clic en «Resolver» cae aquí: no cancela (el teclado da `detail` 0).
           <Button data-testid="solve-cancel" onClick={(e) => e.detail <= 1 && cancel()}>
-            Cancelar
+            {t({ es: "Cancelar", en: "Cancel" })}
           </Button>
         ) : (
           <Button
@@ -209,18 +213,22 @@ export function ClassicPanel() {
             aria-describedby={down ? REASON_ID : undefined}
             onClick={() => void solve()}
           >
-            Resolver
+            {t({ es: "Resolver", en: "Solve" })}
           </Button>
         )}
         <span className="min-w-0 flex-1 text-base leading-snug text-fg-2" data-testid="solve-summary">
           {running
-            ? "Un método cada vez; el servicio calcula uno solo."
-            : summary ?? (queue.length === 0 ? "Marca al menos un método." : "Hasta 30 s por método.")}
+            ? t({ es: "Un método cada vez; el servicio calcula uno solo.", en: "One method at a time; the service runs only one." })
+            : summary
+              ? t(summary)
+              : queue.length === 0
+                ? t({ es: "Marca al menos un método.", en: "Select at least one method." })
+                : t({ es: "Hasta 30 s por método.", en: "Up to 30 s per method." })}
         </span>
       </div>
 
       <fieldset className="m-0 min-w-0 border-0 p-0" disabled={running}>
-        <legend className="kicker mb-2 p-0">Métodos</legend>
+        <legend className="kicker mb-2 p-0">{t({ es: "Métodos", en: "Methods" })}</legend>
         <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
           {CLASSIC_METHODS.map((m) => {
             const st = status[m];

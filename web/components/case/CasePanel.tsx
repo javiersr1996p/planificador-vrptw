@@ -7,7 +7,7 @@ import { usePlanner } from "@/components/planner/store";
 import { Button } from "@/components/ui/Button";
 import { ApiError, parseCsv, type CsvRowError } from "@/lib/api";
 import { formatNumber } from "@/lib/format";
-import { useLang } from "@/lib/i18n";
+import { useLang, useT, type Pair } from "@/lib/i18n";
 import type { components } from "@/lib/types";
 import { CaseForm, Field, INPUT } from "./CaseForm";
 import { MAX_CSV_CHARS, formToCsv, newForm, rowTarget } from "./csv";
@@ -26,21 +26,36 @@ type S = components["schemas"];
 type Mode = "csv" | "form";
 type StepId = "read" | "geocode" | "matrix";
 type StepStatus = "idle" | "running" | "done" | "error" | "skipped";
-type StepState = { status: StepStatus; note?: string };
+type StepState = { status: StepStatus; note?: Pair };
 
-const STEPS: { id: StepId; label: string }[] = [
-  { id: "read", label: "Leer" },
-  { id: "geocode", label: "Geocodificar" },
-  { id: "matrix", label: "Calcular matriz" },
+const STEPS: { id: StepId; label: Pair }[] = [
+  { id: "read", label: { es: "Leer", en: "Read" } },
+  { id: "geocode", label: { es: "Geocodificar", en: "Geocode" } },
+  { id: "matrix", label: { es: "Calcular matriz", en: "Calculate matrix" } },
 ];
 const IDLE: Record<StepId, StepState> = { read: { status: "idle" }, geocode: { status: "idle" }, matrix: { status: "idle" } };
-const STATUS_TEXT: Record<StepStatus, string> = {
-  idle: "Pendiente",
-  running: "En curso",
-  done: "Hecho",
-  error: "Error",
-  skipped: "No hace falta",
+const STATUS_TEXT: Record<StepStatus, Pair> = {
+  idle: { es: "Pendiente", en: "Pending" },
+  running: { es: "En curso", en: "In progress" },
+  done: { es: "Hecho", en: "Done" },
+  error: { es: "Error", en: "Error" },
+  skipped: { es: "No hace falta", en: "Not needed" },
 };
+const DEFAULT_NAME: Pair = { es: "Mi caso", en: "My case" };
+
+/** `3 clientes` / `1 customer`: el número y el sustantivo de cada idioma. */
+const counted = (n: number, one: Pair, many: Pair): Pair => ({
+  es: `${n} ${n === 1 ? one.es : many.es}`,
+  en: `${n} ${n === 1 ? one.en : many.en}`,
+});
+const CUSTOMERS = [
+  { es: "cliente", en: "customer" },
+  { es: "clientes", en: "customers" },
+] as const;
+const VANS = [
+  { es: "furgoneta", en: "van" },
+  { es: "furgonetas", en: "vans" },
+] as const;
 const REASON_ID = "case-reason";
 const CSV_ERROR_ID = "case-csv-errors";
 
@@ -70,21 +85,23 @@ const legend = "kicker mb-1 p-0 text-fg-3";
 export function CasePanel() {
   const { state, actions } = usePlanner();
   const [lang] = useLang();
+  const t = useT();
   const { service } = useService();
   const metaNow = useLatest(state.meta);
 
   const [mode, setMode] = useState<Mode>("csv");
   const [form, setForm] = useState(newForm);
   const [csv, setCsv] = useState<{ name: string; text: string } | null>(null);
-  const [csvWarn, setCsvWarn] = useState<string | null>(null);
-  const [name, setName] = useState("Mi caso");
+  const [csvWarn, setCsvWarn] = useState<Pair | null>(null);
+  // `null`: el nombre por defecto, que sigue al idioma hasta que el visitante escribe otro.
+  const [name, setName] = useState<string | null>(null);
   const [vehicles, setVehicles] = useState("3");
   const [capacity, setCapacity] = useState("20");
 
   const [steps, setSteps] = useState(IDLE);
   const [busy, setBusy] = useState(false);
   const [rowErrors, setRowErrors] = useState<{ from: Mode; items: CsvRowError[] } | null>(null);
-  const [failure, setFailure] = useState<string | null>(null);
+  const [failure, setFailure] = useState<Pair | null>(null);
   const [work, setWork] = useState<S["Instance"] | null>(null);
   const [missing, setMissing] = useState<Position[]>([]);
   const [loaded, setLoaded] = useState<{ name: string; customers: number; vehicles: number } | null>(null);
@@ -112,7 +129,11 @@ export function CasePanel() {
     const text = file.size > MAX_CSV_CHARS * 4 ? null : await file.text().catch(() => null);
     if (text === null || text.length > MAX_CSV_CHARS) {
       setCsv(null);
-      setCsvWarn(`«${file.name}» es demasiado grande: el máximo son ${formatNumber(MAX_CSV_CHARS, 0, lang)} caracteres. Recórtalo y vuelve a subirlo.`);
+      const max = (l: "es" | "en") => formatNumber(MAX_CSV_CHARS, 0, l);
+      setCsvWarn({
+        es: `«${file.name}» es demasiado grande: el máximo son ${max("es")} caracteres. Recórtalo y vuelve a subirlo.`,
+        en: `“${file.name}” is too large: the maximum is ${max("en")} characters. Trim it and upload it again.`,
+      });
       return;
     }
     setCsv({ name: file.name, text });
@@ -134,9 +155,9 @@ export function CasePanel() {
     let inst = start;
     const todo = unplaced(inst);
     if (todo.length === 0) {
-      setStep("geocode", { status: "skipped", note: "Todo trae coordenadas" });
+      setStep("geocode", { status: "skipped", note: { es: "Todo trae coordenadas", en: "All have coordinates" } });
     } else {
-      setStep("geocode", { status: "running", note: `${todo.length} ${todo.length === 1 ? "dirección" : "direcciones"}` });
+      setStep("geocode", { status: "running", note: counted(todo.length, { es: "dirección", en: "address" }, { es: "direcciones", en: "addresses" }) });
       try {
         inst = await geocodePositions(inst, todo, ctrl.signal);
       } catch (e) {
@@ -151,10 +172,10 @@ export function CasePanel() {
       const left = unplaced(inst);
       if (left.length > 0) {
         setMissing(left);
-        setStep("geocode", { status: "error", note: `${left.length} sin encontrar` });
+        setStep("geocode", { status: "error", note: { es: `${left.length} sin encontrar`, en: `${left.length} not found` } });
         return;
       }
-      setStep("geocode", { status: "done", note: `${todo.length} encontradas` });
+      setStep("geocode", { status: "done", note: { es: `${todo.length} encontradas`, en: `${todo.length} found` } });
     }
     setMissing([]);
 
@@ -169,7 +190,7 @@ export function CasePanel() {
       return;
     }
     if (stale()) return;
-    setStep("matrix", { status: "done", note: matrix.source === "haversine_fallback" ? "en línea recta" : "por carretera" });
+    setStep("matrix", { status: "done", note: matrix.source === "haversine_fallback" ? { es: "en línea recta", en: "straight-line" } : { es: "por carretera", en: "by road" } });
     actions.setInstance({ ...inst, matrix }, { meta: { id: null, name: inst.name }, runs: [] });
     setWork(null);
     setLoaded({ name: inst.name, customers: inst.customers.length, vehicles: inst.fleet.vehicles });
@@ -180,7 +201,11 @@ export function CasePanel() {
     if (text === undefined || busy) return;
     reset();
     if (text.length > MAX_CSV_CHARS) {
-      setFailure(`El caso tiene ${formatNumber(text.length, 0, lang)} caracteres: el máximo son ${formatNumber(MAX_CSV_CHARS, 0, lang)}.`);
+      const n = (l: "es" | "en", v: number) => formatNumber(v, 0, l);
+      setFailure({
+        es: `El caso tiene ${n("es", text.length)} caracteres: el máximo son ${n("es", MAX_CSV_CHARS)}.`,
+        en: `The case has ${n("en", text.length)} characters: the maximum is ${n("en", MAX_CSV_CHARS)}.`,
+      });
       return;
     }
     const ctrl = new AbortController();
@@ -192,13 +217,13 @@ export function CasePanel() {
       const inst = await parseCsv(
         {
           csv: text,
-          name: name.trim() || "Mi caso",
+          name: name?.trim() || t(DEFAULT_NAME),
           fleet: { vehicles: Number(vehicles), capacity: capacity.trim() === "" ? null : Number(capacity.replace(",", ".")) },
         },
         ctrl.signal,
       );
       if (ctrl.signal.aborted) return;
-      setStep("read", { status: "done", note: `${inst.customers.length} ${inst.customers.length === 1 ? "cliente" : "clientes"}` });
+      setStep("read", { status: "done", note: counted(inst.customers.length, CUSTOMERS[0], CUSTOMERS[1]) });
       await advance(inst, ctrl, startMeta);
     } catch (e) {
       if (e instanceof ApiError && e.kind === "aborted") return;
@@ -238,13 +263,13 @@ export function CasePanel() {
     setMissing(left);
     if (next.customers.length === 0) {
       setStep("geocode", { status: "error" });
-      setFailure("No queda ningún cliente: añade alguno y vuelve a cargar el caso.");
+      setFailure({ es: "No queda ningún cliente: añade alguno y vuelve a cargar el caso.", en: "No customers left: add some and load the case again." });
       setMissing([]);
       setWork(null);
     } else if (left.length === 0) {
-      setStep("geocode", { status: "idle", note: "Listo para continuar" });
+      setStep("geocode", { status: "idle", note: { es: "Listo para continuar", en: "Ready to continue" } });
     } else {
-      setStep("geocode", { status: "error", note: `${left.length} sin encontrar` });
+      setStep("geocode", { status: "error", note: { es: `${left.length} sin encontrar`, en: `${left.length} not found` } });
     }
   }
 
@@ -253,7 +278,7 @@ export function CasePanel() {
   if (rowErrors?.from === "form") {
     for (const { row, msg } of rowErrors.items) {
       const target = rowTarget(row);
-      if (target !== null) formErrors.set(target, [...(formErrors.get(target) ?? []), `Fila ${row}: ${msg}`]);
+      if (target !== null) formErrors.set(target, [...(formErrors.get(target) ?? []), `${t({ es: "Fila", en: "Row" })} ${row}: ${msg}`]);
     }
   }
 
@@ -269,21 +294,21 @@ export function CasePanel() {
       data-testid="case-panel"
       data-mode={mode}
       role="group"
-      aria-label="Cargar tu propio caso"
+      aria-label={t({ es: "Cargar tu propio caso", en: "Load your own case" })}
       className="flex flex-col gap-4 min-[1180px]:h-px min-[1180px]:[&>:last-child]:mb-4"
     >
       <ServiceNotice id={REASON_ID} />
       {down && (
         <p data-testid="case-needs-service" className="text-base leading-snug text-fg-2">
-          Cargar un caso propio necesita el servicio. Los ejemplos siguen disponibles.
+          {t({ es: "Cargar un caso propio necesita el servicio. Los ejemplos siguen disponibles.", en: "Loading your own case needs the service. The examples are still available." })}
         </p>
       )}
 
-      <div role="group" aria-label="Cómo cargarlo" className="grid grid-cols-2 gap-1 rounded-hud border border-line bg-black/25 p-1">
+      <div role="group" aria-label={t({ es: "Cómo cargarlo", en: "How to load it" })} className="grid grid-cols-2 gap-1 rounded-hud border border-line bg-black/25 p-1">
         {(
           [
-            ["csv", "Subir CSV"],
-            ["form", "Formulario"],
+            ["csv", { es: "Subir CSV", en: "Upload CSV" }],
+            ["form", { es: "Formulario", en: "Form" }],
           ] as const
         ).map(([id, label]) => (
           <button
@@ -297,64 +322,68 @@ export function CasePanel() {
               mode === id ? "bg-amber text-amber-ink" : "text-fg-2 [@media(hover:hover)]:hover:bg-white/[0.06] [@media(hover:hover)]:hover:text-fg"
             }`}
           >
-            {label}
+            {t(label)}
           </button>
         ))}
       </div>
 
       <fieldset className={`${group} m-0 border-0 p-0`} disabled={busy}>
-        <legend className={legend}>Tu flota</legend>
+        <legend className={legend}>{t({ es: "Tu flota", en: "Your fleet" })}</legend>
         <label className="flex min-w-0 flex-col gap-1">
           <span aria-hidden="true" className="font-mono text-[12px] tracking-[0.1em] text-fg-3 uppercase">
-            Nombre del caso
+            {t({ es: "Nombre del caso", en: "Case name" })}
           </span>
           <input
             type="text"
             data-testid="case-name"
-            aria-label="Nombre del caso"
+            aria-label={t({ es: "Nombre del caso", en: "Case name" })}
             maxLength={200}
-            value={name}
+            value={name ?? t(DEFAULT_NAME)}
             onChange={(e) => setName(e.target.value)}
             className={INPUT}
           />
         </label>
         <div className="grid grid-cols-2 gap-2">
-          <Field label="Furgonetas" name="Número de furgonetas" testId="case-vehicles" value={vehicles} onChange={setVehicles} inputMode="numeric" />
-          <Field label="Capacidad" name="Capacidad de cada furgoneta (vacío: sin límite)" testId="case-capacity" value={capacity} onChange={setCapacity} inputMode="decimal" placeholder="sin límite" />
+          <Field label={t({ es: "Furgonetas", en: "Vans" })} name={t({ es: "Número de furgonetas", en: "Number of vans" })} testId="case-vehicles" value={vehicles} onChange={setVehicles} inputMode="numeric" />
+          <Field label={t({ es: "Capacidad", en: "Capacity" })} name={t({ es: "Capacidad de cada furgoneta (vacío: sin límite)", en: "Capacity of each van (empty: no limit)" })} testId="case-capacity" value={capacity} onChange={setCapacity} inputMode="decimal" placeholder={t({ es: "sin límite", en: "no limit" })} />
         </div>
       </fieldset>
 
       {mode === "csv" ? (
         <div className={group}>
-          <span className={legend}>Tu CSV</span>
+          <span className={legend}>{t({ es: "Tu CSV", en: "Your CSV" })}</span>
           <div className="flex flex-wrap items-center gap-2">
             <label className="btn has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-3 has-[:focus-visible]:outline-amber">
               <input type="file" accept=".csv,text/csv,text/plain" data-testid="csv-file" onChange={(e) => void onFile(e)} disabled={busy} className="sr-only" />
-              Elegir fichero CSV
+              {t({ es: "Elegir fichero CSV", en: "Choose CSV file" })}
             </label>
             <a href="/data/plantilla_caso_real.csv" download data-testid="csv-template" className="btn">
-              Descargar la plantilla
+              {t({ es: "Descargar la plantilla", en: "Download the template" })}
             </a>
           </div>
           <p data-testid="csv-info" className="text-base leading-snug text-fg-2">
             {csv ? (
               <>
-                <span className="font-semibold text-fg">{csv.name}</span> · {formatNumber(csv.text.length, 0, lang)} caracteres
+                <span className="font-semibold text-fg">{csv.name}</span> · {formatNumber(csv.text.length, 0, lang)} {t({ es: "caracteres", en: "characters" })}
               </>
             ) : (
-              `Dirección o LAT y LON por fila, horas HH:MM. Máximo ${formatNumber(MAX_CSV_CHARS, 0, lang)} caracteres.`
+              t({
+                es: `Dirección o LAT y LON por fila, horas HH:MM. Máximo ${formatNumber(MAX_CSV_CHARS, 0, "es")} caracteres.`,
+                // La plantilla (sus filas de ejemplo) no se traduce.
+                en: `Address or LAT and LON per row, times as HH:MM. Maximum ${formatNumber(MAX_CSV_CHARS, 0, "en")} characters. The template is in Spanish.`,
+              })
             )}
           </p>
           {csvWarn && (
             <p role="alert" data-testid="csv-too-big" className="text-base leading-snug text-late">
               <span aria-hidden="true">⚠ </span>
-              {csvWarn}
+              {t(csvWarn)}
             </p>
           )}
         </div>
       ) : (
         <div className={group}>
-          <span className={legend}>Tu caso</span>
+          <span className={legend}>{t({ es: "Tu caso", en: "Your case" })}</span>
           <CaseForm form={form} onChange={setForm} errors={formErrors} />
         </div>
       )}
@@ -363,15 +392,19 @@ export function CasePanel() {
         {busy ? (
           // El segundo clic de un doble clic en «Cargar el caso» cae aquí: no cancela (el teclado da `detail` 0).
           <Button data-testid="case-cancel" onClick={(e) => e.detail <= 1 && cancel()}>
-            Cancelar
+            {t({ es: "Cancelar", en: "Cancel" })}
           </Button>
         ) : (
           <Button variant="primary" data-testid="case-load" disabled={!canLoad} aria-describedby={down ? REASON_ID : undefined} onClick={() => void load()}>
-            Cargar el caso
+            {t({ es: "Cargar el caso", en: "Load the case" })}
           </Button>
         )}
         <span className="min-w-0 flex-1 text-base leading-snug text-fg-2">
-          {busy ? "Un paso cada vez." : needsFile ? "Elige un fichero para empezar." : "Sustituye al caso actual."}
+          {busy
+            ? t({ es: "Un paso cada vez.", en: "One step at a time." })
+            : needsFile
+              ? t({ es: "Elige un fichero para empezar.", en: "Choose a file to start." })
+              : t({ es: "Sustituye al caso actual.", en: "Replaces the current case." })}
         </span>
       </div>
 
@@ -388,11 +421,11 @@ export function CasePanel() {
             >
               <StepIcon status={s.status} />
               <span className="font-semibold text-fg">
-                {i + 1}. {label}
+                {i + 1}. {t(label)}
               </span>
               <span className={`ml-auto text-right ${s.status === "error" ? "text-late" : s.status === "done" ? "text-ok" : "text-fg-2"}`}>
-                {STATUS_TEXT[s.status]}
-                {s.note ? ` · ${s.note}` : ""}
+                {t(STATUS_TEXT[s.status])}
+                {s.note ? ` · ${t(s.note)}` : ""}
               </span>
             </li>
           );
@@ -402,12 +435,16 @@ export function CasePanel() {
       {rowErrors && (
         <div role="alert" id={CSV_ERROR_ID} data-testid="csv-errors" className="rounded-hud border border-late/60 bg-late/10 px-3 py-2">
           <p className="text-base font-semibold text-fg">
-            {rowErrors.items.length} {rowErrors.items.length === 1 ? "fila con error" : "filas con error"}
+            {t({
+              es: `${rowErrors.items.length} ${rowErrors.items.length === 1 ? "fila con error" : "filas con error"}`,
+              // Los motivos de cada fila los redacta el servicio en español.
+              en: `${rowErrors.items.length} ${rowErrors.items.length === 1 ? "row with an error" : "rows with errors"} (messages in Spanish)`,
+            })}
           </p>
           <ul className="m-0 mt-1 flex list-none flex-col gap-1 p-0">
             {rowErrors.items.map((it, i) => (
               <li key={i} data-testid="csv-error" data-row={it.row} className="text-base leading-snug text-fg">
-                <span className="num font-semibold text-late">{it.row === 0 ? "General" : `Fila ${it.row}`}</span>
+                <span className="num font-semibold text-late">{it.row === 0 ? "General" : `${t({ es: "Fila", en: "Row" })} ${it.row}`}</span>
                 {": "}
                 {it.msg}
               </li>
@@ -419,45 +456,50 @@ export function CasePanel() {
       {failure && (
         <p role="alert" data-testid="case-failure" className="rounded-hud border border-late/60 bg-late/10 px-3 py-2 text-base leading-snug text-fg">
           <span aria-hidden="true">⚠ </span>
-          {failure}
+          {t(failure)}
         </p>
       )}
 
       {work && resolving && (
         <div data-testid="geocode-missing" className="flex flex-col gap-2 rounded-hud border border-wait/50 bg-wait/10 px-3 py-2.5">
           <p className="text-base leading-snug font-semibold text-fg">
-            {missing.length === 1 ? "No encontramos esta dirección." : `No encontramos ${missing.length} direcciones.`} Corrígelas o quítalas para seguir.
+            {t({
+              es: `${missing.length === 1 ? "No encontramos esta dirección." : `No encontramos ${missing.length} direcciones.`} Corrígelas o quítalas para seguir.`,
+              en: `${missing.length === 1 ? "We could not find this address." : `We could not find ${missing.length} addresses.`} Fix or remove them to continue.`,
+            })}
           </p>
           {missing.map((pos) => {
-            const label = pos === 0 ? "Depósito" : `Cliente ${work.customers[pos - 1].id}`;
+            const label: Pair = pos === 0 ? { es: "Depósito", en: "Depot" } : { es: `Cliente ${work.customers[pos - 1].id}`, en: `Customer ${work.customers[pos - 1].id}` };
             return (
               <div key={pos} data-testid="geocode-missing-row" data-position={pos} className="flex flex-col gap-1.5">
-                <Field label={label} name={`Dirección de ${label.toLowerCase()}`} testId="missing-address" value={addressOf(work, pos)} onChange={(v) => setWork(withAddress(work, pos, v))} invalid />
+                <Field label={t(label)} name={t({ es: `Dirección de ${label.es.toLowerCase()}`, en: `Address of ${label.en.toLowerCase()}` })} testId="missing-address" value={addressOf(work, pos)} onChange={(v) => setWork(withAddress(work, pos, v))} invalid />
                 {pos !== 0 && (
                   <button type="button" data-testid="missing-remove" disabled={busy} onClick={() => removeCustomer(pos)} className="btn self-start">
-                    <span aria-hidden="true">×</span> Quitar {label.toLowerCase()}
+                    <span aria-hidden="true">×</span> {t({ es: `Quitar ${label.es.toLowerCase()}`, en: `Remove ${label.en.toLowerCase()}` })}
                   </button>
                 )}
               </div>
             );
           })}
           <Button variant="primary" data-testid="geocode-retry" disabled={busy} onClick={() => void retry()} className="self-start">
-            Buscar de nuevo
+            {t({ es: "Buscar de nuevo", en: "Search again" })}
           </Button>
         </div>
       )}
 
       {work && !resolving && steps.geocode.status === "idle" && steps.geocode.note && (
         <Button variant="primary" data-testid="geocode-continue" disabled={busy} onClick={() => void retry()} className="self-start">
-          Continuar
+          {t({ es: "Continuar", en: "Continue" })}
         </Button>
       )}
 
       {loaded && (
         <p role="status" data-testid="case-loaded" className="rounded-hud border border-ok/50 bg-ok/10 px-3 py-2 text-base leading-snug text-fg">
           <span aria-hidden="true" className="text-ok">✓ </span>
-          «{loaded.name}» cargado: {loaded.customers} {loaded.customers === 1 ? "cliente" : "clientes"} y {loaded.vehicles}{" "}
-          {loaded.vehicles === 1 ? "furgoneta" : "furgonetas"}. Ya está en el mapa; lo resuelves desde «Resolver».
+          {t({
+            es: `«${loaded.name}» cargado: ${counted(loaded.customers, CUSTOMERS[0], CUSTOMERS[1]).es} y ${counted(loaded.vehicles, VANS[0], VANS[1]).es}. Ya está en el mapa; lo resuelves desde «Resolver».`,
+            en: `“${loaded.name}” loaded: ${counted(loaded.customers, CUSTOMERS[0], CUSTOMERS[1]).en} and ${counted(loaded.vehicles, VANS[0], VANS[1]).en}. It is on the map now; solve it from “Solve”.`,
+          })}
         </p>
       )}
     </div>

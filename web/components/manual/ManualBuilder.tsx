@@ -8,7 +8,7 @@ import { useLatest } from "@/components/solve/useLatest";
 import { Button } from "@/components/ui/Button";
 import { ApiError, evaluate } from "@/lib/api";
 import { formatCost } from "@/lib/format";
-import { useLang, type Lang, type Pair } from "@/lib/i18n";
+import { useLang, useT, type Lang, type Pair } from "@/lib/i18n";
 import { groupViolations } from "@/lib/labels";
 import type { components } from "@/lib/types";
 import { EMPTY_DRAFT, chooseVehicle, pendingOf, tap, type Draft } from "./draft";
@@ -51,19 +51,29 @@ function verdictOf(manual: S["Evaluation"], others: S["RunRecord"][], t: (pair: 
     const why = groupViolations(manual.violations)
       .map((g) => `${t(g.label)} (${g.count})`)
       .join(", ");
-    return { state: "invalid", text: `Todavía no es un plan válido: ${why}.` };
+    return { state: "invalid", text: t({ es: `Todavía no es un plan válido: ${why}.`, en: `Not a valid plan yet: ${why}.` }) };
   }
   const valid = others.filter((r) => r.evaluation?.feasible);
   const heuristic = valid.filter((r) => r.method === "heuristic").map((r) => r.evaluation!.score);
-  if (heuristic.length === 0) return { state: "valid", text: "Plan válido. Compáralo con los métodos en la comparativa." };
+  if (heuristic.length === 0) {
+    return { state: "valid", text: t({ es: "Plan válido. Compáralo con los métodos en la comparativa.", en: "Valid plan. Compare it with the methods in the comparison." }) };
+  }
   const heur = Math.min(...heuristic);
   const best = Math.min(...valid.map((r) => r.evaluation!.score));
   const mine = manual.score;
-  const nums = `Tu coste: ${formatCost(mine, 1, lang)}. Heurística: ${formatCost(heur, 1, lang)}.`;
-  if (mine < best - 1e-6) return { state: "valid-best", text: `¡Mejor que todos los métodos! ${nums}` };
-  if (mine < heur - 1e-6) return { state: "valid-beats", text: `Le ganas a la heurística, aunque otro método va por delante. ${nums}` };
-  if (Math.abs(mine - heur) <= 1e-6) return { state: "valid-tie", text: `Empatas con la heurística. ${nums}` };
-  return { state: "valid-behind", text: `La heurística sigue por delante. ${nums}` };
+  const nums = t({
+    es: `Tu coste: ${formatCost(mine, 1, lang)}. Heurística: ${formatCost(heur, 1, lang)}.`,
+    en: `Your cost: ${formatCost(mine, 1, lang)}. Heuristic: ${formatCost(heur, 1, lang)}.`,
+  });
+  if (mine < best - 1e-6) return { state: "valid-best", text: `${t({ es: "¡Mejor que todos los métodos!", en: "Better than all the methods!" })} ${nums}` };
+  if (mine < heur - 1e-6) {
+    return {
+      state: "valid-beats",
+      text: `${t({ es: "Le ganas a la heurística, aunque otro método va por delante.", en: "You beat the heuristic, although another method is ahead." })} ${nums}`,
+    };
+  }
+  if (Math.abs(mine - heur) <= 1e-6) return { state: "valid-tie", text: `${t({ es: "Empatas con la heurística.", en: "You tie with the heuristic." })} ${nums}` };
+  return { state: "valid-behind", text: `${t({ es: "La heurística sigue por delante.", en: "The heuristic is still ahead." })} ${nums}` };
 }
 
 const VERDICT_TONE: Record<Verdict["state"], string> = {
@@ -87,7 +97,7 @@ const VERDICT_TONE: Record<Verdict["state"], string> = {
  */
 export function ManualBuilder() {
   const [lang] = useLang();
-  const t = (pair: Pair) => pair[lang];
+  const t = useT();
   const { state, actions, setStopClickHandler } = usePlanner();
   const { service } = useService();
   const instance = state.instance;
@@ -96,7 +106,7 @@ export function ManualBuilder() {
   const [history, setHistory] = useState<Draft[]>([]);
   const [draftMeta, setDraftMeta] = useState(state.meta);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Pair | null>(null);
 
   // Otro caso: el borrador del anterior no vale.
   if (draftMeta !== state.meta) {
@@ -148,9 +158,9 @@ export function ManualBuilder() {
         setBusy(false);
         if (e instanceof ApiError && e.kind === "network") {
           actions.setService("down");
-          setError("No se pudo contactar con el servicio.");
+          setError({ es: "No se pudo contactar con el servicio.", en: "Could not reach the service." });
         } else {
-          setError("No se pudo evaluar tu ruta. Pulsa otra parada para reintentar.");
+          setError({ es: "No se pudo evaluar tu ruta. Pulsa otra parada para reintentar.", en: "Could not evaluate your route. Tap another stop to retry." });
         }
       } finally {
         if (inflight.current === ctrl) inflight.current = null;
@@ -211,9 +221,9 @@ export function ManualBuilder() {
         )
       : null;
   const reason = tooBig
-    ? `Tu ruta está disponible en casos de hasta ${MAX_CUSTOMERS} clientes.`
+    ? t({ es: `Tu ruta está disponible en casos de hasta ${MAX_CUSTOMERS} clientes.`, en: `Your route is available for cases of up to ${MAX_CUSTOMERS} customers.` })
     : !down && service !== "up"
-      ? "Comprobando el servicio."
+      ? t({ es: "Comprobando el servicio.", en: "Checking the service." })
       : null;
   const newSlot = draft.routes.length < vehicles ? draft.routes.length : -1;
 
@@ -222,7 +232,7 @@ export function ManualBuilder() {
       data-testid="manual-panel"
       data-active={enabled ? "true" : "false"}
       role="group"
-      aria-label="Constructor de rutas a mano"
+      aria-label={t({ es: "Constructor de rutas a mano", en: "Manual route builder" })}
       className="flex flex-col gap-3 min-[1180px]:max-h-[calc(clamp(560px,100svh-236px,760px)-230px)] min-[1180px]:overflow-y-auto min-[1180px]:overscroll-contain min-[1180px]:pr-1 [scrollbar-width:thin]"
     >
       <ServiceNotice id={REASON_ID} />
@@ -233,38 +243,38 @@ export function ManualBuilder() {
       )}
 
       <div>
-        <p className="m-0 text-lg leading-snug font-semibold text-amber-2">¿Puedes ganar a la heurística?</p>
+        <p className="m-0 text-lg leading-snug font-semibold text-amber-2">{t({ es: "¿Puedes ganar a la heurística?", en: "Can you beat the heuristic?" })}</p>
         <p className="mt-1 mb-0 text-base leading-snug text-fg-2">
-          Elige furgoneta y pulsa paradas en el mapa, en orden; repite la última para quitarla.
+          {t({ es: "Elige furgoneta y pulsa paradas en el mapa, en orden; repite la última para quitarla.", en: "Pick a van and tap stops on the map, in order; tap the last one again to remove it." })}
         </p>
       </div>
 
-      <div role="radiogroup" aria-label="Furgoneta" className="flex flex-wrap gap-1.5">
+      <div role="radiogroup" aria-label={t({ es: "Furgoneta", en: "Van" })} className="flex flex-wrap gap-1.5">
         {draft.routes.map((route, i) => (
-          <VehicleChip key={i} index={i} label={`F${i + 1}`} count={route.length} active={draft.active === i} disabled={!enabled} onPick={() => setDraft(chooseVehicle(draft, i))} />
+          <VehicleChip key={i} index={i} label={`${t({ es: "F", en: "V" })}${i + 1}`} count={route.length} active={draft.active === i} disabled={!enabled} onPick={() => setDraft(chooseVehicle(draft, i))} />
         ))}
         {newSlot >= 0 && (
-          <VehicleChip index={newSlot} label="+ Nueva" count={null} active={draft.active === newSlot} disabled={!enabled} onPick={() => setDraft(chooseVehicle(draft, newSlot))} />
+          <VehicleChip index={newSlot} label={t({ es: "+ Nueva", en: "+ New" })} count={null} active={draft.active === newSlot} disabled={!enabled} onPick={() => setDraft(chooseVehicle(draft, newSlot))} />
         )}
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
         <Button data-testid="manual-undo" disabled={!enabled || history.length === 0} aria-describedby={reason || down ? REASON_ID : undefined} onClick={undo}>
-          Deshacer
+          {t({ es: "Deshacer", en: "Undo" })}
         </Button>
         <Button data-testid="manual-clear" disabled={!enabled || draft.routes.length === 0} aria-describedby={reason || down ? REASON_ID : undefined} onClick={clear}>
-          Vaciar
+          {t({ es: "Vaciar", en: "Clear" })}
         </Button>
         <span role="status" data-testid="manual-status" className="min-w-0 flex-1 text-base leading-snug text-fg-2">
-          {busy ? "Evaluando tu ruta…" : error ? <span className="text-late">{error}</span> : touched ? "" : "Aún no has asignado ninguna parada."}
+          {busy ? t({ es: "Evaluando tu ruta…", en: "Evaluating your route…" }) : error ? <span className="text-late">{t(error)}</span> : touched ? "" : t({ es: "Aún no has asignado ninguna parada.", en: "You have not assigned any stop yet." })}
         </span>
       </div>
 
       {draft.routes.length > 0 && (
-        <ol className="m-0 flex list-none flex-col gap-1 p-0" aria-label="Tus rutas">
+        <ol className="m-0 flex list-none flex-col gap-1 p-0" aria-label={t({ es: "Tus rutas", en: "Your routes" })}>
           {draft.routes.map((route, i) => (
             <li key={i} data-testid="manual-route" data-vehicle={i} className="text-base leading-snug text-fg">
-              <span className="font-semibold">F{i + 1}</span>
+              <span className="font-semibold">{t({ es: "F", en: "V" })}{i + 1}</span>
               <span className="text-fg-2">: </span>
               <span className="num">{route.join(" → ")}</span>
             </li>
@@ -274,11 +284,11 @@ export function ManualBuilder() {
 
       <p data-testid="manual-pending" data-count={pending.length} className="m-0 text-base leading-snug text-fg-2">
         {pending.length === 0 ? (
-          <span className="font-semibold text-ok">✓ Todas las paradas asignadas</span>
+          <span className="font-semibold text-ok">✓ {t({ es: "Todas las paradas asignadas", en: "All stops assigned" })}</span>
         ) : (
           <>
             <span className="font-semibold text-fg">
-              Pendientes {pending.length} de {ids.length}:{" "}
+              {t({ es: `Pendientes ${pending.length} de ${ids.length}:`, en: `Pending ${pending.length} of ${ids.length}:` })}{" "}
             </span>
             <span className="num">{pending.join(", ")}</span>
           </>
@@ -314,12 +324,17 @@ function VehicleChip({
   disabled: boolean;
   onPick: () => void;
 }) {
+  const t = useT();
   return (
     <button
       type="button"
       role="radio"
       aria-checked={active}
-      aria-label={count === null ? "Furgoneta nueva" : `Furgoneta ${index + 1}, ${count} ${count === 1 ? "parada" : "paradas"}`}
+      aria-label={
+        count === null
+          ? t({ es: "Furgoneta nueva", en: "New van" })
+          : t({ es: `Furgoneta ${index + 1}, ${count} ${count === 1 ? "parada" : "paradas"}`, en: `Van ${index + 1}, ${count} ${count === 1 ? "stop" : "stops"}` })
+      }
       data-testid="manual-vehicle"
       data-vehicle={index}
       data-new={count === null ? "true" : undefined}

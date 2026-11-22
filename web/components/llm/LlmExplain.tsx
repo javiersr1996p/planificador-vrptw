@@ -5,6 +5,7 @@ import { useService } from "@/components/planner/ServiceStatus";
 import { hasSolution, usePlanner, type PlannerRun } from "@/components/planner/store";
 import { ApiError, explain } from "@/lib/api";
 import { useFormat } from "@/lib/format";
+import { useT, type Pair } from "@/lib/i18n";
 import { methodLabel } from "@/lib/labels";
 import type { components } from "@/lib/types";
 import { isSendableKey, llmErrorText, useLlm, withoutKey } from "./scope";
@@ -15,7 +16,7 @@ type S = components["schemas"];
 type Entry = { record: S["RunRecord"] } & (
   | { kind: "running"; ctrl: AbortController }
   | { kind: "done"; reply: S["ExplainResponse"] }
-  | { kind: "error"; message: string }
+  | { kind: "error"; message: Pair }
 );
 
 /** Explicaciones que se recuerdan al cambiar de plan y volver. */
@@ -49,6 +50,7 @@ function SparkIcon({ className }: { className?: string }) {
  * clave, el botón abre el panel «Con IA» y lleva el foco al campo.
  */
 export function LlmExplain({ run }: { run: PlannerRun | null }) {
+  const t = useT();
   const { lang, formatEuro, formatNumber } = useFormat();
   const { state, actions } = usePlanner();
   const { service } = useService();
@@ -108,13 +110,15 @@ export function LlmExplain({ run }: { run: PlannerRun | null }) {
     drop(entry.record);
   }
 
-  const line = !up
-    ? service === "down"
-      ? "Sin servicio: no se puede pedir ahora."
-      : "Comprobando el servicio…"
-    : !key || !isSendableKey(key)
-      ? "Necesita tu clave: se escribe en «Con IA»."
-      : "Un modelo lo cuenta en palabras. Tiene coste.";
+  const line = t(
+    !up
+      ? service === "down"
+        ? { es: "Sin servicio: no se puede pedir ahora.", en: "No service: you cannot ask right now." }
+        : { es: "Comprobando el servicio…", en: "Checking the service…" }
+      : !key || !isSendableKey(key)
+        ? { es: "Necesita tu clave: se escribe en «Con IA».", en: "Needs your key: enter it in “With AI”." }
+        : { es: "Un modelo lo cuenta en palabras. Tiene coste.", en: "A model explains it in words. It costs money." },
+  );
 
   return (
     <div data-testid="explain" className="flex flex-col">
@@ -127,9 +131,9 @@ export function LlmExplain({ run }: { run: PlannerRun | null }) {
           {entry?.kind === "running" ? (
             <span role="status" className={`${TRIGGER} text-fg-2`}>
               <span aria-hidden="true" className="inline-block size-3 flex-none animate-spin rounded-full border-2 border-amber border-t-transparent" />
-              Redactando
+              {t({ es: "Redactando", en: "Writing" })}
               <button type="button" data-testid="explain-cancel" onClick={cancel} className={`${HIT} ml-2 text-amber-2 underline underline-offset-2`}>
-                Cancelar
+                {t({ es: "Cancelar", en: "Cancel" })}
               </button>
             </span>
           ) : (
@@ -143,7 +147,7 @@ export function LlmExplain({ run }: { run: PlannerRun | null }) {
               className={`${TRIGGER} ${HIT} text-amber-2 disabled:cursor-not-allowed disabled:text-fg-3 [@media(hover:hover)]:hover:text-amber`}
             >
               <SparkIcon className="size-3.5 flex-none" />
-              Explicar
+              {t({ es: "Explicar", en: "Explain" })}
             </button>
           )}
           <span id="explain-line" data-testid="explain-line" className="sr-only">
@@ -153,24 +157,24 @@ export function LlmExplain({ run }: { run: PlannerRun | null }) {
       )}
       {asked && !key && (
         <p role="status" data-testid="explain-ask" className="m-0 mt-2.5 text-base leading-snug text-wait">
-          Escribe tu clave en el panel «Con IA» y vuelve a pulsar «Explicar».
+          {t({ es: "Escribe tu clave en el panel «Con IA» y vuelve a pulsar «Explicar».", en: "Enter your key in the “With AI” panel and press “Explain” again." })}
         </p>
       )}
       {entry?.kind === "error" && (
         <p role="alert" data-testid="explain-error" className="m-0 mt-2.5 text-base leading-snug text-late">
-          {entry.message}
+          {t(entry.message)}
         </p>
       )}
       {entry?.kind === "done" && (
         <figure className="m-0 mt-3 flex flex-col gap-1.5">
           <figcaption className="kicker flex items-center gap-2">
             <SparkIcon className="size-3.5 flex-none" />
-            Explicación del plan
+            {t({ es: "Explicación del plan", en: "Plan explanation" })}
           </figcaption>
           <p
             data-testid="explain-text"
             tabIndex={0}
-            aria-label="Explicación del plan"
+            aria-label={t({ es: "Explicación del plan", en: "Plan explanation" })}
             className="m-0 max-h-60 overflow-y-auto rounded-hud border border-line bg-black/25 px-3 py-2 text-base leading-relaxed whitespace-pre-wrap text-fg [scrollbar-width:thin]"
           >
             {entry.reply.text}

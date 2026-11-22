@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
 import { ApiError, models as fetchModels } from "@/lib/api";
+import type { Pair } from "@/lib/i18n";
 import type { components } from "@/lib/types";
 
 type S = components["schemas"];
@@ -86,7 +87,10 @@ export function useLlm(): LlmContextValue {
 }
 
 /** Aviso fijo junto al campo de la clave (dos líneas como mucho). */
-export const KEY_NOTE = "Solo viaja en tu petición; no se guarda y recargar la borra. Mejor con tope de gasto.";
+export const KEY_NOTE: Pair = {
+  es: "Solo viaja en tu petición; no se guarda y recargar la borra. Mejor con tope de gasto.",
+  en: "It travels only with your request; it is not stored and reloading erases it. Best with a spending cap.",
+};
 
 /**
  * Una clave que se puede enviar en la cabecera: al menos 8 caracteres del
@@ -117,25 +121,31 @@ export function withoutKey<T>(value: T, key: string): T {
  * Texto de un error de `/solve/llm` o `/explain`. Siempre un texto fijo de la
  * interfaz: nunca el cuerpo ni el mensaje del servidor, que podría repetir la clave.
  */
-export function llmErrorText(e: unknown): string {
-  if (!(e instanceof ApiError)) return "Algo falló. Inténtalo de nuevo.";
+export function llmErrorText(e: unknown): Pair {
+  if (!(e instanceof ApiError)) return { es: "Algo falló. Inténtalo de nuevo.", en: "Something went wrong. Try again." };
   switch (e.kind) {
     case "auth":
-      return "Clave rechazada: Anthropic no la acepta. Revisa que esté completa y activa.";
+      return {
+        es: "Clave rechazada: Anthropic no la acepta. Revisa que esté completa y activa.",
+        en: "Key rejected: Anthropic does not accept it. Check that it is complete and active.",
+      };
     case "rate-limit":
-      return "Tu cuenta llegó a su límite de uso (error 429). Espera un poco o revisa el tope de gasto.";
+      return {
+        es: "Tu cuenta llegó a su límite de uso (error 429). Espera un poco o revisa el tope de gasto.",
+        en: "Your account hit its usage limit (error 429). Wait a bit or check your spending cap.",
+      };
     case "provider":
-      return "El proveedor del modelo falló (error 502). Inténtalo de nuevo.";
+      return { es: "El proveedor del modelo falló (error 502). Inténtalo de nuevo.", en: "The model provider failed (error 502). Try again." };
     case "network":
-      return "No se pudo contactar con el servicio.";
+      return { es: "No se pudo contactar con el servicio.", en: "Could not reach the service." };
     case "unavailable":
-      return "El servicio está ocupado. Inténtalo en un momento.";
+      return { es: "El servicio está ocupado. Inténtalo en un momento.", en: "The service is busy. Try again in a moment." };
     case "validation":
     case "csv":
-      return `El servicio no aceptó la petición (error ${e.status}).`;
+      return { es: `El servicio no aceptó la petición (error ${e.status}).`, en: `The service did not accept the request (error ${e.status}).` };
     case "payload":
-      return "El caso es demasiado grande para el servicio.";
+      return { es: "El caso es demasiado grande para el servicio.", en: "The case is too large for the service." };
     default:
-      return `El servicio falló (error ${e.status}). Inténtalo de nuevo.`;
+      return { es: `El servicio falló (error ${e.status}). Inténtalo de nuevo.`, en: `The service failed (error ${e.status}). Try again.` };
   }
 }

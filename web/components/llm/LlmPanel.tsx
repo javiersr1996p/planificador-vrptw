@@ -9,7 +9,7 @@ import { Help } from "@/components/ui/Help";
 import { ApiError, solveLlm } from "@/lib/api";
 import { formatEuro, formatNumber, useFormat } from "@/lib/format";
 import { GLOSSARY } from "@/lib/glossary";
-import { useT, type Lang } from "@/lib/i18n";
+import { useT, type Lang, type Pair } from "@/lib/i18n";
 import { unreadableReason } from "@/lib/labels";
 import type { components } from "@/lib/types";
 import { KEY_NOTE, isSendableKey, llmErrorText, useLlm, withoutKey, type Role } from "./scope";
@@ -23,12 +23,12 @@ type Status =
   | { kind: "idle" }
   | { kind: "running"; since: number; role: Role }
   | { kind: "done"; record: S["RunRecord"] }
-  | { kind: "error"; message: string }
+  | { kind: "error"; message: Pair }
   | { kind: "cancelled" };
 
-const ROLES: { id: Role; label: string }[] = [
-  { id: "llm_direct", label: "Directo" },
-  { id: "llm_agent", label: "Agente" },
+const ROLES: { id: Role; label: Pair }[] = [
+  { id: "llm_direct", label: { es: "Directo", en: "Direct" } },
+  { id: "llm_agent", label: { es: "Agente", en: "Agent" } },
 ];
 
 const REASON_ID = "llm-reason";
@@ -64,7 +64,7 @@ function StatusText({ status, now }: { status: Status; now: number }) {
       return (
         <span className="flex items-center gap-2 text-fg">
           <span aria-hidden="true" className="inline-block size-3.5 flex-none animate-spin rounded-full border-2 border-amber border-t-transparent" />
-          {status.role === "llm_agent" ? "El agente trabaja" : "El modelo escribe el plan"}{" "}
+          {status.role === "llm_agent" ? t({ es: "El agente trabaja", en: "The agent is working" }) : t({ es: "El modelo escribe el plan", en: "The model is writing the plan" })}{" "}
           <span className="num" data-testid="llm-timer">{clock(now - status.since)}</span>
         </span>
       );
@@ -76,7 +76,7 @@ function StatusText({ status, now }: { status: Status; now: number }) {
       if (record.parse_status !== "ok" || !record.solution || !ev) {
         return (
           <span className="text-late">
-            <span className="font-semibold">Sin plan legible:</span> {t(unreadableReason(record))}.
+            <span className="font-semibold">{t({ es: "Sin plan legible:", en: "No readable plan:" })}</span> {t(unreadableReason(record))}.
             <span className="block text-fg-2">
               {model}
               {cost && ` · ${cost}`}
@@ -86,12 +86,12 @@ function StatusText({ status, now }: { status: Status; now: number }) {
       }
       return (
         <span className="text-fg">
-          <span className="font-semibold text-ok">Hecho</span>
+          <span className="font-semibold text-ok">{t({ es: "Hecho", en: "Done" })}</span>
           {" · "}
           <span className="num">{formatCost(ev.score)}</span>
           {" · "}
-          <span className="num">{ev.vehicles_used}</span> {ev.vehicles_used === 1 ? "furgoneta" : "furgonetas"}
-          {!ev.feasible && <span className="font-semibold text-late"> · no válido</span>}
+          <span className="num">{ev.vehicles_used}</span> {ev.vehicles_used === 1 ? t({ es: "furgoneta", en: "van" }) : t({ es: "furgonetas", en: "vans" })}
+          {!ev.feasible && <span className="font-semibold text-late"> · {t({ es: "no válido", en: "not valid" })}</span>}
           <span className="block text-fg-2">
             {model}
             {cost && ` · ${cost}`}
@@ -100,9 +100,9 @@ function StatusText({ status, now }: { status: Status; now: number }) {
       );
     }
     case "error":
-      return <span className="text-late">{status.message}</span>;
+      return <span className="text-late">{t(status.message)}</span>;
     case "cancelled":
-      return <span className="text-fg-2">Cancelada. Si el modelo ya había empezado, la llamada puede cobrarse.</span>;
+      return <span className="text-fg-2">{t({ es: "Cancelada. Si el modelo ya había empezado, la llamada puede cobrarse.", en: "Canceled. If the model had already started, the call may be billed." })}</span>;
   }
 }
 
@@ -233,23 +233,25 @@ export function LlmPanel() {
     }
   }
 
-  const hint = down
-    ? "Sin servicio."
-    : models.kind === "error"
-      ? "No se pudo leer la lista de modelos."
-      : !info
-        ? "Leyendo los modelos del servicio…"
-        : reevaluating
-          ? "Espera: se reevalúan los planes con el tráfico nuevo."
-          : !key
-            ? "Escribe tu clave para lanzar."
-            : !isSendableKey(key)
-              ? "La clave no parece completa."
-              : role === "llm_agent"
-                ? "Varias llamadas: tarda y cuesta más."
-                : recheck
-                  ? "Dos llamadas al modelo."
-                  : "Una llamada al modelo.";
+  const hint = t(
+    down
+      ? { es: "Sin servicio.", en: "No service." }
+      : models.kind === "error"
+        ? { es: "No se pudo leer la lista de modelos.", en: "Could not read the model list." }
+        : !info
+          ? { es: "Leyendo los modelos del servicio…", en: "Reading the service's models…" }
+          : reevaluating
+            ? { es: "Espera: se reevalúan los planes con el tráfico nuevo.", en: "Wait: plans are being re-evaluated with the new traffic." }
+            : !key
+              ? { es: "Escribe tu clave para lanzar.", en: "Enter your key to launch." }
+              : !isSendableKey(key)
+                ? { es: "La clave no parece completa.", en: "The key does not look complete." }
+                : role === "llm_agent"
+                  ? { es: "Varias llamadas: tarda y cuesta más.", en: "Several calls: slower and costs more." }
+                  : recheck
+                    ? { es: "Dos llamadas al modelo.", en: "Two model calls." }
+                    : { es: "Una llamada al modelo.", en: "One model call." },
+  );
 
   return (
     // Con desplazamiento interno en escritorio, como «Resolver»: la página no crece con el panel.
@@ -257,7 +259,7 @@ export function LlmPanel() {
       className="flex flex-col gap-4 min-[1180px]:max-h-[calc(clamp(560px,100svh-236px,760px)-230px)] min-[1180px]:overflow-y-auto min-[1180px]:overscroll-contain min-[1180px]:pr-1 [scrollbar-width:thin]"
       data-testid="llm-panel"
       role="group"
-      aria-label="IA con tu clave"
+      aria-label={t({ es: "IA con tu clave", en: "AI with your key" })}
     >
       <ServiceNotice id={REASON_ID} />
 
@@ -265,12 +267,12 @@ export function LlmPanel() {
       <div className="flex flex-col gap-2">
         <div className="flex min-h-5 flex-wrap items-center justify-between gap-x-2 gap-y-1">
           <label htmlFor={keyId} className="kicker whitespace-nowrap">
-            Clave de Anthropic
+            {t({ es: "Clave de Anthropic", en: "Anthropic key" })}
           </label>
           {key && (
             <span data-testid="llm-key-state" className="flex items-center gap-1.5 text-base leading-none whitespace-nowrap text-ok">
               <span aria-hidden="true" className="size-2 rounded-full bg-ok shadow-[0_0_8px_var(--ok)]" />
-              En memoria
+              {t({ es: "En memoria", en: "In memory" })}
             </span>
           )}
         </div>
@@ -294,17 +296,17 @@ export function LlmPanel() {
             />
           </span>
           <Button data-testid="llm-forget" onClick={forgetKey} disabled={!llmKey} className="px-3">
-            Olvidar clave
+            {t({ es: "Olvidar clave", en: "Forget key" })}
           </Button>
         </div>
         <p id={noteId} data-testid="llm-key-note" className="m-0 text-base leading-snug text-fg-2">
-          {KEY_NOTE}
+          {t(KEY_NOTE)}
         </p>
       </div>
 
       {/* Papel del modelo: directo o agente, cada uno con su «?». */}
       <fieldset className="m-0 min-w-0 border-0 p-0">
-        <legend className="kicker mb-2 p-0">Papel del modelo</legend>
+        <legend className="kicker mb-2 p-0">{t({ es: "Papel del modelo", en: "Model role" })}</legend>
         <div className="grid grid-cols-2 gap-2">
           {ROLES.map((r) => (
             <div key={r.id} className="flex min-w-0 items-center gap-2">
@@ -324,7 +326,7 @@ export function LlmPanel() {
                   className="sr-only"
                 />
                 <RoleIcon role={r.id} />
-                {r.label}
+                {t(r.label)}
               </label>
               <Help term={r.id} size="sm" />
             </div>
@@ -339,7 +341,7 @@ export function LlmPanel() {
       <div className="flex flex-col gap-2">
         <span className="flex items-center gap-2">
           <label htmlFor={modelId} className="kicker">
-            Modelo
+            {t({ es: "Modelo", en: "Model" })}
           </label>
           <Help term="tokens" size="sm" />
         </span>
@@ -352,7 +354,7 @@ export function LlmPanel() {
           onChange={(e) => setModel(e.target.value)}
           className="h-11 w-full rounded-hud border border-line-2 bg-ink-0/70 px-3 font-mono text-base text-fg focus:border-amber/70 focus:shadow-[var(--glow-amber)] focus:outline-none disabled:opacity-55"
         >
-          {list.length === 0 && <option value="">{models.kind === "error" ? "Sin lista de modelos" : "Cargando…"}</option>}
+          {list.length === 0 && <option value="">{models.kind === "error" ? t({ es: "Sin lista de modelos", en: "No model list" }) : t({ es: "Cargando…", en: "Loading…" })}</option>}
           {list.map((m) => (
             <option key={m.model_id} value={m.model_id}>
               {m.model_id}
@@ -361,23 +363,23 @@ export function LlmPanel() {
         </select>
         {info && (
           <p data-testid="llm-price" className="m-0 text-base leading-snug text-fg-2">
-            <span className="num text-fg">{price(info.price_in_per_mtok, lang)}</span> {info.currency} entrada ·{" "}
-            <span className="num text-fg">{price(info.price_out_per_mtok, lang)}</span> {info.currency} salida, por millón de tokens ·{" "}
+            <span className="num text-fg">{price(info.price_in_per_mtok, lang)}</span> {info.currency} {t({ es: "entrada", en: "input" })} ·{" "}
+            <span className="num text-fg">{price(info.price_out_per_mtok, lang)}</span> {info.currency} {t({ es: "salida, por millón de tokens", en: "output, per million tokens" })} ·{" "}
             <a
               data-testid="llm-price-source"
               href={info.source_url}
               target="_blank"
               rel="noopener noreferrer"
-              title={`Precio consultado el ${info.checked_on}`}
+              title={t({ es: `Precio consultado el ${info.checked_on}`, en: `Price checked on ${info.checked_on}` })}
               className="text-amber-2 underline underline-offset-2"
             >
-              fuente
+              {t({ es: "fuente", en: "source" })}
             </a>
           </p>
         )}
         {models.kind === "error" && up && (
           <Button data-testid="llm-models-retry" onClick={() => void loadModels()} className="self-start">
-            Reintentar
+            {t({ es: "Reintentar", en: "Retry" })}
           </Button>
         )}
       </div>
@@ -392,8 +394,8 @@ export function LlmPanel() {
           className="size-5 flex-none accent-[var(--amber)]"
         />
         <span className="min-w-0 flex-1 text-base leading-snug">
-          <span className="font-semibold text-fg">Segunda comprobación</span>
-          <span className="block text-fg-2">{role === "llm_direct" ? "Revisa su plan una vez más." : "Solo con el directo."}</span>
+          <span className="font-semibold text-fg">{t({ es: "Segunda comprobación", en: "Second check" })}</span>
+          <span className="block text-fg-2">{role === "llm_direct" ? t({ es: "Revisa su plan una vez más.", en: "Reviews its plan once more." }) : t({ es: "Solo con el directo.", en: "Direct only." })}</span>
         </span>
       </label>
 
@@ -404,13 +406,13 @@ export function LlmPanel() {
             <circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" strokeWidth="1.6" />
             <path d="M8 4.5v7M10 6.2c-.4-.6-1.1-.9-2-.9-1.1 0-1.9.6-1.9 1.4 0 1.9 4 1 4 2.9 0 .8-.8 1.5-2 1.5-.9 0-1.7-.4-2.1-1" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
           </svg>
-          Tiene coste: se cobra en tu cuenta de Anthropic.
+          {t({ es: "Tiene coste: se cobra en tu cuenta de Anthropic.", en: "It costs money: billed to your Anthropic account." })}
         </p>
         <div className="flex flex-wrap items-center gap-3">
           {running ? (
             // El segundo clic de un doble clic en «Lanzar» cae aquí: no cancela (el teclado da `detail` 0).
             <Button data-testid="llm-cancel" onClick={(e) => e.detail <= 1 && cancel()}>
-              Cancelar
+              {t({ es: "Cancelar", en: "Cancel" })}
             </Button>
           ) : (
             <Button
@@ -421,11 +423,11 @@ export function LlmPanel() {
               onClick={() => void launch(Date.now())}
             >
               <RoleIcon role={role} />
-              {role === "llm_agent" ? "Lanzar el agente" : "Lanzar el directo"}
+              {role === "llm_agent" ? t({ es: "Lanzar el agente", en: "Launch the agent" }) : t({ es: "Lanzar el directo", en: "Launch the direct LLM" })}
             </Button>
           )}
           <span id={hintId} data-testid="llm-launch-hint" className="min-w-0 flex-1 basis-32 text-base leading-snug text-fg-2">
-            {running ? "Puede tardar; la comparativa se actualiza al acabar." : hint}
+            {running ? t({ es: "Puede tardar; la comparativa se actualiza al acabar.", en: "It may take a while; the comparison updates when done." }) : hint}
           </span>
         </div>
         {status.kind !== "idle" && (

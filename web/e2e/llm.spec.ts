@@ -188,7 +188,7 @@ test("directo y agente añaden su fila en vivo, «Explicar» muestra el texto y 
   // El cuerpo lleva lo que pide el contrato y nada más.
   const body = JSON.parse(carrying[0].body) as Record<string, unknown>;
   expect(Object.keys(body).sort()).toEqual(["instance", "model", "recheck", "role", "seed"]);
-  expect(Object.keys(JSON.parse(carrying[2].body)).sort()).toEqual(["instance", "method", "model", "routes"]);
+  expect(Object.keys(JSON.parse(carrying[2].body)).sort()).toEqual(["instance", "lang", "method", "model", "routes"]);
 
   // Cerrar y reabrir el panel no deja la clave en el HTML serializado.
   await openIa(page);

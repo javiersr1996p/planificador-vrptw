@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useT } from "@/lib/i18n";
 import { MAX_CUSTOMERS, newCustomer, type CustomerRow, type DepotRow, type FormModel } from "./csv";
 
 export const INPUT =
@@ -96,6 +97,8 @@ function RowCard({
   );
 }
 
+const ADDRESS = { es: "Dirección", en: "Address" };
+
 type Errors = Map<"depot" | number, string[]>;
 
 /**
@@ -103,6 +106,7 @@ type Errors = Map<"depot" | number, string[]>;
  * demanda, ventana `HH:MM` y servicio. No valida nada: el texto va tal cual al servidor.
  */
 export function CaseForm({ form, onChange, errors }: { form: FormModel; onChange: (form: FormModel) => void; errors: Errors }) {
+  const t = useT();
   const setDepot = (patch: Partial<DepotRow>) => onChange({ ...form, depot: { ...form.depot, ...patch } });
   const setCustomer = (i: number, patch: Partial<CustomerRow>) =>
     onChange({ ...form, customers: form.customers.map((c, j) => (j === i ? { ...c, ...patch } : c)) });
@@ -111,13 +115,13 @@ export function CaseForm({ form, onChange, errors }: { form: FormModel; onChange
 
   return (
     <div data-testid="case-form" className="flex flex-col gap-2">
-      <RowCard testId="form-depot" index={-1} title="Depósito" errors={errors.get("depot") ?? []}>
-        <Field label="Dirección" name="Dirección del depósito" testId="depot-address" value={d.address} onChange={(address) => setDepot({ address })} placeholder="Calle y ciudad" invalid={errors.has("depot")} />
+      <RowCard testId="form-depot" index={-1} title={t({ es: "Depósito", en: "Depot" })} errors={errors.get("depot") ?? []}>
+        <Field label={t(ADDRESS)} name={t({ es: "Dirección del depósito", en: "Depot address" })} testId="depot-address" value={d.address} onChange={(address) => setDepot({ address })} placeholder={t({ es: "Calle y ciudad", en: "Street and city" })} invalid={errors.has("depot")} />
         <div className="grid grid-cols-2 gap-2">
-          <Field label="Lat" name="Latitud del depósito" testId="depot-lat" value={d.lat} onChange={(lat) => setDepot({ lat })} inputMode="decimal" placeholder="40,4168" />
-          <Field label="Lon" name="Longitud del depósito" testId="depot-lon" value={d.lon} onChange={(lon) => setDepot({ lon })} inputMode="decimal" placeholder="-3,7038" />
-          <Field label="Abre" name="Hora de apertura del depósito" testId="depot-ready" value={d.ready} onChange={(ready) => setDepot({ ready })} placeholder="HH:MM" />
-          <Field label="Cierra" name="Hora de cierre del depósito" testId="depot-due" value={d.due} onChange={(due) => setDepot({ due })} placeholder="HH:MM" />
+          <Field label="Lat" name={t({ es: "Latitud del depósito", en: "Depot latitude" })} testId="depot-lat" value={d.lat} onChange={(lat) => setDepot({ lat })} inputMode="decimal" placeholder={t({ es: "40,4168", en: "40.4168" })} />
+          <Field label="Lon" name={t({ es: "Longitud del depósito", en: "Depot longitude" })} testId="depot-lon" value={d.lon} onChange={(lon) => setDepot({ lon })} inputMode="decimal" placeholder={t({ es: "-3,7038", en: "-3.7038" })} />
+          <Field label={t({ es: "Abre", en: "Opens" })} name={t({ es: "Hora de apertura del depósito", en: "Depot opening time" })} testId="depot-ready" value={d.ready} onChange={(ready) => setDepot({ ready })} placeholder="HH:MM" />
+          <Field label={t({ es: "Cierra", en: "Closes" })} name={t({ es: "Hora de cierre del depósito", en: "Depot closing time" })} testId="depot-due" value={d.due} onChange={(due) => setDepot({ due })} placeholder="HH:MM" />
         </div>
       </RowCard>
 
@@ -129,29 +133,29 @@ export function CaseForm({ form, onChange, errors }: { form: FormModel; onChange
             key={c.key}
             testId="form-customer"
             index={i}
-            title={`Cliente ${n}`}
+            title={t({ es: `Cliente ${n}`, en: `Customer ${n}` })}
             errors={errors.get(i) ?? []}
             action={
               <button
                 type="button"
                 data-testid="remove-customer"
-                aria-label={`Quitar el cliente ${n}`}
+                aria-label={t({ es: `Quitar el cliente ${n}`, en: `Remove customer ${n}` })}
                 disabled={form.customers.length === 1}
                 onClick={() => onChange({ ...form, customers: form.customers.filter((_, j) => j !== i) })}
                 className="btn min-h-11 px-3 text-base"
               >
-                <span aria-hidden="true">×</span> Quitar
+                <span aria-hidden="true">×</span> {t({ es: "Quitar", en: "Remove" })}
               </button>
             }
           >
-            <Field label="Dirección" name={`Dirección del cliente ${n}`} testId="customer-address" value={c.address} onChange={(address) => setCustomer(i, { address })} placeholder="o rellena Lat y Lon" invalid={bad} />
+            <Field label={t(ADDRESS)} name={t({ es: `Dirección del cliente ${n}`, en: `Customer ${n} address` })} testId="customer-address" value={c.address} onChange={(address) => setCustomer(i, { address })} placeholder={t({ es: "o rellena Lat y Lon", en: "or fill in Lat and Lon" })} invalid={bad} />
             <div className="grid grid-cols-2 gap-2">
-              <Field label="Lat" name={`Latitud del cliente ${n}`} testId="customer-lat" value={c.lat} onChange={(lat) => setCustomer(i, { lat })} inputMode="decimal" />
-              <Field label="Lon" name={`Longitud del cliente ${n}`} testId="customer-lon" value={c.lon} onChange={(lon) => setCustomer(i, { lon })} inputMode="decimal" />
-              <Field label="Demanda" name={`Demanda del cliente ${n}`} testId="customer-demand" value={c.demand} onChange={(demand) => setCustomer(i, { demand })} inputMode="decimal" />
-              <Field label="Servicio (min)" name={`Servicio del cliente ${n}, en minutos`} testId="customer-service" value={c.service} onChange={(service) => setCustomer(i, { service })} inputMode="decimal" />
-              <Field label="Desde" name={`Ventana del cliente ${n}: desde`} testId="customer-ready" value={c.ready} onChange={(ready) => setCustomer(i, { ready })} placeholder="HH:MM" />
-              <Field label="Hasta" name={`Ventana del cliente ${n}: hasta`} testId="customer-due" value={c.due} onChange={(due) => setCustomer(i, { due })} placeholder="HH:MM" />
+              <Field label="Lat" name={t({ es: `Latitud del cliente ${n}`, en: `Customer ${n} latitude` })} testId="customer-lat" value={c.lat} onChange={(lat) => setCustomer(i, { lat })} inputMode="decimal" />
+              <Field label="Lon" name={t({ es: `Longitud del cliente ${n}`, en: `Customer ${n} longitude` })} testId="customer-lon" value={c.lon} onChange={(lon) => setCustomer(i, { lon })} inputMode="decimal" />
+              <Field label={t({ es: "Demanda", en: "Demand" })} name={t({ es: `Demanda del cliente ${n}`, en: `Customer ${n} demand` })} testId="customer-demand" value={c.demand} onChange={(demand) => setCustomer(i, { demand })} inputMode="decimal" />
+              <Field label={t({ es: "Servicio (min)", en: "Service (min)" })} name={t({ es: `Servicio del cliente ${n}, en minutos`, en: `Customer ${n} service time, in minutes` })} testId="customer-service" value={c.service} onChange={(service) => setCustomer(i, { service })} inputMode="decimal" />
+              <Field label={t({ es: "Desde", en: "From" })} name={t({ es: `Ventana del cliente ${n}: desde`, en: `Customer ${n} time window: from` })} testId="customer-ready" value={c.ready} onChange={(ready) => setCustomer(i, { ready })} placeholder="HH:MM" />
+              <Field label={t({ es: "Hasta", en: "To" })} name={t({ es: `Ventana del cliente ${n}: hasta`, en: `Customer ${n} time window: to` })} testId="customer-due" value={c.due} onChange={(due) => setCustomer(i, { due })} placeholder="HH:MM" />
             </div>
           </RowCard>
         );
@@ -164,9 +168,9 @@ export function CaseForm({ form, onChange, errors }: { form: FormModel; onChange
         onClick={() => onChange({ ...form, customers: [...form.customers, newCustomer()] })}
         className="btn self-start"
       >
-        <span aria-hidden="true">+</span> Añadir cliente
+        <span aria-hidden="true">+</span> {t({ es: "Añadir cliente", en: "Add customer" })}
       </button>
-      {full && <p className="text-base text-fg-2">Máximo {MAX_CUSTOMERS} clientes.</p>}
+      {full && <p className="text-base text-fg-2">{t({ es: `Máximo ${MAX_CUSTOMERS} clientes.`, en: `Maximum ${MAX_CUSTOMERS} customers.` })}</p>}
     </div>
   );
 }
