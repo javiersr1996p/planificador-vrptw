@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { buttonClass } from "@/components/ui/Button";
 import { Kicker } from "@/components/ui/Kicker";
+import { DocMeta, T, type Pair } from "@/lib/i18n";
 import { REPO_URL, TFE_CODE_COMMIT, TFE_CODE_URL, TFE_DOC_URL } from "@/lib/nav";
 
 export const metadata: Metadata = {
@@ -10,11 +11,12 @@ export const metadata: Metadata = {
     "El Trabajo Fin de Estudios de 2024 del que parte este planificador: su código, qué se ha actualizado con los modelos de IA actuales, las limitaciones y los créditos.",
 };
 
-const CREDITS = [
-  { name: "Javier Sánchez Rueda", role: "Autor" },
-  { name: "Óscar Sánchez Rueda", role: "Autor" },
-  { name: "María Teresa García Ordás", role: "Directora" },
-  { name: "Hernán Díaz Rodríguez", role: "Codirector" },
+const AUTHOR: Pair = { es: "Autor", en: "Author" };
+const CREDITS: { name: string; role: Pair }[] = [
+  { name: "Javier Sánchez Rueda", role: AUTHOR },
+  { name: "Óscar Sánchez Rueda", role: AUTHOR },
+  { name: "María Teresa García Ordás", role: { es: "Directora", en: "Supervisor" } },
+  { name: "Hernán Díaz Rodríguez", role: { es: "Codirector", en: "Co-supervisor" } },
 ];
 
 /**
@@ -22,44 +24,59 @@ const CREDITS = [
  * Fuentes: modelos de 2024, apartado 4.8 del TFE; de ahora, `GET /models`. Métodos y problemas
  * de 2024, el código del TFE (`c3ad94c`); Solomon y su camuflaje, README (Benchmark y Servicio).
  */
-const CHANGES = [
+const CHANGES: { title: Pair; then: Pair; now: Pair }[] = [
   {
-    title: "Modelos de IA",
-    then: "Claude 3.5 Sonnet, Llama 3.1, GPT-4o y Perplexity AI.",
-    now: "Claude Haiku 5.5, Sonnet 5.5 y Opus 5.5, llamados por API.",
+    title: { es: "Modelos de IA", en: "AI models" },
+    then: { es: "Claude 3.5 Sonnet, Llama 3.1, GPT-4o y Perplexity AI.", en: "Claude 3.5 Sonnet, Llama 3.1, GPT-4o and Perplexity AI." },
+    now: { es: "Claude Haiku 5.5, Sonnet 5.5 y Opus 5.5, llamados por API.", en: "Claude Haiku 5.5, Sonnet 5.5 and Opus 5.5, called through the API." },
   },
   {
-    title: "Papel del modelo",
-    then: "Recibía el problema en un prompt y devolvía el plan.",
-    now: "Resuelve directo o como agente que usa los métodos clásicos.",
+    title: { es: "Papel del modelo", en: "Model role" },
+    then: { es: "Recibía el problema en un prompt y devolvía el plan.", en: "Received the problem in a prompt and returned the plan." },
+    now: { es: "Resuelve directo o como agente que usa los métodos clásicos.", en: "Solves directly or as an agent that uses the classic methods." },
   },
   {
-    title: "Métodos clásicos",
-    then: "Heurística, colonia de hormigas, genético y tabú, en notebooks.",
-    now: "Los mismos cuatro, en un servicio que la web ejecuta en vivo.",
+    title: { es: "Métodos clásicos", en: "Classic methods" },
+    then: { es: "Heurística, colonia de hormigas, genético y tabú, en notebooks.", en: "Heuristic, ant colony, genetic and tabu, in notebooks." },
+    now: { es: "Los mismos cuatro, en un servicio que la web ejecuta en vivo.", en: "The same four, in a service the web runs live." },
   },
   {
-    title: "Problemas de referencia",
-    then: "12 problemas generados de 10 y 20 clientes, más C101 y C102 de Solomon.",
-    now: "Solomon de 25 a 100 clientes, camuflado para que el LLM no lo reconozca.",
+    title: { es: "Problemas de referencia", en: "Benchmark problems" },
+    then: {
+      es: "12 problemas generados de 10 y 20 clientes, más C101 y C102 de Solomon.",
+      en: "12 generated problems (10 and 20 customers) and Solomon C101, C102.",
+    },
+    now: {
+      es: "Solomon de 25 a 100 clientes, camuflado para que el LLM no lo reconozca.",
+      en: "Solomon, 25 to 100 customers, disguised so the LLM does not recognize it.",
+    },
   },
   {
-    title: "Casos reales",
-    then: "Puntos en un plano, con distancias en línea recta.",
-    now: "Direcciones reales, distancias por carretera y tráfico por franjas.",
+    title: { es: "Casos reales", en: "Real cases" },
+    then: { es: "Puntos en un plano, con distancias en línea recta.", en: "Points on a plane, with straight-line distances." },
+    now: { es: "Direcciones reales, distancias por carretera y tráfico por franjas.", en: "Real addresses, road distances and traffic by time of day." },
   },
   {
-    title: "Web pública",
-    then: "Resultados en el documento y en el repositorio de código.",
-    now: "Cualquiera repite la comparativa en la web con su propia clave.",
+    title: { es: "Web pública", en: "Public web" },
+    then: { es: "Resultados en el documento y en el repositorio de código.", en: "Results in the document and the code repository." },
+    now: { es: "Cualquiera repite la comparativa en la web con su propia clave.", en: "Anyone can rerun the comparison on the web with their own key." },
   },
 ];
 
 /** El perfil de tráfico es el de public/data/traffic-profiles.json. */
-const LIMITS = [
-  "Modelos y código nuevos: las cifras no se comparan una a una con las de 2024.",
-  "Tráfico: perfil estático por franjas horarias, con factores ilustrativos.",
-  "Solo modelos de Anthropic: el agente usa su protocolo de herramientas.",
+const LIMITS: Pair[] = [
+  {
+    es: "Modelos y código nuevos: las cifras no se comparan una a una con las de 2024.",
+    en: "New models and code: figures are not compared one to one with 2024's.",
+  },
+  {
+    es: "Tráfico: perfil estático por franjas horarias, con factores ilustrativos.",
+    en: "Traffic: static profile by time of day, with illustrative factors.",
+  },
+  {
+    es: "Solo modelos de Anthropic: el agente usa su protocolo de herramientas.",
+    en: "Anthropic models only: the agent uses their tool protocol.",
+  },
 ];
 
 const VEHICLE_COLORS = ["var(--veh-1)", "var(--veh-2)", "var(--veh-3)", "var(--veh-4)"];
@@ -77,7 +94,7 @@ function OutLink({ href, children }: { href: string; children: ReactNode }) {
 }
 
 /** Un dato de la ficha del trabajo: etiqueta y valor. */
-function Fact({ term, className, children }: { term: string; className?: string; children: ReactNode }) {
+function Fact({ term, className, children }: { term: ReactNode; className?: string; children: ReactNode }) {
   return (
     <div className={className}>
       <dt className="kicker text-fg-3">{term}</dt>
@@ -100,7 +117,7 @@ function Step({ now, children }: { now?: boolean; children: ReactNode }) {
       />
       <span>
         <span className={`mr-2 font-mono text-[12px] font-semibold tracking-[0.14em] uppercase ${now ? "text-amber" : "text-fg-3"}`}>
-          {now ? "Ahora" : "2024"}
+          {now ? <T es="Ahora" en="Now" /> : "2024"}
         </span>
         {children}
       </span>
@@ -112,13 +129,25 @@ function Step({ now, children }: { now?: boolean; children: ReactNode }) {
 export default function AboutPage() {
   return (
     <main className="wrap flex flex-1 flex-col gap-6 pt-2 pb-8 lg:gap-8 lg:pt-3">
+      <DocMeta
+        es={{ title: metadata.title as string, description: metadata.description as string }}
+        en={{
+          title: "About the thesis: the 2024 comparison with today's AI models",
+          description:
+            "The 2024 master's thesis this planner builds on: its code, what has been updated with today's AI models, the limitations and the credits.",
+        }}
+      />
       <div className="flex flex-wrap items-end justify-between gap-x-10 gap-y-2">
         <div className="min-w-0">
-          <Kicker>Sobre el TFE</Kicker>
-          <h1 className="mt-2 text-[28px] font-extrabold sm:text-[clamp(30px,2.8vw,40px)]">Del TFE de 2024 a este planificador</h1>
+          <Kicker>
+            <T es="Sobre el TFE" en="About the thesis" />
+          </Kicker>
+          <h1 className="mt-2 text-[28px] font-extrabold sm:text-[clamp(30px,2.8vw,40px)]">
+            <T es="Del TFE de 2024 a este planificador" en="From the 2024 thesis to this planner" />
+          </h1>
         </div>
         <p className="max-w-[38rem] text-lg leading-snug text-fg-2">
-          La comparativa del Trabajo Fin de Estudios de 2024, repetida con los modelos de IA actuales.
+          <T es="La comparativa del Trabajo Fin de Estudios de 2024, repetida con los modelos de IA actuales." en="The 2024 thesis comparison, rerun with today's AI models." />
         </p>
       </div>
 
@@ -128,30 +157,47 @@ export default function AboutPage() {
         className="panel grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-10 lg:p-8"
       >
         <div className="flex min-w-0 flex-col items-start gap-4">
-          <Kicker>Trabajo Fin de Estudios</Kicker>
+          <Kicker>
+            <T es="Trabajo Fin de Estudios" en="Master's thesis" />
+          </Kicker>
           <h2 id="about-title" className="-mt-1 text-[24px] font-bold text-balance lg:text-[28px]">
-            «Comparativa de soluciones en problemas VRPTW empleando métodos tradicionales e Inteligencia Artificial Generativa»
+            <T
+              es="«Comparativa de soluciones en problemas VRPTW empleando métodos tradicionales e Inteligencia Artificial Generativa»"
+              en="“Comparison of solutions to VRPTW problems using traditional methods and generative artificial intelligence”"
+            />
           </h2>
           <dl className="grid w-full grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)]">
-            <Fact term="Universidad" className="max-sm:col-span-2">
+            <Fact term={<T es="Universidad" en="University" />} className="max-sm:col-span-2">
               Universidad Internacional de La Rioja (UNIR)
             </Fact>
-            <Fact term="Titulación">Máster en Inteligencia Artificial</Fact>
-            <Fact term="Fecha">
-              <time dateTime="2024-09-11">11 de septiembre de 2024</time>
+            <Fact term={<T es="Titulación" en="Degree" />}>
+              <T es="Máster en Inteligencia Artificial" en="Master's in Artificial Intelligence" />
+            </Fact>
+            <Fact term={<T es="Fecha" en="Date" />}>
+              <time dateTime="2024-09-11">
+                <T es="11 de septiembre de 2024" en="September 11, 2024" />
+              </time>
             </Fact>
           </dl>
           <div className="flex flex-wrap gap-2">
             <OutLink href={TFE_CODE_URL}>
-              Código de 2024 <span className="font-mono text-fg-3">{TFE_CODE_COMMIT}</span>
+              <T es="Código de 2024" en="2024 code" /> <span className="font-mono text-fg-3">{TFE_CODE_COMMIT}</span>
             </OutLink>
-            <OutLink href={REPO_URL}>Este repositorio</OutLink>
-            {TFE_DOC_URL && <OutLink href={TFE_DOC_URL}>Documento del TFE</OutLink>}
+            <OutLink href={REPO_URL}>
+              <T es="Este repositorio" en="This repository" />
+            </OutLink>
+            {TFE_DOC_URL && (
+              <OutLink href={TFE_DOC_URL}>
+                <T es="Documento del TFE" en="Thesis document" />
+              </OutLink>
+            )}
           </div>
         </div>
 
         <div className="min-w-0 border-line lg:border-l lg:pl-10">
-          <h3 className="kicker">Créditos</h3>
+          <h3 className="kicker">
+            <T es="Créditos" en="Credits" />
+          </h3>
           {/* En móvil, papel y nombre en la misma fila; desde 640 px, el papel encima. */}
           <ul className="mt-4 grid gap-x-4 gap-y-2.5 sm:grid-cols-2 sm:gap-y-4 lg:grid-cols-1 xl:grid-cols-2">
             {CREDITS.map((c, i) => (
@@ -162,7 +208,7 @@ export default function AboutPage() {
                 style={{ borderColor: VEHICLE_COLORS[i] }}
               >
                 <span data-testid="credit-role" className="kicker text-fg-3 max-sm:w-[104px] max-sm:flex-none">
-                  {c.role}
+                  <T {...c.role} />
                 </span>
                 <span className="block text-[18px] leading-snug font-semibold sm:mt-1.5">{c.name}</span>
               </li>
@@ -173,20 +219,24 @@ export default function AboutPage() {
 
       <section aria-labelledby="about-changes">
         <h2 id="about-changes" className="text-[clamp(26px,2.4vw,34px)] font-extrabold">
-          Qué se ha actualizado
+          <T es="Qué se ha actualizado" en="What has been updated" />
         </h2>
         <ol className="mt-4 grid gap-3 md:grid-cols-2 lg:gap-4 xl:grid-cols-3">
           {CHANGES.map((c, i) => (
-            <li key={c.title} data-testid="about-change" className="panel">
+            <li key={c.title.es} data-testid="about-change" className="panel">
               <h3 className="flex items-baseline gap-3 text-[22px] font-bold">
                 <span aria-hidden="true" className="text-[30px] leading-none font-extrabold text-amber [text-shadow:0_0_24px_rgb(255_181_71/0.5)]">
                   {String(i + 1).padStart(2, "0")}
                 </span>
-                {c.title}
+                <T {...c.title} />
               </h3>
               <div className="mt-3 grid gap-2">
-                <Step>{c.then}</Step>
-                <Step now>{c.now}</Step>
+                <Step>
+                  <T {...c.then} />
+                </Step>
+                <Step now>
+                  <T {...c.now} />
+                </Step>
               </div>
             </li>
           ))}
@@ -195,17 +245,19 @@ export default function AboutPage() {
 
       <section aria-labelledby="about-limits" className="panel">
         <h2 id="about-limits" className="text-[clamp(26px,2.4vw,34px)] font-extrabold">
-          Limitaciones
+          <T es="Limitaciones" en="Limitations" />
         </h2>
         <ul className="mt-3 grid gap-2">
           {LIMITS.map((text) => (
-            <li key={text} data-testid="about-limit" className="flex gap-3">
+            <li key={text.es} data-testid="about-limit" className="flex gap-3">
               <svg viewBox="0 0 20 20" className="mt-[3px] size-5 flex-none text-amber" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden="true">
                 <path d="M10 2.5 18.5 17h-17z" />
                 <path d="M10 8v4" strokeLinecap="round" />
                 <circle cx="10" cy="14.4" r="0.6" fill="currentColor" />
               </svg>
-              <p className="leading-snug text-fg-2">{text}</p>
+              <p className="leading-snug text-fg-2">
+                <T {...text} />
+              </p>
             </li>
           ))}
         </ul>
