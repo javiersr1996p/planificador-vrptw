@@ -30,12 +30,11 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    // El script de <head> cambia `lang`, `data-lang` y la clase de <html> antes del primer pintado.
+    // El script del principio de <body> cambia `lang`, `data-lang` y la clase de <html> antes del primer pintado.
+    // No va en <head>: ahí, si el JavaScript llega tarde, la hidratación falla (#418) y React devuelve <html> al español.
     <html lang="es" suppressHydrationWarning className={`${display.variable} ${body.variable} ${mono.variable} antialiased`}>
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: LANG_INIT_SCRIPT }} />
-      </head>
       <body>
+        <script dangerouslySetInnerHTML={{ __html: LANG_INIT_SCRIPT }} />
         <div className="shell">
           <Header />
           {children}

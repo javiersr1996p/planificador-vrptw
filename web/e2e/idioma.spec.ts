@@ -11,6 +11,8 @@ import { blockService, expectNoHorizontalOverflow, stubMapStyle } from "./helper
 // páginas sin mapa ni servicio.
 
 const KEY = "vrptw-lang";
+// En desarrollo, el texto del aviso; en producción, React solo da el código (#418 a #425).
+const HYDRATION_ERROR = /hydrat|did not match|mismatch|#41[89]|#42[0-5]/i;
 const nav = (page: Page, name: string) => page.getByRole("navigation", { name });
 
 test.beforeEach(async ({ page }) => {
@@ -83,7 +85,32 @@ test("sin errores de hidratación al cargar en inglés", async ({ page }) => {
   await expect(nav(page, "Main")).toBeVisible();
   await page.goto("/no-existe?lang=en");
   await expect(page.getByRole("link", { name: "Back to the planner" })).toBeVisible();
-  expect(problems.filter((m) => /hydrat|did not match|mismatch/i.test(m))).toEqual([]);
+  expect(problems.filter((m) => HYDRATION_ERROR.test(m))).toEqual([]);
+});
+
+test("con el JavaScript retrasado, la hidratación no falla ni pierde el inglés", async ({ page }) => {
+  // Con el script de idioma dentro de <head>, una hidratación tardía fallaba (#418) y React,
+  // al regenerar la raíz, devolvía <html> al español. Debe ir al principio de <body>.
+  const problems: string[] = [];
+  page.on("pageerror", (err) => problems.push(err.message));
+  page.on("console", (msg) => {
+    if (msg.type() === "error") problems.push(msg.text());
+  });
+  // Retrasos distintos por fichero: la hidratación empieza tarde y en otro orden.
+  await page.route(/\/_next\/static\/.*\.js/, async (route) => {
+    await new Promise((r) => setTimeout(r, 300 + Math.floor(Math.random() * 2200)));
+    await route.continue().catch(() => {}); // la petición pudo morir con la navegación anterior
+  });
+  for (let i = 0; i < 6; i++) {
+    await page.goto("/sobre?lang=en");
+    await expect(nav(page, "Main")).toBeVisible();
+    await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  }
+  const parent = await page.evaluate(
+    () => [...document.scripts].find((s) => s.textContent?.includes("vrptw-lang"))?.parentElement?.tagName,
+  );
+  expect(parent).toBe("BODY");
+  expect(problems.filter((m) => HYDRATION_ERROR.test(m))).toEqual([]);
 });
 
 for (const lang of ["es", "en"]) {

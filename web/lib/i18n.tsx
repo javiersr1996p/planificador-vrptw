@@ -10,7 +10,7 @@ export type Pair = { es: string; en: string };
 export const LANG_KEY = "vrptw-lang";
 const LANG_EVENT = "langchange";
 
-/** Se ejecuta en `<head>` antes del primer pintado (app/layout.tsx): mismo criterio que `readLang`. */
+/** Se ejecuta al principio de `<body>`, antes del primer pintado (app/layout.tsx): mismo criterio que `readLang`. */
 export const LANG_INIT_SCRIPT = `(function(){var d=document.documentElement,l="es";try{var q=new URLSearchParams(location.search).get("lang");if(q==="es"||q==="en")l=q;else{var s=localStorage.getItem("${LANG_KEY}");if(s==="es"||s==="en")l=s}}catch(e){}d.lang=l;d.dataset.lang=l;if(l==="en"){d.classList.add("i18n-pending");setTimeout(function(){d.classList.remove("i18n-pending")},1500)}})()`;
 
 /** Texto del idioma pedido. Función pura: sirve también fuera de React. */
