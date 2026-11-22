@@ -319,7 +319,7 @@ export function Comparison() {
       <h2 id="comparison-title" className="panel-title">
         {n === 0
           ? t({ es: "Sin planes todavía", en: "No plans yet" })
-          : `${n} ${n === methods ? t({ es: "métodos", en: "methods" }) : t({ es: "planes", en: "plans" })}, ${t({ es: "el mismo reparto", en: "the same deliveries" })}`}
+          : `${n} ${n === methods ? t({ es: "métodos", en: "methods" }) : t({ es: "planes", en: "plans" })}, ${t({ es: "el mismo reparto", en: "the same delivery run" })}`}
       </h2>
       {(invalid > 0 || unreadable > 0) && (
         <p className="mt-1 text-base text-fg-3">

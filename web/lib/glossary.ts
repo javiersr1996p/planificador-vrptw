@@ -28,7 +28,7 @@ export const GLOSSARY = {
   },
   espera: {
     title: { es: "Espera", en: "Wait" },
-    ask: { es: "¿Qué es la espera?", en: "What is wait?" },
+    ask: { es: "¿Qué es la espera?", en: "What does wait mean?" },
     text: { es: "Tiempo parado ante un cliente cuya ventana aún no ha abierto: la furgoneta llegó pronto y aguarda.", en: "Time spent parked at a customer whose time window has not opened yet: the van arrived early and waits." },
   },
   retraso: {
@@ -49,7 +49,7 @@ export const GLOSSARY = {
   valido: {
     title: { es: "Plan válido", en: "Valid plan" },
     ask: { es: "¿Qué es un plan válido?", en: "What is a valid plan?" },
-    text: { es: "El que atiende a todos los clientes una sola vez, sin pasar la capacidad y sin llegar tarde a nadie.", en: "One that serves every customer exactly once, without going over capacity and without being late to anyone." },
+    text: { es: "El que atiende a todos los clientes una sola vez, sin pasar la capacidad y sin llegar tarde a nadie.", en: "One that serves every customer exactly once, without going over capacity and without making anyone late." },
   },
   heuristic: {
     title: { es: "Heurística", en: "Heuristic" },

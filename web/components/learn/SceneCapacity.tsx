@@ -120,7 +120,7 @@ export function SceneCapacity() {
                 setMessage({ es: "Furgonetas vacías.", en: "Both vans are empty." });
               }}
             >
-              {t({ es: "Vaciar", en: "Empty" })}
+              {t({ es: "Vaciar", en: "Clear" })}
             </button>
           </div>
         </div>

@@ -218,7 +218,7 @@ function Tabu({ motion }: { motion: boolean }) {
     <Svg
       label={t({
         es: "Un cambio pequeño deshace el cruce de la ruta; el movimiento contrario queda prohibido un tiempo.",
-        en: "A small change undoes the crossing in the route; the opposite move is banned for a while.",
+        en: "A small change removes a spot where the route crosses itself; the opposite move is banned for a while.",
       })}
     >
       {[seg(base, TL), seg(TR, BR), seg(BL, base)].map((s, i) => (
@@ -297,7 +297,7 @@ export function AgentIdea({ motion }: { motion: boolean }) {
     <Svg
       label={t({
         es: "El modelo lanza los métodos y el evaluador como herramientas, mira el resultado y vuelve a probar antes de entregar.",
-        en: "The model runs the methods and the evaluator as tools, checks the result and tries again before handing in.",
+        en: "The model runs the methods and the evaluator as tools, checks the result and tries again before submitting.",
       })}
     >
       <path id={`${id}-loop`} d={loop} fill="none" stroke="rgb(255 181 71 / 0.45)" strokeWidth="2" strokeDasharray="4 5" />
@@ -327,7 +327,7 @@ export function AgentIdea({ motion }: { motion: boolean }) {
         {t({ es: "Mira", en: "Check" })}
       </text>
       <text x="120" y="136" textAnchor="middle" style={LABEL}>
-        {t({ es: "Prueba y corrige", en: "Try and correct" })}
+        {t({ es: "Prueba y corrige", en: "Try, then adjust" })}
       </text>
     </Svg>
   );

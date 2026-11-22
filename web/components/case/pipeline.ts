@@ -79,7 +79,7 @@ export function failureText(e: unknown, step: "read" | "geocode" | "matrix"): Pa
     case "payload":
       return { es: "El caso es demasiado grande para el servicio.", en: "The case is too large for the service." };
     case "validation":
-      return { es: `El servicio no aceptó el caso: ${e.text.es}.`, en: `The service did not accept the case: ${e.text.en}` };
+      return { es: `El servicio no aceptó el caso: ${e.text.es}.`, en: `The service did not accept the case: ${e.text.en}.` };
     default:
       return { es: `El servicio falló (error ${e.status}). Inténtalo de nuevo.`, en: `The service failed (error ${e.status}). Try again.` };
   }

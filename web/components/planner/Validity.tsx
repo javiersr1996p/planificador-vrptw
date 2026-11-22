@@ -79,7 +79,7 @@ export function Validity() {
             ? t({ es: `Ninguna pasa de ${formatNumber(capacity, 0)} uds.`, en: `None goes over ${formatNumber(capacity, 0)} units` })
             : t({ es: "Carga sin límite en este caso", en: "No load limit in this case" })
           : rule.id === "late"
-            ? t({ es: "Nadie recibe tarde", en: "Nobody gets a late delivery" })
+            ? t({ es: "Nadie recibe tarde", en: "No late deliveries" })
             : t({ es: "Flota y vuelta a la base", en: "Fleet and return to depot" });
     const ok = rule.id === "capacity" ? groups.length === 0 && ev.overload <= 0 : groups.length === 0;
     return { ...rule, label, value, ok, groups };

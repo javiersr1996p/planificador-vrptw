@@ -73,7 +73,7 @@ export function SceneProblem({ motion }: { motion: boolean }) {
             </button>
             {done && motion && (
               <button type="button" className="btn" onClick={() => setTrip((t) => t + 1)}>
-                {t({ es: "Repetir el reparto", en: "Repeat the delivery" })}
+                {t({ es: "Repetir el reparto", en: "Repeat the run" })}
               </button>
             )}
           </div>

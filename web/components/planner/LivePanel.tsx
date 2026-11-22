@@ -61,7 +61,7 @@ export const LIVE_TABS: TabInfo[] = [
     id: "ruta",
     action: { es: "Tu ruta", en: "Your route" },
     title: { es: "Tu ruta", en: "Your route" },
-    line: { es: "Arma las rutas a mano pulsando paradas en el mapa.", en: "Build the routes by hand by clicking stops on the map." },
+    line: { es: "Arma las rutas a mano pulsando paradas en el mapa.", en: "Build the routes by hand by tapping stops on the map." },
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={ICON}>
         <circle cx="5" cy="18" r="2" />

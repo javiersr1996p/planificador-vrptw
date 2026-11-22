@@ -36,7 +36,7 @@ export const TOUR_STEPS: readonly TourStep[] = [
     target: '[data-tour="comparison"]',
     text: {
       es: "Varios métodos resuelven el mismo reparto. Gana el plan válido que menos cuesta.",
-      en: "Several methods solve the same delivery. The valid plan that costs least wins.",
+      en: "Several methods solve the same delivery run. The valid plan that costs least wins.",
     },
   },
   {

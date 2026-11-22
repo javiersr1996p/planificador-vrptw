@@ -153,7 +153,7 @@ export function SceneAI({ data, motion, onRetry }: { data: CaseState; motion: bo
                 </dl>
                 {current.role === "llm_agent" && (
                   <ol className="flex flex-wrap items-center gap-1.5 text-base" aria-label={t({ es: "Lo que hizo el agente", en: "What the agent did" })} data-testid="learn-trace">
-                    {[...traceSteps(current, t), solved(current) ? t({ es: "Entrega su plan", en: "Hands in its plan" }) : t({ es: "Se queda sin respuesta", en: "Ends with no answer" })].map((step, i, list) => (
+                    {[...traceSteps(current, t), solved(current) ? t({ es: "Entrega su plan", en: "Submits its plan" }) : t({ es: "Se queda sin respuesta", en: "Ends with no answer" })].map((step, i, list) => (
                       <li key={i} className="flex items-center gap-1.5">
                         <span
                           className={`rounded-tag border px-2 py-1 leading-tight ${

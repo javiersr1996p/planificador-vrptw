@@ -423,7 +423,7 @@ export function LlmPanel() {
               onClick={() => void launch(Date.now())}
             >
               <RoleIcon role={role} />
-              {role === "llm_agent" ? t({ es: "Lanzar el agente", en: "Launch the agent" }) : t({ es: "Lanzar el directo", en: "Launch the direct LLM" })}
+              {role === "llm_agent" ? t({ es: "Lanzar el agente", en: "Launch the agent" }) : t({ es: "Lanzar el directo", en: "Launch direct LLM" })}
             </Button>
           )}
           <span id={hintId} data-testid="llm-launch-hint" className="min-w-0 flex-1 basis-32 text-base leading-snug text-fg-2">

@@ -83,7 +83,7 @@ async function exercise(page: Page, n: number): Promise<void> {
       await s.locator(`[data-testid="toy-order"][data-client="${id}"]`).click();
       await expectEnglish(page, '[data-testid="learn-story"]', `escena 3 tras ${id}`);
     }
-    await s.getByRole("button", { name: "Empty" }).click();
+    await s.getByRole("button", { name: "Clear" }).click();
   }
   if (n === 4) {
     for (const i of [1, 2, 0]) {
