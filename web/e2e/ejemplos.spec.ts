@@ -356,7 +356,8 @@ test("la cabecera cabe en una sola línea sin perder sus enlaces", async ({ page
   expect(height).toBeLessThanOrEqual(lineHeight + 1);
   const nav = page.getByRole("navigation", { name: "Principal" });
   const width = page.viewportSize()!.width;
-  for (const name of ["Planificador", "Repositorio"]) {
+  // Por debajo de 768 px la marca lleva a la portada y el enlace «Planificador» se oculta a propósito.
+  for (const name of width < 768 ? ["Repositorio"] : ["Planificador", "Repositorio"]) {
     const link = nav.getByRole("link", { name });
     await expect(link).toBeVisible();
     const box = (await link.boundingBox())!;
