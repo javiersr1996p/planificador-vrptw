@@ -348,6 +348,34 @@ def test_explain_uses_server_evaluation(
     assert "heuristic" in prompt and "Spanish" in prompt
 
 
+def test_explain_asks_for_the_language(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    seen = use_fake(monkeypatch, [LLMResponse(text="x"), LLMResponse(text="x")])
+    base = {"instance": dump(INSTANCE), "routes": ROUTES, "method": "x", "model": MODEL}
+    for extra in ({"lang": "en"}, {}):
+        assert (
+            client.post("/explain", json={**base, **extra}, headers=HEADERS).status_code
+            == 200
+        )
+    assert "in English" in seen[0][0]["content"]
+    assert "in Spanish" in seen[1][0]["content"]  # sin `lang`, español como hasta ahora
+    bad = {**base, "lang": "fr"}
+    assert client.post("/explain", json=bad, headers=HEADERS).status_code == 422
+
+
+def test_fake_explanation_follows_the_language(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("VRPTW_LLM_PROVIDER", "fake")
+    base = {"instance": dump(INSTANCE), "routes": ROUTES, "method": "x", "model": MODEL}
+    es = client.post("/explain", json=base, headers=HEADERS).json()["text"]
+    en = client.post("/explain", json={**base, "lang": "en"}, headers=HEADERS).json()[
+        "text"
+    ]
+    assert es.startswith("Respuesta de prueba") and en.startswith("Test answer")
+
+
 def test_explain_method_too_long_is_422(client: TestClient) -> None:
     payload = {
         "instance": dump(INSTANCE),

@@ -364,8 +364,10 @@ def recheck_prompt() -> str:
     )
 
 
-def explain_prompt(instance: Instance, evaluation: Evaluation, method: str) -> str:
-    """Prompt para explicar en español una solución ya evaluada, sin la matriz."""
+def explain_prompt(
+    instance: Instance, evaluation: Evaluation, method: str, lang: str = "es"
+) -> str:
+    """Prompt para explicar una solución ya evaluada, sin la matriz, en `es` o `en`."""
     d_unit, t_unit = (
         ("kilometers", "minutes")
         if instance.source in ("tfe2024", "real")
@@ -403,7 +405,8 @@ def explain_prompt(instance: Instance, evaluation: Evaluation, method: str) -> s
         ),
         f"Feasible: {'yes' if evaluation.feasible else 'no'}. Violations: {violations}.",
         (
-            "Explain this solution in Spanish, briefly, for a logistics manager: what "
+            f"Explain this solution in {'English' if lang == 'en' else 'Spanish'}, "
+            "briefly, for a logistics manager: what "
             "each vehicle does, where there are waits or delays, and whether the "
             "solution is feasible. Use only the figures above."
         ),

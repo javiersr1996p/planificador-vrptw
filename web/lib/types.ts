@@ -271,6 +271,12 @@ export interface components {
         /** ExplainRequest */
         ExplainRequest: {
             instance: components["schemas"]["Instance"];
+            /**
+             * Lang
+             * @default es
+             * @enum {string}
+             */
+            lang: "es" | "en";
             /** Method */
             method: string;
             /** Model */

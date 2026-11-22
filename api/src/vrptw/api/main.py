@@ -91,7 +91,10 @@ RETRY_AFTER_S = "5"
 # Supuesto propio, sin validar con un modelo real: con razonamiento activo, 2000
 # tokens podrían agotarse antes de que el modelo empiece a escribir el texto.
 EXPLAIN_MAX_TOKENS = 4000
-FAKE_EXPLANATION = "Respuesta de prueba: el servicio está en modo de pruebas y no ha llamado a ningún modelo."
+FAKE_EXPLANATION = {
+    "es": "Respuesta de prueba: el servicio está en modo de pruebas y no ha llamado a ningún modelo.",
+    "en": "Test answer: the service is in test mode and has not called any model.",
+}
 
 logger = logging.getLogger("vrptw.api")
 
@@ -317,6 +320,7 @@ class SolveLlmRequest(_Request):
 class ExplainRequest(EvaluateRequest):
     method: str = Field(max_length=40)
     model: str
+    lang: Literal["es", "en"] = "es"
 
 
 class HealthResponse(BaseModel):
@@ -669,9 +673,9 @@ def explain(
     def work() -> ExplainResponse:
         # Las cifras las calcula el servidor, no el cliente.
         evaluation = evaluate(req.instance, Solution(routes=req.routes))
-        prompt = explain_prompt(req.instance, evaluation, req.method)
+        prompt = explain_prompt(req.instance, evaluation, req.method, req.lang)
         provider, call = _provider(
-            lambda: LLMResponse(text=FAKE_EXPLANATION, model="fake")
+            lambda: LLMResponse(text=FAKE_EXPLANATION[req.lang], model="fake")
         )
         send: Provider = call or PROVIDERS[provider]
         response = send(

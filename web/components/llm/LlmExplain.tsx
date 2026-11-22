@@ -49,7 +49,7 @@ function SparkIcon({ className }: { className?: string }) {
  * clave, el botón abre el panel «Con IA» y lleva el foco al campo.
  */
 export function LlmExplain({ run }: { run: PlannerRun | null }) {
-  const { formatEuro, formatNumber } = useFormat();
+  const { lang, formatEuro, formatNumber } = useFormat();
   const { state, actions } = usePlanner();
   const { service } = useService();
   const { llmKey, model, focusKey } = useLlm();
@@ -89,7 +89,7 @@ export function LlmExplain({ run }: { run: PlannerRun | null }) {
     put({ record: rec, kind: "running", ctrl });
     try {
       const reply = await explain(
-        { instance, routes: rec.solution!.routes, method: methodLabel(rec.method).es.slice(0, 40), model },
+        { instance, routes: rec.solution!.routes, method: methodLabel(rec.method)[lang].slice(0, 40), model, lang },
         key,
         ctrl.signal,
       );
