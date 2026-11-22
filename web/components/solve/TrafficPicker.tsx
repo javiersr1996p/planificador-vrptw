@@ -2,10 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { evaluate } from "@/lib/api";
-import { useT, type Pair } from "@/lib/i18n";
+import { useT } from "@/lib/i18n";
 import { methodLabel } from "@/lib/labels";
 import type { components } from "@/lib/types";
-import { hasSolution, usePlanner } from "@/components/planner/store";
+import { hasSolution, ORIGIN_LABELS, usePlanner } from "@/components/planner/store";
 import { isReal } from "@/components/planner/units";
 import { useLatest } from "./useLatest";
 
@@ -28,12 +28,6 @@ const PROFILE_EN: Record<string, { name: string; note: string }> = {
     name: "Rush hours",
     note: "Illustrative factors, not measured. Slots: 07:30 to 09:30 and 17:00 to 19:30.",
   },
-};
-
-const ORIGIN: Record<string, Pair> = {
-  precalculada: { es: "precalculada", en: "precomputed" },
-  "en vivo": { es: "en vivo", en: "live" },
-  manual: { es: "manual", en: "manual" },
 };
 
 /**
@@ -194,7 +188,7 @@ export function TrafficPicker({
           <ul data-testid="reevaluated" className="m-0 mt-1.5 flex list-none flex-wrap gap-1.5 p-0">
             {marked.map((r) => (
               <li key={r.key} className="rounded-full border border-line-2 px-2.5 py-0.5 text-base leading-snug text-fg-2">
-                {t(methodLabel(r.record.method))} · {t(ORIGIN[r.origin] ?? { es: r.origin, en: r.origin })}
+                {t(methodLabel(r.record.method))} · {t(ORIGIN_LABELS[r.origin])}
                 <span className="sr-only">{t({ es: ": reevaluada con tráfico", en: ": re-evaluated with traffic" })}</span>
               </li>
             ))}
