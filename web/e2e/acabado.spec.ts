@@ -280,7 +280,8 @@ test.describe("movimiento", () => {
     await page.getByTestId("learn-dot").nth(4).click();
     expect(await loops(page), "escena 5 en pausa").toEqual(still);
 
-    await nav.getByRole("link", { name: "Planificador", exact: true }).click();
+    // En móvil el enlace «Planificador» se oculta; la marca lleva a la portada en todos los anchos.
+    await page.getByRole("link", { name: "Planificador VRPTW, inicio" }).click();
     await expect(page.getByTestId("motion-toggle").filter({ visible: true })).toHaveAttribute("aria-checked", "false");
     await expect(page.getByTestId("route-map").filter({ visible: true })).toHaveAttribute("data-motion", "off");
   });
