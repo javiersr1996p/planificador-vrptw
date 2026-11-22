@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useService } from "@/components/planner/ServiceStatus";
+import { SERVICE_WAKING_TEXT, useService } from "@/components/planner/ServiceStatus";
 import { hasSolution, usePlanner, type PlannerRun } from "@/components/planner/store";
 import { ApiError, explain } from "@/lib/api";
 import { useFormat } from "@/lib/format";
@@ -114,7 +114,9 @@ export function LlmExplain({ run }: { run: PlannerRun | null }) {
     !up
       ? service === "down"
         ? { es: "Sin servicio: no se puede pedir ahora.", en: "No service: you cannot ask right now." }
-        : { es: "Comprobando el servicio…", en: "Checking the service…" }
+        : service === "waking"
+          ? SERVICE_WAKING_TEXT
+          : { es: "Comprobando el servicio…", en: "Checking the service…" }
       : !key || !isSendableKey(key)
         ? { es: "Necesita tu clave: se escribe en «Con IA».", en: "Needs your key: enter it in “With AI”." }
         : { es: "Un modelo lo cuenta en palabras. Tiene coste.", en: "A model explains it in words. It costs money." },

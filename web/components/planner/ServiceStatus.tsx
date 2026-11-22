@@ -5,8 +5,13 @@ import { health } from "@/lib/api";
 import { useT, type Pair } from "@/lib/i18n";
 import { usePlanner, type ServiceState } from "./store";
 
-/** Tiempo de espera de `/health`. */
+/** Tiempo de espera de la primera petición a `/health`. */
 const HEALTH_TIMEOUT_MS = 5000;
+/** Si esa primera espera se agota, el servicio puede estar despertando (plan gratuito que se duerme): se sigue intentando. */
+const WAKING_ATTEMPT_MS = 10000;
+const WAKING_PAUSE_MS = 2000;
+/** Plazo total desde el primer intento; pasado, el servicio se da por no disponible. */
+const WAKING_DEADLINE_MS = 90000;
 
 /** Texto del aviso cuando el servicio no responde; lo comparten el indicador y los paneles en vivo. */
 export const SERVICE_DOWN_TEXT: Pair = {
@@ -14,8 +19,21 @@ export const SERVICE_DOWN_TEXT: Pair = {
   en: "Service unavailable: showing the precomputed results",
 };
 
+/** Texto del aviso mientras el servicio despierta. */
+export const SERVICE_WAKING_TEXT: Pair = {
+  es: "Despertando el servicio (hasta un minuto)…",
+  en: "Waking up the service (up to a minute)…",
+};
+
+/** Sin servicio utilizable ahora (caído o despertando): las acciones en vivo se desactivan. */
+export const serviceOff = (s: ServiceState) => s === "down" || s === "waking";
+
+const sleep = (ms: number) => new Promise<void>((done) => setTimeout(done, ms));
+
 /**
- * Estado del servicio y su comprobación (`GET /health`, 5 s de espera).
+ * Estado del servicio y su comprobación (`GET /health`).
+ * La primera petición espera 5 s: si falla antes, `down`; si se agota, `waking` y se sigue
+ * intentando hasta 90 s desde el inicio (una respuesta no 2xx cuenta como "aún despertando").
  * `check` se puede llamar a mano (reintento); si ya hay una en curso, la sustituye.
  */
 export function useService(): { service: ServiceState; check: () => Promise<void> } {
@@ -26,20 +44,37 @@ export function useService(): { service: ServiceState; check: () => Promise<void
     inflight.current?.abort();
     const ctrl = new AbortController();
     inflight.current = ctrl;
-    let timedOut = false;
-    const timer = setTimeout(() => {
-      timedOut = true;
-      ctrl.abort();
-    }, HEALTH_TIMEOUT_MS);
+    // Cancelada por otra comprobación o por ocultarse la página: la que manda decide el estado.
+    const current = () => inflight.current === ctrl && !ctrl.signal.aborted;
+    const start = Date.now();
     actions.setService("checking");
-    try {
-      await health(ctrl.signal);
-      if (inflight.current === ctrl) actions.setService("up");
-    } catch {
-      // Cancelada por otra comprobación o por ocultarse la página: la que manda decide el estado.
-      if (inflight.current === ctrl && (timedOut || !ctrl.signal.aborted)) actions.setService("down");
-    } finally {
-      clearTimeout(timer);
+    for (let first = true; ; first = false) {
+      const attempt = new AbortController();
+      const cancel = () => attempt.abort();
+      ctrl.signal.addEventListener("abort", cancel);
+      let timedOut = false;
+      const limit = first ? HEALTH_TIMEOUT_MS : Math.min(WAKING_ATTEMPT_MS, WAKING_DEADLINE_MS - (Date.now() - start));
+      const timer = setTimeout(() => {
+        timedOut = true;
+        attempt.abort();
+      }, limit);
+      try {
+        await health(attempt.signal);
+        if (current()) actions.setService("up");
+        return;
+      } catch {
+        if (!current()) return;
+        if (first && !timedOut) return actions.setService("down");
+        if (first) actions.setService("waking");
+      } finally {
+        clearTimeout(timer);
+        ctrl.signal.removeEventListener("abort", cancel);
+      }
+      const left = WAKING_DEADLINE_MS - (Date.now() - start);
+      if (left <= 0) return actions.setService("down");
+      if (!timedOut) await sleep(Math.min(WAKING_PAUSE_MS, left));
+      if (!current()) return;
+      if (WAKING_DEADLINE_MS - (Date.now() - start) <= 0) return actions.setService("down");
     }
   }, [actions]);
 
@@ -66,6 +101,14 @@ function Dot({ state }: { state: ServiceState }) {
       </svg>
     );
   }
+  if (state === "waking") {
+    return (
+      <svg viewBox="0 0 16 16" aria-hidden="true" className="size-4 flex-none">
+        <circle cx="8" cy="8" r="7" fill="none" stroke="var(--amber)" strokeWidth="1.6" />
+        <path d="M8 4.2 V8 L10.6 9.6" fill="none" stroke="var(--amber)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
   if (state === "up") {
     return (
       <svg viewBox="0 0 16 16" aria-hidden="true" className="size-4 flex-none">
@@ -81,6 +124,7 @@ const SHORT: Record<ServiceState, Pair> = {
   unknown: { es: "Comprobando el servicio", en: "Checking the service" },
   checking: { es: "Comprobando el servicio", en: "Checking the service" },
   up: { es: "Servicio activo", en: "Service active" },
+  waking: { es: "Despertando el servicio", en: "Waking up the service" },
   down: { es: "Sin servicio", en: "No service" },
 };
 
@@ -119,14 +163,27 @@ export function ServiceStatus() {
 }
 
 /**
- * Aviso completo de servicio caído, con el reintento. No muestra nada si el
+ * Aviso completo de servicio caído (con el reintento) o despertando. No muestra nada si el
  * servicio responde. Lo usan los paneles en vivo para explicar por qué sus
  * acciones están desactivadas (`id` sirve para `aria-describedby`).
  */
 export function ServiceNotice({ id }: { id?: string }) {
   const t = useT();
   const { service, check } = useService();
-  if (service !== "down") return null;
+  if (!serviceOff(service)) return null;
+  if (service === "waking") {
+    return (
+      <div
+        id={id}
+        role="status"
+        data-testid="service-notice"
+        className="flex items-center gap-3 rounded-hud border border-amber/50 bg-amber/10 px-3 py-2 text-base leading-snug text-fg"
+      >
+        <Dot state="waking" />
+        <span className="min-w-0 flex-1">{t(SERVICE_WAKING_TEXT)}</span>
+      </div>
+    );
+  }
   return (
     <div
       id={id}

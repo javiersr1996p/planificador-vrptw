@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { ServiceNotice, useService } from "@/components/planner/ServiceStatus";
+import { SERVICE_WAKING_TEXT, ServiceNotice, serviceOff, useService } from "@/components/planner/ServiceStatus";
 import { hasSolution, makeRun, usePlanner, type PlannerRun } from "@/components/planner/store";
 import { useLatest } from "@/components/solve/useLatest";
 import { Button } from "@/components/ui/Button";
@@ -156,7 +156,7 @@ export function LlmPanel() {
   const hintId = `${ids}-hint`;
 
   const up = service === "up";
-  const down = service === "down";
+  const down = serviceOff(service);
   const running = status.kind === "running";
 
   // La lista de modelos se pide al mostrarse el panel con el servicio activo (una vez obtenida, no se repite).
@@ -235,7 +235,9 @@ export function LlmPanel() {
 
   const hint = t(
     down
-      ? { es: "Sin servicio.", en: "No service." }
+      ? service === "waking"
+        ? SERVICE_WAKING_TEXT
+        : { es: "Sin servicio.", en: "No service." }
       : models.kind === "error"
         ? { es: "No se pudo leer la lista de modelos.", en: "Could not read the model list." }
         : !info

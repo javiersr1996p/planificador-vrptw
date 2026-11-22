@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ServiceNotice, useService } from "@/components/planner/ServiceStatus";
+import { ServiceNotice, serviceOff, useService } from "@/components/planner/ServiceStatus";
 import { bestRunKey, makeRun, usePlanner, type PlannerRun } from "@/components/planner/store";
 import { Button } from "@/components/ui/Button";
 import { ApiError } from "@/lib/api";
@@ -125,7 +125,7 @@ export function ClassicPanel() {
 
   const instance = state.instance;
   const queue = CLASSIC_METHODS.filter((m) => picked[m]);
-  const down = service === "down";
+  const down = serviceOff(service);
   // Mientras se reevalúan los planes con un tráfico nuevo no se lanza ningún cálculo.
   const blocked = !instance || service !== "up" || state.busy.traffic;
 

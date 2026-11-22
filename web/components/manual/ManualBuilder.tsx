@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { vehicleColor } from "@/components/map/geometry";
-import { ServiceNotice, useService } from "@/components/planner/ServiceStatus";
+import { ServiceNotice, serviceOff, useService } from "@/components/planner/ServiceStatus";
 import { makeRun, usePlanner } from "@/components/planner/store";
 import { useLatest } from "@/components/solve/useLatest";
 import { Button } from "@/components/ui/Button";
@@ -118,7 +118,7 @@ export function ManualBuilder() {
   }
 
   const tooBig = !!instance && instance.customers.length > MAX_CUSTOMERS;
-  const down = service === "down";
+  const down = serviceOff(service);
   const enabled = !!instance && !tooBig && service === "up";
   const vehicles = instance?.fleet.vehicles ?? 0;
 

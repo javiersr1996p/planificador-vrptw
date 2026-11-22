@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, type ChangeEvent } from "react";
-import { ServiceNotice, useService } from "@/components/planner/ServiceStatus";
+import { ServiceNotice, serviceOff, useService } from "@/components/planner/ServiceStatus";
 import { useLatest } from "@/components/solve/useLatest";
 import { usePlanner } from "@/components/planner/store";
 import { Button } from "@/components/ui/Button";
@@ -107,7 +107,7 @@ export function CasePanel() {
   const [loaded, setLoaded] = useState<{ name: string; customers: number; vehicles: number } | null>(null);
   const abort = useRef<AbortController | null>(null);
 
-  const down = service === "down";
+  const down = serviceOff(service);
   const setStep = (id: StepId, s: StepState) => setSteps((prev) => ({ ...prev, [id]: s }));
 
   function reset() {

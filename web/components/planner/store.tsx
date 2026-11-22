@@ -39,7 +39,7 @@ export type CaseMeta = {
   note?: string | null;
 };
 
-export type ServiceState = "unknown" | "checking" | "up" | "down";
+export type ServiceState = "unknown" | "checking" | "waking" | "up" | "down";
 
 /** Cálculos en vivo que no pueden solaparse con un cambio de tráfico. */
 export type LiveJob = "classic" | "llm" | "traffic";
