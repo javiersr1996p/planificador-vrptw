@@ -12,6 +12,7 @@ import {
   setWorkerUrl,
 } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+import { type Lang, currentLang, useLang } from "@/lib/i18n";
 import { playback } from "@/lib/playback";
 import { type Pt, mercator, vehicleColor } from "./geometry";
 import { useOnScreen, usePageVisible } from "./hooks";
@@ -56,11 +57,19 @@ type Props = {
   onDegrade: () => void;
 };
 
-const LOCALE = {
-  "Map.Title": "Mapa de rutas",
-  "CooperativeGesturesHandler.WindowsHelpText": "Usa Ctrl + rueda para ampliar el mapa",
-  "CooperativeGesturesHandler.MacHelpText": "Usa ⌘ + rueda para ampliar el mapa",
-  "CooperativeGesturesHandler.MobileHelpText": "Usa dos dedos para mover el mapa",
+const LOCALE: Record<Lang, Record<string, string>> = {
+  es: {
+    "Map.Title": "Mapa de rutas",
+    "CooperativeGesturesHandler.WindowsHelpText": "Usa Ctrl + rueda para ampliar el mapa",
+    "CooperativeGesturesHandler.MacHelpText": "Usa ⌘ + rueda para ampliar el mapa",
+    "CooperativeGesturesHandler.MobileHelpText": "Usa dos dedos para mover el mapa",
+  },
+  en: {
+    "Map.Title": "Route map",
+    "CooperativeGesturesHandler.WindowsHelpText": "Use Ctrl + scroll to zoom the map",
+    "CooperativeGesturesHandler.MacHelpText": "Use ⌘ + scroll to zoom the map",
+    "CooperativeGesturesHandler.MobileHelpText": "Use two fingers to move the map",
+  },
 };
 
 // El paquete trae el worker en un fichero aparte; el empaquetador lo publica como estático.
@@ -287,6 +296,7 @@ export default function MapGL({
   const overview = useRef(true);
   const visible = usePageVisible();
   const onScreen = useOnScreen(box);
+  const [lang] = useLang();
 
   const lines = useMemo<Line[]>(() => {
     const flat: Pt[] = mercator(nodes);
@@ -300,6 +310,15 @@ export default function MapGL({
   useLayoutEffect(() => {
     layout.current = { legendColumn, compact };
   }, [legendColumn, compact]);
+
+  // El mapa se crea una vez por caso: al cambiar de idioma se actualizan sus textos en el sitio.
+  // MapLibre no ofrece `setLocale`; la tabla de textos es la que comparten sus controles.
+  useEffect(() => {
+    if (!map) return;
+    const table = (map as unknown as { _locale?: Record<string, string> })._locale;
+    if (table) Object.assign(table, LOCALE[lang]);
+    map.getCanvas().setAttribute("aria-label", LOCALE[lang]["Map.Title"]);
+  }, [map, lang]);
 
   const setGradient = useCallback(
     (id: string, expression: unknown[]) => {
@@ -354,7 +373,7 @@ export default function MapGL({
             maxZoom: 18,
             fadeDuration: 0,
             pixelRatio: Math.min(window.devicePixelRatio, 2),
-            locale: LOCALE,
+            locale: LOCALE[currentLang()],
           });
         } catch {
           // Sin WebGL 2: el caso se dibuja en el plano.

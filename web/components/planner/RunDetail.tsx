@@ -9,7 +9,7 @@ import { methodLabel } from "@/lib/labels";
 import { playback } from "@/lib/playback";
 import type { components } from "@/lib/types";
 import { axisTicks, customersById, focusRoute, timeDomain, vehicleDays, type VehicleDay } from "./schedule";
-import { hasSolution, usePlanner } from "./store";
+import { ORIGIN_LABELS, hasSolution, usePlanner } from "./store";
 import { customerName, formatClock, formatSpan, isReal, vehicleColor } from "./units";
 
 type S = components["schemas"];
@@ -32,11 +32,12 @@ const NUMS =
 
 /** Rótulos de las columnas de cifras. Cada fila los repite solo para lectores de pantalla. */
 function StopColumns({ className }: { className: string }) {
+  const t = useT();
   return (
     <div data-testid="stop-columns" aria-hidden="true" className={`${NUMS} ${className}`}>
-      <span>Llegada</span>
-      <span>Espera</span>
-      <span>Carga</span>
+      <span>{t({ es: "Llegada", en: "Arrival" })}</span>
+      <span>{t({ es: "Espera", en: "Wait" })}</span>
+      <span>{t({ es: "Carga", en: "Load" })}</span>
     </div>
   );
 }
@@ -59,6 +60,7 @@ function VehicleTabs({
   onPick: (route: number) => void;
 }) {
   const [lang] = useLang();
+  const t = useT();
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
   const n = days.length;
 
@@ -77,7 +79,7 @@ function VehicleTabs({
 
   return (
     <div className="-mx-1 max-w-full min-w-0 overflow-x-auto px-1 py-1 [scrollbar-width:thin] max-[760px]:w-full">
-      <div role="tablist" aria-label="Elige furgoneta" className="flex w-max min-w-full gap-1.5">
+      <div role="tablist" aria-label={t({ es: "Elige furgoneta", en: "Pick a van" })} className="flex w-max min-w-full gap-1.5">
         {days.map((d, i) => {
           const load = d.stops.length ? d.stops[d.stops.length - 1].load : 0;
           const share = capacity ? Math.min(1, load / capacity) : 1;
@@ -109,8 +111,8 @@ function VehicleTabs({
             >
               <span aria-hidden="true" className="size-3 rounded-full bg-[var(--c)] shadow-[0_0_8px_var(--c)]" />
               <b className="text-base leading-none font-semibold whitespace-nowrap">
-                <span className="max-[760px]:hidden">Furgoneta </span>
-                <span className="min-[761px]:hidden">F</span>
+                <span className="max-[760px]:hidden">{t({ es: "Furgoneta", en: "Van" })} </span>
+                <span className="min-[761px]:hidden">{t({ es: "F", en: "V" })}</span>
                 {i + 1}
               </b>
               <span className="col-span-2 flex items-center gap-1.5 font-mono text-[12px] leading-none tracking-[0.04em] whitespace-nowrap text-fg-3 uppercase">
@@ -119,7 +121,7 @@ function VehicleTabs({
                   className="block h-1 w-[30px] rounded-sm min-[761px]:w-[54px]"
                   style={{ background: `linear-gradient(90deg,var(--c) ${share * 100}%,rgb(255 255 255/0.12) ${share * 100}%)` }}
                 />
-                <span className="max-[760px]:hidden">carga </span>
+                <span className="max-[760px]:hidden">{t({ es: "carga", en: "load" })} </span>
                 {formatNumber(load, 0, lang)}
                 {capacity ? `/${formatNumber(capacity, 0, lang)}` : ""}
               </span>
@@ -182,12 +184,13 @@ function TimeMark({ p, children, testId }: { p: number; children: string; testId
 /** Línea de tiempo de una furgoneta: salida, cada parada con su ventana, y vuelta. */
 function Timeline({ instance, day, lo, hi }: { instance: S["Instance"]; day: VehicleDay; lo: number; hi: number }) {
   const [lang] = useLang();
+  const t = useT();
   const [open, setOpen] = useState(false);
   // Sin paradas no hay salida ni vuelta: la hora que trae `depot_arrival` es la de apertura de la base.
   if (day.stops.length === 0) {
     return (
       <p role="tabpanel" id="veh-panel" aria-labelledby={`veh-tab-${day.route}`} className="py-2 text-fg-2">
-        Esta furgoneta no sale de la base: no tiene paradas.
+        {t({ es: "Esta furgoneta no sale de la base: no tiene paradas.", en: "This van does not leave the depot: it has no stops." })}
       </p>
     );
   }
@@ -240,14 +243,15 @@ function Timeline({ instance, day, lo, hi }: { instance: S["Instance"]; day: Veh
         <StopColumns className="self-start pt-1 leading-none max-[760px]:hidden" />
       </div>
 
-      <ol id="veh-stops" aria-label={`Paradas de la furgoneta ${day.route + 1}`} className="relative flex flex-col">
+      <ol id="veh-stops" aria-label={t({ es: `Paradas de la furgoneta ${day.route + 1}`, en: `Stops of van ${day.route + 1}` })} className="relative flex flex-col">
         <li className={`${row} min-h-[30px] min-[761px]:min-h-8`}>
           <span className="flex min-w-0 items-center gap-2.5">
             <Badge base color={color}>
               B
             </Badge>
             <span className="truncate text-fg-2">
-              Salida<span className="max-[760px]:hidden"> de la base</span>
+              {t({ es: "Salida", en: "Departure" })}
+              <span className="max-[760px]:hidden"> {t({ es: "de la base", en: "from depot" })}</span>
             </span>
           </span>
           <span className="relative h-[22px]">
@@ -309,7 +313,7 @@ function Timeline({ instance, day, lo, hi }: { instance: S["Instance"]; day: Veh
               {/* En móvil las cifras van bajo la pista. Los rótulos, una sola vez arriba. */}
               <dl className={`${NUMS} [grid-area:nums]`}>
                 <div>
-                  <dt className="sr-only">Llegada</dt>
+                  <dt className="sr-only">{t({ es: "Llegada", en: "Arrival" })}</dt>
                   <dd data-testid="stop-arrival" className="font-semibold text-fg-2">
                     {formatClock(s.arrival, real, lang)}
                   </dd>
@@ -317,7 +321,7 @@ function Timeline({ instance, day, lo, hi }: { instance: S["Instance"]; day: Veh
                 {/* Quien llega tarde no espera: en su columna va el retraso, en rojo y con su nombre. */}
                 {!late && (
                   <div>
-                    <dt className="sr-only">Espera</dt>
+                    <dt className="sr-only">{t({ es: "Espera", en: "Wait" })}</dt>
                     <dd data-testid="stop-wait" className="font-semibold text-fg-2">
                       {s.wait > 0 ? formatSpan(s.wait, real, lang) : "–"}
                     </dd>
@@ -325,12 +329,12 @@ function Timeline({ instance, day, lo, hi }: { instance: S["Instance"]; day: Veh
                 )}
                 {late && (
                   <div className="flex flex-wrap gap-x-1 font-bold text-late">
-                    <dt>Retraso</dt>
+                    <dt>{t({ es: "Retraso", en: "Late" })}</dt>
                     <dd data-testid="stop-late">{formatSpan(s.late, real, lang)}</dd>
                   </div>
                 )}
                 <div>
-                  <dt className="sr-only">Carga</dt>
+                  <dt className="sr-only">{t({ es: "Carga", en: "Load" })}</dt>
                   <dd data-testid="stop-load" className="font-semibold text-fg-2">
                     {formatNumber(s.load, 0, lang)}
                     {capacity ? ` / ${formatNumber(capacity, 0, lang)}` : ""}
@@ -352,8 +356,11 @@ function Timeline({ instance, day, lo, hi }: { instance: S["Instance"]; day: Veh
               className="btn w-full"
             >
               {open
-                ? "Ver menos paradas"
-                : `Ver ${day.stops.length - FOLD_SHOW} paradas más${hiddenLate ? ` (${hiddenLate} con retraso)` : ""}`}
+                ? t({ es: "Ver menos paradas", en: "Show fewer stops" })
+                : t({
+                    es: `Ver ${day.stops.length - FOLD_SHOW} paradas más${hiddenLate ? ` (${hiddenLate} con retraso)` : ""}`,
+                    en: `Show ${day.stops.length - FOLD_SHOW} more stops${hiddenLate ? ` (${hiddenLate} late)` : ""}`,
+                  })}
             </button>
           </li>
         )}
@@ -365,7 +372,8 @@ function Timeline({ instance, day, lo, hi }: { instance: S["Instance"]; day: Veh
                 B
               </Badge>
               <span className="truncate text-fg-2">
-                Vuelta<span className="max-[760px]:hidden"> a la base</span>
+                {t({ es: "Vuelta", en: "Back" })}
+                <span className="max-[760px]:hidden"> {t({ es: "a la base", en: "at depot" })}</span>
               </span>
             </span>
             <span className="relative h-[22px]">
@@ -414,8 +422,10 @@ export function RunDetail({ onShowLate }: { onShowLate?: () => void }) {
   if (!selected || !ev) {
     return (
       <section data-testid="detail" data-tour="detail" data-zone className="panel">
-        <span className="kicker">Detalle</span>
-        <p className="mt-2 text-fg-2">Elige un plan de la comparativa para ver el día de cada furgoneta.</p>
+        <span className="kicker">{t({ es: "Detalle", en: "Details" })}</span>
+        <p className="mt-2 text-fg-2">
+          {t({ es: "Elige un plan de la comparativa para ver el día de cada furgoneta.", en: "Pick a plan from the comparison to see each van's day." })}
+        </p>
       </section>
     );
   }
@@ -444,20 +454,20 @@ export function RunDetail({ onShowLate }: { onShowLate?: () => void }) {
     >
       <div className="flex flex-wrap items-end justify-between gap-x-5 gap-y-2.5">
         <div className="min-w-0">
-          <span className="kicker">Detalle</span>
+          <span className="kicker">{t({ es: "Detalle", en: "Details" })}</span>
           <h2 id="detail-title" className="panel-title">
-            El día de la furgoneta {shown + 1}
+            {t({ es: `El día de la furgoneta ${shown + 1}`, en: `Van ${shown + 1}'s day` })}
           </h2>
         </div>
         <div className="flex max-w-full min-w-0 items-center gap-2 max-[760px]:w-full">
           {route !== null && (
             <button
               type="button"
-              title="Ver todas las furgonetas en el mapa"
+              title={t({ es: "Ver todas las furgonetas en el mapa", en: "Show all vans on the map" })}
               onClick={() => actions.selectRoute(null)}
               className="btn min-h-12 shrink-0 rounded-[10px] px-3"
             >
-              ← Todas
+              {t({ es: "← Todas", en: "← All" })}
             </button>
           )}
           <VehicleTabs days={days} shown={shown} capacity={instance.fleet.capacity} onPick={(i) => actions.selectRoute(i)} />
@@ -466,20 +476,20 @@ export function RunDetail({ onShowLate }: { onShowLate?: () => void }) {
 
       <div className="mt-3 mb-2 flex flex-wrap items-center gap-x-3.5 gap-y-2 text-base text-fg-2 min-[761px]:gap-x-[18px]">
         <Key swatch={{ height: 16, border: "1.5px solid rgb(236 241 250 / 0.6)", background: "rgb(255 255 255 / 0.05)" }}>
-          Ventana horaria
+          {t({ es: "Ventana horaria", en: "Time window" })}
           <Help term="ventana" size="sm" />
         </Key>
-        <Key swatch={{ height: 8, background: HATCH }}>Espera</Key>
-        <Key swatch={{ height: 12, background: "var(--ok)", boxShadow: "0 0 8px rgb(78 240 162 / 0.6)" }}>Entrega</Key>
+        <Key swatch={{ height: 8, background: HATCH }}>{t({ es: "Espera", en: "Wait" })}</Key>
+        <Key swatch={{ height: 12, background: "var(--ok)", boxShadow: "0 0 8px rgb(78 240 162 / 0.6)" }}>{t({ es: "Entrega", en: "Delivery" })}</Key>
         <Key swatch={{ height: 12, background: "var(--late)" }}>
-          Retraso
+          {t({ es: "Retraso", en: "Late" })}
           <Help term="retraso" size="sm" />
         </Key>
-        <Key swatch={{ height: 0, borderTop: `2px dashed ${color}`, borderRadius: 0 }}>Trayecto</Key>
+        <Key swatch={{ height: 0, borderTop: `2px dashed ${color}`, borderRadius: 0 }}>{t({ es: "Trayecto", en: "Travel" })}</Key>
         {onShowLate && !anyLate && (
           <button type="button" data-testid="show-late" onClick={onShowLate} className="btn min-[761px]:ml-auto">
             <span aria-hidden="true" className="size-2.5 rounded-full bg-late shadow-[0_0_10px_var(--late)]" />
-            Ver un plan que llega tarde
+            {t({ es: "Ver un plan que llega tarde", en: "Show a plan that arrives late" })}
           </button>
         )}
       </div>
@@ -490,7 +500,8 @@ export function RunDetail({ onShowLate }: { onShowLate?: () => void }) {
       {unserved.length > 0 && (
         <div className="mt-3 flex flex-col gap-1.5 rounded-tag border border-late/40 bg-late/10 px-3 py-2">
           <p className="font-semibold text-late">
-            <span aria-hidden="true">✕ </span>Sin atender ({unserved.length})
+            <span aria-hidden="true">✕ </span>
+            {t({ es: "Sin atender", en: "Unserved" })} ({unserved.length})
           </p>
           <p className="flex flex-wrap gap-1.5">
             {unserved.map((c) => (
@@ -504,7 +515,7 @@ export function RunDetail({ onShowLate }: { onShowLate?: () => void }) {
 
       {/* Hueco a la derecha para «Explicar», que se pinta sobre esta línea. */}
       <p className="mt-2.5 truncate border-t border-line pt-2 pr-24 font-mono text-[12px] leading-tight tracking-[0.06em] text-fg-3 uppercase">
-        {t(methodLabel(record.method))} · {origin}
+        {t(methodLabel(record.method))} · {t(ORIGIN_LABELS[origin])}
         {model ? ` · ${model}` : ""} · run_id <span data-testid="detail-run-id">{record.run_id}</span>
       </p>
 

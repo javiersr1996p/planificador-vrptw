@@ -65,7 +65,7 @@ export function Validity() {
       rule.id === "served"
         ? `${n - ev.unserved}/${n}`
         : rule.id === "capacity"
-          ? `máx. ${formatNumber(maxLoad, 0)}`
+          ? `${t({ es: "máx.", en: "max" })} ${formatNumber(maxLoad, 0)}`
           : rule.id === "late"
             ? late > 0
               ? `${late} · ${lateText}`
@@ -73,14 +73,14 @@ export function Validity() {
             : "";
     const label =
       rule.id === "served"
-        ? "Todos los clientes atendidos"
+        ? t({ es: "Todos los clientes atendidos", en: "All customers served" })
         : rule.id === "capacity"
           ? capacity != null
-            ? `Ninguna pasa de ${formatNumber(capacity, 0)} uds.`
-            : "Carga sin límite en este caso"
+            ? t({ es: `Ninguna pasa de ${formatNumber(capacity, 0)} uds.`, en: `None goes over ${formatNumber(capacity, 0)} units` })
+            : t({ es: "Carga sin límite en este caso", en: "No load limit in this case" })
           : rule.id === "late"
-            ? "Nadie recibe tarde"
-            : "Flota y vuelta a la base";
+            ? t({ es: "Nadie recibe tarde", en: "Nobody gets a late delivery" })
+            : t({ es: "Flota y vuelta a la base", en: "Fleet and return to depot" });
     const ok = rule.id === "capacity" ? groups.length === 0 && ev.overload <= 0 : groups.length === 0;
     return { ...rule, label, value, ok, groups };
   }).filter((r) => r.id !== "other" || !r.ok);
@@ -90,7 +90,7 @@ export function Validity() {
       <div className="flex items-baseline justify-between gap-3">
         <span className="flex items-center gap-2">
           <span className="kicker" id="validity-title">
-            ¿Es un plan válido?
+            {t({ es: "¿Es un plan válido?", en: "Is it a valid plan?" })}
           </span>
           <Help term="valido" size="sm" />
         </span>
@@ -98,7 +98,7 @@ export function Validity() {
           data-testid="validity-verdict"
           className={`font-display text-[20px] leading-none font-bold tracking-[0.03em] ${ev.feasible ? "text-ok" : "text-late"}`}
         >
-          {ev.feasible ? "Sí, válido" : "No válido"}
+          {ev.feasible ? t({ es: "Sí, válido", en: "Yes, valid" }) : t({ es: "No válido", en: "Not valid" })}
         </b>
       </div>
       <ul className="mt-3 flex flex-col gap-2">
@@ -113,12 +113,12 @@ export function Validity() {
             <Mark ok={r.ok} />
             <span className={r.ok ? "" : "font-semibold text-fg"}>
               {r.label}
-              <span className="sr-only">{r.ok ? ": se cumple" : ": no se cumple"}</span>
+              <span className="sr-only">{r.ok ? t({ es: ": se cumple", en: ": met" }) : t({ es: ": no se cumple", en: ": not met" })}</span>
             </span>
             <span className={`num text-base font-semibold whitespace-nowrap ${r.ok ? "text-fg" : "text-late"}`}>{r.value}</span>
             {!r.ok && (
               <span className="col-start-2 col-end-4 flex flex-wrap gap-1.5">
-                <span className="font-semibold text-late">No se cumple:</span>
+                <span className="font-semibold text-late">{t({ es: "No se cumple:", en: "Not met:" })}</span>
                 {r.groups.map((g) => (
                   <span key={g.type} className="rounded-tag bg-late/15 px-1.5 text-late">
                     {t(g.label)} ({g.count})

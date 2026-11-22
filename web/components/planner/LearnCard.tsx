@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { T } from "@/lib/i18n";
 import { NAV_LINKS } from "@/lib/nav";
 
 const LEARN_HREF = "/aprende";
@@ -33,9 +34,11 @@ export function LearnCard() {
       </svg>
       <span className="min-w-0">
         <span className="block font-display text-[30px] leading-[0.95] font-extrabold tracking-[0.04em] text-amber uppercase [text-shadow:0_0_24px_rgb(255_181_71/0.45)]">
-          Aprende
+          <T es="Aprende" en="Learn" />
         </span>
-        <span className="sr-only">Rutas, horarios y métodos, explicados con dibujos.</span>
+        <span className="sr-only">
+          <T es="Rutas, horarios y métodos, explicados con dibujos." en="Routes, schedules and methods, explained with drawings." />
+        </span>
       </span>
       <span className="grid size-11 place-items-center rounded-full border border-amber/50 text-amber-2">
         <Arrow />

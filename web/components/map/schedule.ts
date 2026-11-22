@@ -118,15 +118,16 @@ export function progressOf(acc: number[], p: Pick<VanPosition, "from" | "to" | "
   return (acc[p.from] + p.f * (acc[p.to] - acc[p.from])) / total;
 }
 
-export type Units = { clock: (v: number) => string; span: (v: number) => string };
+export type Units = { clock: (v: number) => string; span: (v: number) => string; lang: Lang };
 
 /** Casos reales: `HH:MM` y minutos. El resto, en las unidades de la instancia. */
 export function unitsOf(instance: Instance, lang: Lang = "es"): Units {
   if (instance.source !== "real") {
     const plain = (v: number) => formatNumber(v, 1, lang);
-    return { clock: plain, span: plain };
+    return { clock: plain, span: plain, lang };
   }
   return {
+    lang,
     clock: formatTime,
     span: (v) => {
       const total = Math.round(v);
@@ -140,8 +141,9 @@ export function unitsOf(instance: Instance, lang: Lang = "es"): Units {
 /** Rótulo de la furgoneta mientras espera, entrega o llega tarde. */
 export function vanLabel(p: VanPosition, units: Units): string {
   if (!p.stop) return "";
-  if (p.state === "wait") return `Espera · abre ${units.clock(p.stop.ready)}`;
-  if (p.state === "serve") return `Entregando · ${units.span(p.stop.service)}`;
-  if (p.state === "late") return `Tarde +${units.span(p.stop.evaluation.late)}`;
+  const en = units.lang === "en";
+  if (p.state === "wait") return `${en ? "Wait · opens" : "Espera · abre"} ${units.clock(p.stop.ready)}`;
+  if (p.state === "serve") return `${en ? "Delivering" : "Entregando"} · ${units.span(p.stop.service)}`;
+  if (p.state === "late") return `${en ? "Late" : "Tarde"} +${units.span(p.stop.evaluation.late)}`;
   return "";
 }

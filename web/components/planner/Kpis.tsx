@@ -71,7 +71,7 @@ export function Kpis() {
     <section data-testid="kpis" data-zone aria-labelledby="kpi-title" className="panel pt-3 pb-3.5">
       <div className="flex items-baseline justify-between gap-3">
         <span className="kicker" id="kpi-title">
-          Plan en el mapa
+          {t({ es: "Plan en el mapa", en: "Plan on the map" })}
         </span>
         <b className="truncate font-display text-[20px] leading-none font-bold tracking-[0.03em]">
           {selected ? t(methodLabel(selected.record.method)) : "–"}
@@ -83,7 +83,7 @@ export function Kpis() {
             testId="kpi-distance"
             value={formatNumber(ev.distance, 1)}
             raw={ev.distance}
-            label={real ? "km en total" : "de distancia"}
+            label={real ? t({ es: "km en total", en: "km in total" }) : t({ es: "de distancia", en: "distance" })}
             color="var(--amber)"
           />
           <Gauge
@@ -91,19 +91,19 @@ export function Kpis() {
             value={String(ev.vehicles_used)}
             raw={ev.vehicles_used}
             after={<span className="font-sans text-base font-semibold text-fg-3">/{instance.fleet.vehicles}</span>}
-            label="furgonetas"
+            label={t({ es: "furgonetas", en: "vans" })}
           />
           <Gauge
             testId="kpi-late"
             value={span(ev.total_late)}
             raw={ev.total_late}
-            label="de retraso"
+            label={t({ es: "de retraso", en: "late" })}
             color={ev.total_late > 0 ? "var(--late)" : "var(--ok)"}
           />
-          <Gauge testId="kpi-wait" value={span(ev.total_wait)} raw={ev.total_wait} label="de espera" color="var(--wait)" />
+          <Gauge testId="kpi-wait" value={span(ev.total_wait)} raw={ev.total_wait} label={t({ es: "de espera", en: "wait" })} color="var(--wait)" />
         </div>
       ) : (
-        <p className="mt-3 text-fg-2">Elige un plan de la comparativa.</p>
+        <p className="mt-3 text-fg-2">{t({ es: "Elige un plan de la comparativa.", en: "Pick a plan from the comparison." })}</p>
       )}
     </section>
   );

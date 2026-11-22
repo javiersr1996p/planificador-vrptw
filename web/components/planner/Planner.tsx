@@ -5,7 +5,9 @@ import { LlmScope } from "@/components/llm/LlmPanel";
 import { hasGeo } from "@/components/map/geometry";
 import { RouteMap } from "@/components/map/RouteMap";
 import { Corners } from "@/components/ui/Corners";
+import { caseText } from "@/lib/case-names";
 import { fetchCase, fetchCaseIndex, type CaseFile, type CaseSummary } from "@/lib/cases";
+import { useT } from "@/lib/i18n";
 import { playback } from "@/lib/playback";
 import { Comparison } from "./Comparison";
 import { ExamplePicker } from "./ExamplePicker";
@@ -47,6 +49,7 @@ function useMotion(): boolean {
 }
 
 function Workspace() {
+  const t = useT();
   const { state, actions, selected, stopClickHandler } = usePlanner();
   const [cases, setCases] = useState<CaseSummary[] | null>(null);
   const [pending, setPending] = useState<string | null>(null);
@@ -165,7 +168,7 @@ function Workspace() {
           <Hook instance={state.instance} />
         </div>
         <p data-zone className="m-0 self-center text-base leading-snug font-medium text-fg-2 [grid-area:sub] min-[761px]:text-[clamp(16px,1.25vw,19px)]">
-          ¿Qué método traza el plan más corto sin llegar tarde a nadie?
+          {t({ es: "¿Qué método traza el plan más corto sin llegar tarde a nadie?", en: "Which method draws the shortest plan without making anyone late?" })}
         </p>
         <div className="min-w-0 [grid-area:cases]">
           <ExamplePicker
@@ -179,13 +182,18 @@ function Workspace() {
           />
           {failed && (
             <p role="alert" className="mt-2 flex flex-wrap items-center gap-x-3 text-base text-late">
-              {failed === "index" ? "No se pudo leer la lista de ejemplos." : `No se pudo cargar «${failed.name}».`}
+              {failed === "index"
+                ? t({ es: "No se pudo leer la lista de ejemplos.", en: "Could not read the list of examples." })
+                : t({
+                    es: `No se pudo cargar «${failed.name}».`,
+                    en: `Could not load “${t(caseText(failed.id, "name", failed.name))}”.`,
+                  })}
               <button
                 type="button"
                 onClick={() => (failed === "index" ? void loadIndex() : void open(failed.id, failed.name))}
                 className="btn min-h-10 border-late/60 text-late"
               >
-                Reintentar
+                {t({ es: "Reintentar", en: "Retry" })}
               </button>
             </p>
           )}
@@ -213,7 +221,7 @@ function Workspace() {
               data-testid="straight-line-warning"
               className="rounded-tag border border-wait/40 bg-wait/10 px-3 py-1.5 text-base text-wait"
             >
-              Distancias en línea recta: el servicio de rutas no está disponible
+              {t({ es: "Distancias en línea recta: el servicio de rutas no está disponible", en: "Straight-line distances: the routing service is not available" })}
             </p>
           )}
           <div className="@container relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-panel border border-line-2 bg-[#050a14] shadow-[var(--shadow-deep),inset_0_0_0_1px_rgb(255_255_255/0.02)]">
@@ -245,7 +253,7 @@ function Workspace() {
                 <div className="absolute inset-0 z-[5] grid place-items-center bg-ink-0/40 backdrop-blur-[1px]">
                   <span className="hud flex items-center gap-2 px-3 py-1.5 text-base text-fg-2">
                     <span className="inline-block size-4 animate-spin rounded-full border-2 border-fg-2 border-t-transparent" />
-                    Cargando el caso
+                    {t({ es: "Cargando el caso", en: "Loading the case" })}
                   </span>
                 </div>
               )}

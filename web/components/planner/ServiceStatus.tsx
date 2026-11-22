@@ -2,13 +2,17 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import { health } from "@/lib/api";
+import { useT, type Pair } from "@/lib/i18n";
 import { usePlanner, type ServiceState } from "./store";
 
 /** Tiempo de espera de `/health`. */
 const HEALTH_TIMEOUT_MS = 5000;
 
 /** Texto del aviso cuando el servicio no responde; lo comparten el indicador y los paneles en vivo. */
-export const SERVICE_DOWN_TEXT = "Servicio no disponible: se muestran los resultados precalculados";
+export const SERVICE_DOWN_TEXT: Pair = {
+  es: "Servicio no disponible: se muestran los resultados precalculados",
+  en: "Service unavailable: showing the precomputed results",
+};
 
 /**
  * Estado del servicio y su comprobación (`GET /health`, 5 s de espera).
@@ -73,11 +77,11 @@ function Dot({ state }: { state: ServiceState }) {
   return <span aria-hidden="true" className="inline-block size-3.5 flex-none animate-spin rounded-full border-2 border-fg-2 border-t-transparent" />;
 }
 
-const SHORT: Record<ServiceState, string> = {
-  unknown: "Comprobando el servicio",
-  checking: "Comprobando el servicio",
-  up: "Servicio activo",
-  down: "Sin servicio",
+const SHORT: Record<ServiceState, Pair> = {
+  unknown: { es: "Comprobando el servicio", en: "Checking the service" },
+  checking: { es: "Comprobando el servicio", en: "Checking the service" },
+  up: { es: "Servicio activo", en: "Service active" },
+  down: { es: "Sin servicio", en: "No service" },
 };
 
 /**
@@ -86,6 +90,7 @@ const SHORT: Record<ServiceState, string> = {
  * el reintento están en cada panel (`ServiceNotice`).
  */
 export function ServiceStatus() {
+  const t = useT();
   const { service, check } = useService();
   useInitialCheck(check);
   const down = service === "down";
@@ -98,7 +103,7 @@ export function ServiceStatus() {
       className="flex min-w-0 flex-none items-center gap-2 text-base leading-none text-fg-2"
     >
       <Dot state={service} />
-      <span className="max-[760px]:sr-only">{SHORT[service]}</span>
+      <span className="max-[760px]:sr-only">{t(SHORT[service])}</span>
       {down && (
         <button
           type="button"
@@ -106,7 +111,7 @@ export function ServiceStatus() {
           onClick={() => void check()}
           className="btn min-h-11 px-3 max-[760px]:hidden"
         >
-          Reintentar
+          {t({ es: "Reintentar", en: "Retry" })}
         </button>
       )}
     </div>
@@ -119,6 +124,7 @@ export function ServiceStatus() {
  * acciones están desactivadas (`id` sirve para `aria-describedby`).
  */
 export function ServiceNotice({ id }: { id?: string }) {
+  const t = useT();
   const { service, check } = useService();
   if (service !== "down") return null;
   return (
@@ -128,9 +134,9 @@ export function ServiceNotice({ id }: { id?: string }) {
       data-testid="service-notice"
       className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-hud border border-late/50 bg-late/10 px-3 py-2 text-base leading-snug text-fg"
     >
-      <span className="min-w-0 flex-1 basis-48">{SERVICE_DOWN_TEXT}</span>
+      <span className="min-w-0 flex-1 basis-48">{t(SERVICE_DOWN_TEXT)}</span>
       <button type="button" data-testid="service-notice-retry" onClick={() => void check()} className="btn min-h-11">
-        Reintentar
+        {t({ es: "Reintentar", en: "Retry" })}
       </button>
     </div>
   );

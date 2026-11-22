@@ -113,29 +113,44 @@ export type RadioEvent = { t: number; text: string };
 export function radioEvents(instance: S["Instance"], ev: S["Evaluation"], lang: Lang = "es"): RadioEvent[] {
   const real = isReal(instance);
   const byId = customersById(instance);
-  const at = (t: number) => (real ? `a las ${formatClock(t, true, lang)}` : `en t = ${formatClock(t, false, lang)}`);
+  const en = lang === "en";
+  const at = (t: number) =>
+    real ? `${en ? "at" : "a las"} ${formatClock(t, true, lang)}` : `${en ? "at" : "en"} t = ${formatClock(t, false, lang)}`;
   const base = depotName(instance);
   const events: RadioEvent[] = [];
   vehicleDays(instance, ev).forEach(({ route, stops, departure, back }) => {
     if (stops.length === 0) return;
-    const f = `F${route + 1}`;
-    events.push({ t: departure, text: `${f} sale de la base${base ? ` de ${base}` : ""}` });
+    const f = `${en ? "V" : "F"}${route + 1}`;
+    events.push({
+      t: departure,
+      text: en ? `${f} leaves the depot${base ? ` (${base})` : ""}` : `${f} sale de la base${base ? ` de ${base}` : ""}`,
+    });
     for (const s of stops) {
       const c = byId.get(s.customer);
       const name = customerName(c, s.customer, real, lang);
       if (s.late > EPS) {
-        events.push({ t: s.arrival, text: `${f} llega ${formatSpan(s.late, real, lang)} tarde a ${name}` });
+        events.push({
+          t: s.arrival,
+          text: en
+            ? `${f} arrives ${formatSpan(s.late, real, lang)} late at ${name}`
+            : `${f} llega ${formatSpan(s.late, real, lang)} tarde a ${name}`,
+        });
       } else if (s.wait > EPS && c) {
         events.push({
           t: s.arrival,
-          text: `${f} llega a ${name}, que abre ${at(c.ready)}: espera ${formatSpan(s.wait, real, lang)}`,
+          text: en
+            ? `${f} arrives at ${name}, which opens ${at(c.ready)}: waits ${formatSpan(s.wait, real, lang)}`
+            : `${f} llega a ${name}, que abre ${at(c.ready)}: espera ${formatSpan(s.wait, real, lang)}`,
         });
-        events.push({ t: s.start, text: `${f} empieza a entregar en ${name}` });
+        events.push({ t: s.start, text: en ? `${f} starts delivering at ${name}` : `${f} empieza a entregar en ${name}` });
       } else {
-        events.push({ t: s.arrival, text: `${f} llega a ${name} y entrega al momento` });
+        events.push({
+          t: s.arrival,
+          text: en ? `${f} arrives at ${name} and delivers right away` : `${f} llega a ${name} y entrega al momento`,
+        });
       }
     }
-    if (back !== null) events.push({ t: back, text: `${f} vuelve a la base ${at(back)}` });
+    if (back !== null) events.push({ t: back, text: en ? `${f} is back at the depot ${at(back)}` : `${f} vuelve a la base ${at(back)}` });
   });
   return events
     .map((e, i) => ({ e, i }))

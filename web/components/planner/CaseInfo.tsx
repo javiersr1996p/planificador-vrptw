@@ -2,6 +2,7 @@
 
 import { Fragment } from "react";
 import { CasePanel } from "@/components/case/CasePanel";
+import { caseText } from "@/lib/case-names";
 import { useLang, useT } from "@/lib/i18n";
 import { SOURCE_LABELS, matrixLabel } from "@/lib/labels";
 import { usePlanner } from "./store";
@@ -37,14 +38,14 @@ export function CaseSource({ className }: { className?: string }) {
         <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true" className="transition-transform duration-150 group-open/src:rotate-90">
           <path d="M4 2 L8 6 L4 10" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
         </svg>
-        Origen de los datos
+        {t({ es: "Origen de los datos", en: "Data source" })}
         <span className="kicker ml-auto text-fg-3">{t(SOURCE_LABELS[instance.source])}</span>
       </summary>
       <div className="flex flex-col gap-2 pb-2 text-base leading-snug text-fg-2">
-        {meta.note && <p>{meta.note}</p>}
+        {meta.note && <p>{t(caseText(meta.id, "note", meta.note))}</p>}
         {meta.attribution && (
           <p className="text-fg-3">
-            <Linkified text={meta.attribution} />
+            <Linkified text={t(caseText(meta.id, "attribution", meta.attribution))} />
           </p>
         )}
       </div>
@@ -67,22 +68,30 @@ export function CaseInfo() {
       {instance && meta && (
         <>
           <div>
-            <span className="kicker text-fg-3">Caso cargado · {t(SOURCE_LABELS[instance.source])}</span>
-            <h3 className="mt-1.5 font-display text-[22px] leading-tight font-bold">{meta.name}</h3>
+            <span className="kicker text-fg-3">
+              {t({ es: "Caso cargado", en: "Loaded case" })} · {t(SOURCE_LABELS[instance.source])}
+            </span>
+            <h3 className="mt-1.5 font-display text-[22px] leading-tight font-bold">{t(caseText(meta.id, "name", meta.name))}</h3>
           </div>
           <dl data-testid="case-facts" className="grid grid-cols-2 gap-2 group-has-[[data-mode=form]]/info:hidden">
             {[
-              ["Clientes", String(instance.customers.length)],
-              ["Flota", `${instance.fleet.vehicles} furgonetas`],
-              ["Capacidad", instance.fleet.capacity != null ? String(instance.fleet.capacity) : "sin límite"],
+              [t({ es: "Clientes", en: "Customers" }), String(instance.customers.length)],
+              [t({ es: "Flota", en: "Fleet" }), `${instance.fleet.vehicles} ${t({ es: "furgonetas", en: "vans" })}`],
               [
-                "Jornada",
+                t({ es: "Capacidad", en: "Capacity" }),
+                instance.fleet.capacity != null ? String(instance.fleet.capacity) : t({ es: "sin límite", en: "no limit" }),
+              ],
+              [
+                t({ es: "Jornada", en: "Workday" }),
                 instance.depot.due != null
                   ? `${formatClock(instance.depot.ready, isReal(instance), lang)}–${formatClock(instance.depot.due, isReal(instance), lang)}`
-                  : "abierta",
+                  : t({ es: "abierta", en: "open" }),
               ],
-              ["Distancias", instance.matrix ? t(matrixLabel(instance.matrix.source)) : "–"],
-              ["Unidades", isReal(instance) ? "km y HH:MM" : "las del caso"],
+              [t({ es: "Distancias", en: "Distances" }), instance.matrix ? t(matrixLabel(instance.matrix.source)) : "–"],
+              [
+                t({ es: "Unidades", en: "Units" }),
+                isReal(instance) ? t({ es: "km y HH:MM", en: "km and HH:MM" }) : t({ es: "las del caso", en: "the case's own" }),
+              ],
             ].map(([label, value]) => (
               <div key={label} className="rounded-tag border border-line bg-black/25 px-2.5 py-1.5">
                 <dt className="font-mono text-[12px] tracking-[0.1em] text-fg-3 uppercase">{label}</dt>

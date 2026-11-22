@@ -4,6 +4,7 @@ import { Activity, useEffect, useRef, type KeyboardEvent, type ReactNode, type R
 import { LlmPanel } from "@/components/llm/LlmPanel";
 import { ManualBuilder } from "@/components/manual/ManualBuilder";
 import { ClassicPanel } from "@/components/solve/ClassicPanel";
+import { useT, type Pair } from "@/lib/i18n";
 import { CaseInfo } from "./CaseInfo";
 
 /**
@@ -16,16 +17,16 @@ import { CaseInfo } from "./CaseInfo";
 
 export type LiveTab = "resolver" | "ia" | "caso" | "ruta";
 
-type TabInfo = { id: LiveTab; action: string; title: string; line: string; icon: ReactNode };
+type TabInfo = { id: LiveTab; action: Pair; title: Pair; line: Pair; icon: ReactNode };
 
 const ICON = "size-[18px] flex-none";
 
 export const LIVE_TABS: TabInfo[] = [
   {
     id: "resolver",
-    action: "Resolver",
-    title: "Resolver en vivo",
-    line: "Lanza los métodos clásicos sobre este caso.",
+    action: { es: "Resolver", en: "Solve" },
+    title: { es: "Resolver en vivo", en: "Solve live" },
+    line: { es: "Lanza los métodos clásicos sobre este caso.", en: "Runs the classic methods on this case." },
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={ICON}>
         <circle cx="12" cy="12" r="9" />
@@ -35,9 +36,9 @@ export const LIVE_TABS: TabInfo[] = [
   },
   {
     id: "ia",
-    action: "Con IA",
-    title: "IA con tu clave",
-    line: "Un modelo de lenguaje traza el plan; tu clave no se guarda.",
+    action: { es: "Con IA", en: "With AI" },
+    title: { es: "IA con tu clave", en: "AI with your key" },
+    line: { es: "Un modelo de lenguaje traza el plan; tu clave no se guarda.", en: "A language model draws up the plan; your key is not stored." },
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={ICON}>
         <path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.5 2.5M15.2 15.2l2.5 2.5M6.3 17.7l2.5-2.5M15.2 8.8l2.5-2.5" />
@@ -46,9 +47,9 @@ export const LIVE_TABS: TabInfo[] = [
   },
   {
     id: "caso",
-    action: "Tu caso",
-    title: "Tu caso",
-    line: "El caso cargado y cómo subir el tuyo.",
+    action: { es: "Tu caso", en: "Your case" },
+    title: { es: "Tu caso", en: "Your case" },
+    line: { es: "El caso cargado y cómo subir el tuyo.", en: "The loaded case and how to upload yours." },
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={ICON}>
         <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
@@ -58,9 +59,9 @@ export const LIVE_TABS: TabInfo[] = [
   },
   {
     id: "ruta",
-    action: "Tu ruta",
-    title: "Tu ruta",
-    line: "Arma las rutas a mano pulsando paradas en el mapa.",
+    action: { es: "Tu ruta", en: "Your route" },
+    title: { es: "Tu ruta", en: "Your route" },
+    line: { es: "Arma las rutas a mano pulsando paradas en el mapa.", en: "Build the routes by hand by clicking stops on the map." },
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={ICON}>
         <circle cx="5" cy="18" r="2" />
@@ -88,10 +89,11 @@ export function LiveActions({
   /** Estado del servicio, a la izquierda de los botones. */
   children?: ReactNode;
 }) {
+  const tr = useT();
   return (
     <div data-zone className="flex min-w-0 items-center gap-3">
       <span id="live-label" className="kicker flex-none max-[760px]:sr-only">
-        En vivo
+        {tr({ es: "En vivo", en: "Live" })}
       </span>
       {children}
       <div role="group" aria-labelledby="live-label" className="grid w-full grid-cols-4 gap-1.5 min-[761px]:flex min-[761px]:w-auto">
@@ -112,7 +114,7 @@ export function LiveActions({
               className={`btn gap-2 px-2 min-[761px]:px-4 ${active ? "border-amber/70 bg-amber/[0.14] text-amber-2" : ""}`}
             >
               <span className="max-[760px]:hidden">{t.icon}</span>
-              {t.action}
+              {tr(t.action)}
             </button>
           );
         })}
@@ -142,6 +144,7 @@ export function LivePanel({
 }
 
 function PanelBody({ tab, onTab, onClose }: { tab: LiveTab; onTab: (tab: LiveTab) => void; onClose: () => void }) {
+  const tr = useT();
   const tabs = useRef<(HTMLButtonElement | null)[]>([]);
   const info = LIVE_TABS.find((t) => t.id === tab)!;
 
@@ -181,22 +184,22 @@ function PanelBody({ tab, onTab, onClose }: { tab: LiveTab; onTab: (tab: LiveTab
       <span aria-hidden="true" className="mx-auto mt-2 h-1 w-10 flex-none rounded-full bg-white/20 min-[1180px]:hidden" />
       <div className="flex flex-none items-start gap-3 px-4 pt-3 min-[1180px]:px-[18px] min-[1180px]:pt-4">
         <div className="min-w-0 flex-1">
-          <span className="kicker">En vivo</span>
+          <span className="kicker">{tr({ es: "En vivo", en: "Live" })}</span>
           <h2 id="live-title" className="panel-title mt-1.5">
-            {info.title}
+            {tr(info.title)}
           </h2>
-          <p className="mt-1 text-base leading-snug text-fg-2">{info.line}</p>
+          <p className="mt-1 text-base leading-snug text-fg-2">{tr(info.line)}</p>
         </div>
         <button
           type="button"
-          aria-label="Cerrar el panel"
+          aria-label={tr({ es: "Cerrar el panel", en: "Close the panel" })}
           onClick={onClose}
           className="grid size-11 flex-none place-items-center rounded-full text-2xl leading-none text-fg-2 [@media(hover:hover)]:hover:bg-white/[0.07] [@media(hover:hover)]:hover:text-fg"
         >
           <span aria-hidden="true">×</span>
         </button>
       </div>
-      <div role="tablist" aria-label="Acciones en vivo" className="mx-4 mt-3 grid flex-none grid-cols-4 gap-1 rounded-hud border border-line bg-black/25 p-1 min-[1180px]:mx-[18px]">
+      <div role="tablist" aria-label={tr({ es: "Acciones en vivo", en: "Live actions" })} className="mx-4 mt-3 grid flex-none grid-cols-4 gap-1 rounded-hud border border-line bg-black/25 p-1 min-[1180px]:mx-[18px]">
         {LIVE_TABS.map((t, i) => {
           const active = t.id === tab;
           return (
@@ -217,7 +220,7 @@ function PanelBody({ tab, onTab, onClose }: { tab: LiveTab; onTab: (tab: LiveTab
                 active ? "bg-amber text-amber-ink" : "text-fg-2 [@media(hover:hover)]:hover:bg-white/[0.06] [@media(hover:hover)]:hover:text-fg"
               }`}
             >
-              {t.action}
+              {tr(t.action)}
             </button>
           );
         })}

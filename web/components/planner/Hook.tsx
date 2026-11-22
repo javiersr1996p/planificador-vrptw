@@ -1,6 +1,7 @@
 "use client";
 
 import { Help } from "@/components/ui/Help";
+import { useT } from "@/lib/i18n";
 import type { components } from "@/lib/types";
 import { cityOf } from "./units";
 
@@ -15,6 +16,7 @@ function N({ children }: { children: number }) {
  * «ventana horaria» subrayada y su «?». En los casos sin mapa, sin ciudad.
  */
 export function Hook({ instance }: { instance: S["Instance"] | null }) {
+  const t = useT();
   const vehicles = instance?.fleet.vehicles ?? 0;
   const stops = instance?.customers.length ?? 0;
   const city = instance ? cityOf(instance) : null;
@@ -27,15 +29,16 @@ export function Hook({ instance }: { instance: S["Instance"] | null }) {
     >
       {instance ? (
         <>
-          <N>{vehicles}</N> {vehicles === 1 ? "furgoneta" : "furgonetas"}, <N>{stops}</N> {stops === 1 ? "parada" : "paradas"}
-          {city ? ` por ${city}` : ""} y cada una con su{" "}
+          <N>{vehicles}</N> {vehicles === 1 ? t({ es: "furgoneta", en: "van" }) : t({ es: "furgonetas", en: "vans" })},{" "}
+          <N>{stops}</N> {stops === 1 ? t({ es: "parada", en: "stop" }) : t({ es: "paradas", en: "stops" })}
+          {city ? ` ${t({ es: "por", en: "around" })} ${city}` : ""} {t({ es: "y cada una con su", en: "and each with its own" })}{" "}
         </>
       ) : (
-        "Furgonetas, paradas y cada una con su "
+        `${t({ es: "Furgonetas, paradas y cada una con su", en: "Vans, stops and each with its own" })} `
       )}
-      <span className="term-mark">ventana</span>{" "}
+      <span className="term-mark">{t({ es: "ventana", en: "time" })}</span>{" "}
       <span className="whitespace-nowrap">
-        <span className="term-mark">horaria</span>
+        <span className="term-mark">{t({ es: "horaria", en: "window" })}</span>
         <Help term="ventana" className="ml-2" />
       </span>
     </h1>

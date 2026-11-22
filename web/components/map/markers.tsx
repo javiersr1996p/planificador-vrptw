@@ -2,6 +2,7 @@
 
 import type { CSSProperties, Ref } from "react";
 import { TowerIcon } from "@/components/ui/TowerIcon";
+import { useT } from "@/lib/i18n";
 import { vehicleColor } from "./geometry";
 import "./map.css";
 
@@ -81,6 +82,7 @@ export function DepotMarker({ label, size, labelled = true }: { label: string; s
 
 /** Furgoneta: oculta hasta que la reproducción la saca de la base. */
 export function VanMarker({ route, vanRef }: { route: number; vanRef: Ref<HTMLDivElement> }) {
+  const t = useT();
   return (
     <div
       ref={vanRef}
@@ -95,7 +97,8 @@ export function VanMarker({ route, vanRef }: { route: number; vanRef: Ref<HTMLDi
         <svg viewBox="0 0 16 16" fill="currentColor">
           <path d="M1 4h8v7H1zM9.5 6h3l2.5 2.5V11h-5.5z" />
         </svg>
-        F{route + 1}
+        {t({ es: "F", en: "V" })}
+        {route + 1}
       </span>
       <span className="rm-van-pill" />
     </div>

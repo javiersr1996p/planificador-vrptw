@@ -1,6 +1,7 @@
 "use client";
 
 import { type CSSProperties, type PointerEvent, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useT } from "@/lib/i18n";
 import { playback } from "@/lib/playback";
 import { IDENTITY, type Pad, type Pt, type View, fitToBox, vehicleColor, zoomView } from "./geometry";
 import { useBoxSize } from "./hooks";
@@ -58,6 +59,7 @@ export default function PlaneView({
   onRoute,
   onControls,
 }: Props) {
+  const t = useT();
   const box = useRef<HTMLDivElement>(null);
   const size = useBoxSize(box);
   const [view, setView] = useState<View>(IDENTITY);
@@ -174,7 +176,7 @@ export default function PlaneView({
             className="pointer-events-none absolute inset-0 h-full w-full select-none"
             viewBox={`0 0 ${size.width} ${size.height}`}
             role="group"
-            aria-label="Rutas"
+            aria-label={t({ es: "Rutas", en: "Routes" })}
           >
             {order.map((l) => {
               const i = lines.indexOf(l);

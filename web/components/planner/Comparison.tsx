@@ -9,7 +9,7 @@ import { useT, type Pair } from "@/lib/i18n";
 import { groupViolations, methodLabel, unreadableReason } from "@/lib/labels";
 import type { components } from "@/lib/types";
 import { AgentTrace } from "./AgentTrace";
-import { hasSolution, rankRuns, usePlanner, type PlannerRun } from "./store";
+import { ORIGIN_LABELS, hasSolution, rankRuns, usePlanner, type PlannerRun } from "./store";
 import { isReal } from "./units";
 
 type S = components["schemas"];
@@ -124,12 +124,12 @@ function Row({
         {t(methodLabel(record.method))}
         {best && (
           <span className="rounded-full bg-amber px-[7px] py-[3px] font-mono text-[12px] leading-none font-bold tracking-[0.08em] whitespace-nowrap text-amber-ink uppercase shadow-[0_0_14px_-2px_rgb(255_181_71/0.8)]">
-            Mejor válida
+            {t({ es: "Mejor válida", en: "Best valid" })}
           </span>
         )}
         {showOrigin && (
           <span className={`rounded-full border px-[7px] py-[2px] font-mono text-[12px] leading-none font-semibold tracking-[0.08em] uppercase ${ORIGIN_TAG[origin]}`}>
-            {origin}
+            {t(ORIGIN_LABELS[origin])}
           </span>
         )}
         {(run.reevaluated || run.reevaluationFailed) && (
@@ -139,7 +139,9 @@ function Row({
               run.reevaluated ? "border-wait/60 text-wait" : "border-late/60 text-late"
             }`}
           >
-            {run.reevaluated ? "reevaluada con tráfico" : "sin reevaluar"}
+            {run.reevaluated
+              ? t({ es: "reevaluada con tráfico", en: "re-evaluated with traffic" })
+              : t({ es: "sin reevaluar", en: "not re-evaluated" })}
           </span>
         )}
       </span>
@@ -170,19 +172,19 @@ function Row({
           >
             {best
               ? real
-                ? "el más corto"
-                : "el menor coste"
+                ? t({ es: "el más corto", en: "the shortest" })
+                : t({ es: "el menor coste", en: "the lowest cost" })
               : invalid
-                ? "no comparable"
+                ? t({ es: "no comparable", en: "not comparable" })
                 : delta !== null
                   ? `+${formatCost(delta)}`
                   : ""}
-            {offScale && <span className="sr-only"> (fuera de escala)</span>}
+            {offScale && <span className="sr-only"> ({t({ es: "fuera de escala", en: "off scale" })})</span>}
           </span>
         </>
       ) : (
         <span className="col-span-2 flex min-w-0 flex-wrap items-baseline gap-x-2 text-fg">
-          <span className="font-semibold">Sin respuesta legible</span>
+          <span className="font-semibold">{t({ es: "Sin respuesta legible", en: "No readable answer" })}</span>
           <span className="text-fg-3">{t(unreadableReason(record))}</span>
         </span>
       )}
@@ -195,11 +197,11 @@ function Row({
       </span>
       <span className="flex items-center justify-end gap-1.5 text-base leading-none whitespace-nowrap text-fg-2 tabular-nums">
         <VanIcon />
-        <span className="sr-only">furgonetas:</span>
+        <span className="sr-only">{t({ es: "furgonetas", en: "vans" })}:</span>
         <span data-testid="row-vehicles">{ev ? ev.vehicles_used : "–"}</span>
         <span data-testid="row-time" className={`ml-1.5 flex items-center gap-1.5 ${folded}`}>
           <ClockIcon />
-          <span className="sr-only">cálculo:</span>
+          <span className="sr-only">{t({ es: "cálculo", en: "compute time" })}:</span>
           {origin === "manual" ? "–" : formatDuration(record.wall_time_s)}
         </span>
       </span>
@@ -252,7 +254,7 @@ function Row({
           {invalid && (
             <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-base">
               <WarnIcon />
-              <span className="font-semibold text-late">No válida</span>
+              <span className="font-semibold text-late">{t({ es: "No válida", en: "Not valid" })}</span>
               {groupViolations(ev!.violations).map((g) => (
                 <span key={g.type} className="rounded-tag bg-late/15 px-1.5 leading-7 text-late">
                   {t(g.label)} ({g.count})
@@ -268,23 +270,26 @@ function Row({
 }
 
 /** Coste en una línea: kilómetros en los casos reales; distancia y multas en el resto. */
-function costLine(instance: S["Instance"] | null): string {
-  if (instance && isReal(instance)) return "Coste = kilómetros; llegar tarde se multa.";
+function costLine(instance: S["Instance"] | null, t: (pair: Pair) => string): string {
+  if (instance && isReal(instance)) return t({ es: "Coste = kilómetros; llegar tarde se multa.", en: "Cost = kilometers; arriving late is penalized." });
   const w = instance?.cost_profile?.w_vehicle ?? 0;
-  return w > 0 ? "Coste = distancia, furgonetas y multas." : "Coste = distancia; llegar tarde se multa.";
+  return w > 0
+    ? t({ es: "Coste = distancia, furgonetas y multas.", en: "Cost = distance, vans and penalties." })
+    : t({ es: "Coste = distancia; llegar tarde se multa.", en: "Cost = distance; arriving late is penalized." });
 }
 
 /** En los casos con mapa los tramos se dibujan rectos: la ayuda del coste dice si la distancia es por carretera. */
-function mapNote(instance: S["Instance"] | null): string | undefined {
+function mapNote(instance: S["Instance"] | null, t: (pair: Pair) => string): string | undefined {
   if (!instance || !hasGeo(instance)) return undefined;
   return instance.matrix?.source === "haversine_fallback"
-    ? "Tramos y distancias en línea recta."
-    : "Tramos rectos; la distancia es por carretera.";
+    ? t({ es: "Tramos y distancias en línea recta.", en: "Legs and distances in a straight line." })
+    : t({ es: "Tramos rectos; la distancia es por carretera.", en: "Straight legs; the distance is by road." });
 }
 
 /** Comparativa de planes, ordenada por coste, con las no válidas al final. */
 export function Comparison() {
   const { state, actions } = usePlanner();
+  const t = useT();
   const ranked = rankRuns(state.runs);
   const max = scaleMax(ranked);
   const bestRun = ranked.find((r) => hasSolution(r) && r.record.evaluation!.feasible) ?? null;
@@ -305,23 +310,32 @@ export function Comparison() {
       className="panel flex min-h-0 flex-col min-[1180px]:flex-1"
     >
       <span className="flex items-center gap-2">
-        <span className="kicker">Comparativa{allPrecalc ? " · precalculada" : ""}</span>
-        <Help term="coste" note={mapNote(state.instance)} size="sm" />
+        <span className="kicker">
+          {t({ es: "Comparativa", en: "Comparison" })}
+          {allPrecalc ? ` · ${t(ORIGIN_LABELS.precalculada)}` : ""}
+        </span>
+        <Help term="coste" note={mapNote(state.instance, t)} size="sm" />
       </span>
       <h2 id="comparison-title" className="panel-title">
-        {n === 0 ? "Sin planes todavía" : `${n} ${n === methods ? "métodos" : "planes"}, el mismo reparto`}
+        {n === 0
+          ? t({ es: "Sin planes todavía", en: "No plans yet" })
+          : `${n} ${n === methods ? t({ es: "métodos", en: "methods" }) : t({ es: "planes", en: "plans" })}, ${t({ es: "el mismo reparto", en: "the same deliveries" })}`}
       </h2>
       {(invalid > 0 || unreadable > 0) && (
         <p className="mt-1 text-base text-fg-3">
-          {invalid > 0 && <span className="text-late">{invalid} no válidos</span>}
+          {invalid > 0 && (
+            <span className="text-late">
+              {invalid} {t({ es: "no válidos", en: "not valid" })}
+            </span>
+          )}
           {invalid > 0 && unreadable > 0 && " · "}
-          {unreadable > 0 && `${unreadable} sin respuesta`}
+          {unreadable > 0 && `${unreadable} ${t({ es: "sin respuesta", en: "with no answer" })}`}
         </p>
       )}
 
       {n > 0 ? (
         <ol
-          aria-label="Planes ordenados por coste"
+          aria-label={t({ es: "Planes ordenados por coste", en: "Plans sorted by cost" })}
           className="-mr-2 mt-2.5 flex max-h-[30rem] min-h-0 flex-col gap-1.5 overflow-y-auto overscroll-contain pr-2 [scrollbar-width:thin] min-[761px]:max-h-[36rem] min-[1180px]:max-h-[21.5rem]"
         >
           {ranked.map((run, i) => (
@@ -340,14 +354,16 @@ export function Comparison() {
           ))}
         </ol>
       ) : (
-        <p className="mt-2 text-fg-2">Abre «Resolver» para calcular planes de este caso.</p>
+        <p className="mt-2 text-fg-2">
+          {t({ es: "Abre «Resolver» para calcular planes de este caso.", en: "Open “Solve” to compute plans for this case." })}
+        </p>
       )}
 
       <p className="mt-auto pt-2 text-base leading-snug text-fg-3">
-        <b className="font-semibold text-fg-2">{costLine(state.instance)}</b>
+        <b className="font-semibold text-fg-2">{costLine(state.instance, t)}</b>
         {state.meta?.id && !hasLlm && (
           <span data-testid="llm-live-only" className="block">
-            Sin IA precalculada: la IA va en vivo, con tu clave.
+            {t({ es: "Sin IA precalculada: la IA va en vivo, con tu clave.", en: "No precomputed AI: the AI runs live, with your key." })}
           </span>
         )}
       </p>

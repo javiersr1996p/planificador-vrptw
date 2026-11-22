@@ -1,12 +1,20 @@
 "use client";
 
 import { createContext, useCallback, useContext, useMemo, useReducer, useState, type ReactNode } from "react";
+import type { Pair } from "@/lib/i18n";
 import type { components } from "@/lib/types";
 
 type S = components["schemas"];
 
 /** De dónde sale una fila de la comparativa. */
 export type Origin = "precalculada" | "en vivo" | "manual";
+
+/** Cómo se rotula cada origen en pantalla (el valor de `Origin` es interno: claves y `data-origin`). */
+export const ORIGIN_LABELS: Record<Origin, Pair> = {
+  precalculada: { es: "precalculada", en: "precomputed" },
+  "en vivo": { es: "en vivo", en: "live" },
+  manual: { es: "manual", en: "manual" },
+};
 
 /**
  * Una ejecución en la comparativa. Toda cifra que se muestra sale de `record`

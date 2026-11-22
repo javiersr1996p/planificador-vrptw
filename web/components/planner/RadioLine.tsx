@@ -2,7 +2,7 @@
 
 import { useMemo, useSyncExternalStore } from "react";
 import { hasGeo } from "@/components/map/geometry";
-import { useLang } from "@/lib/i18n";
+import { useLang, useT } from "@/lib/i18n";
 import { playback } from "@/lib/playback";
 import type { components } from "@/lib/types";
 import { lastEventAt, radioEvents, type RadioEvent } from "./schedule";
@@ -34,14 +34,23 @@ function useRadioState(events: RadioEvent[]): { index: number; playing: boolean;
 export function RadioLine({ instance, evaluation }: { instance: S["Instance"]; evaluation: S["Evaluation"] | null }) {
   const real = isReal(instance);
   const [lang] = useLang();
+  const t = useT();
   const events = useMemo(() => (evaluation ? radioEvents(instance, evaluation, lang) : []), [instance, evaluation, lang]);
   const { index, playing, canPlay } = useRadioState(events);
   if (!evaluation) return null;
 
   const event = index >= 0 ? events[index] : null;
-  const ready = `${plural(evaluation.vehicles_used, "furgoneta lista", "furgonetas listas")} en la base.`;
+  const ready =
+    lang === "en"
+      ? `${plural(evaluation.vehicles_used, "van ready", "vans ready")} at the depot.`
+      : `${plural(evaluation.vehicles_used, "furgoneta lista", "furgonetas listas")} en la base.`;
   const text =
-    event?.text ?? `${ready} ${canPlay ? "Pulsa «Reproducir»." : "Mueve el deslizador para recorrer el día."}`;
+    event?.text ??
+    `${ready} ${
+      canPlay
+        ? t({ es: "Pulsa «Reproducir».", en: "Press “Play”." })
+        : t({ es: "Mueve el deslizador para recorrer el día.", en: "Move the slider to go through the day." })
+    }`;
 
   return (
     <div

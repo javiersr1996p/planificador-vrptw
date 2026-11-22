@@ -18,9 +18,9 @@ type ToolCall = {
 };
 
 function callLabel(call: ToolCall, t: (pair: Pair) => string): string {
-  if (call.name === "solve_classic") return `Resolver: ${t(methodLabel(call.arguments?.method ?? "?")).toLowerCase()}`;
-  if (call.name === "evaluate_routes") return "Evaluar rutas";
-  return call.name ?? "Herramienta";
+  if (call.name === "solve_classic") return `${t({ es: "Resolver", en: "Solve" })}: ${t(methodLabel(call.arguments?.method ?? "?")).toLowerCase()}`;
+  if (call.name === "evaluate_routes") return t({ es: "Evaluar rutas", en: "Evaluate routes" });
+  return call.name ?? t({ es: "Herramienta", en: "Tool" });
 }
 
 /** Llamadas del agente a sus herramientas y su texto final. Plegada por defecto. */
@@ -43,11 +43,11 @@ export function AgentTrace({ record }: { record: S["RunRecord"] }) {
         >
           <path d="M4 2 L8 6 L4 10" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
         </svg>
-        Traza del agente
-        <span className="text-fg-3 tabular-nums">· {calls.length} llamadas</span>
+        {t({ es: "Traza del agente", en: "Agent trace" })}
+        <span className="text-fg-3 tabular-nums">· {calls.length} {t({ es: "llamadas", en: "calls" })}</span>
       </summary>
       <div className="max-h-80 overflow-y-auto border-t border-line px-3 py-2">
-        <ol className="flex flex-col gap-2" aria-label="Llamadas a herramientas">
+        <ol className="flex flex-col gap-2" aria-label={t({ es: "Llamadas a herramientas", en: "Tool calls" })}>
           {calls.map((call, i) => {
             const r = result(call);
             return (
@@ -66,27 +66,32 @@ export function AgentTrace({ record }: { record: S["RunRecord"] }) {
                       <span className="num">{r.score !== undefined ? formatCost(r.score) : "–"}</span>
                     </span>
                     <span className="w-full pl-9 text-fg-3">
-                      {r.vehicles_used ?? "–"} furgonetas · {r.feasible ? "válida" : "no válida"} ·{" "}
+                      {r.vehicles_used ?? "–"} {t({ es: "furgonetas", en: "vans" })} ·{" "}
+                      {r.feasible ? t({ es: "válida", en: "valid" }) : t({ es: "no válida", en: "not valid" })} ·{" "}
                       {formatDuration(call.time_s ?? NaN)}
                     </span>
                   </>
                 ) : (
-                  <span className="flex-1 text-late">Error: {String(call.result ?? "sin detalle")}</span>
+                  <span className="flex-1 text-late">
+                    Error: {String(call.result ?? t({ es: "sin detalle", en: "no detail" }))}
+                  </span>
                 )}
               </li>
             );
           })}
         </ol>
-        <p className="kicker mt-3 mb-1 text-fg-3">Texto final</p>
+        <p className="kicker mt-3 mb-1 text-fg-3">{t({ es: "Texto final", en: "Final text" })}</p>
         {record.params.camouflaged === true && (
           <p data-testid="trace-camouflaged" className="mb-1 text-base leading-snug text-fg-3">
-            El modelo vio el caso camuflado: sus llamadas y este texto numeran los clientes a su manera. El plan
-            dibujado ya está traducido.
+            {t({
+              es: "El modelo vio el caso camuflado: sus llamadas y este texto numeran los clientes a su manera. El plan dibujado ya está traducido.",
+              en: "The model saw the disguised case: its calls and this text number the customers its own way. The plan drawn is already mapped back.",
+            })}
           </p>
         )}
         <p data-testid="trace-final" className={`text-base whitespace-pre-wrap ${record.raw_response ? "" : "text-fg-3"}`}>
           {record.raw_response ||
-            `Sin texto final${record.parse_status !== "ok" ? `: ${t(unreadableReason(record))}` : ""}.`}
+            `${t({ es: "Sin texto final", en: "No final text" })}${record.parse_status !== "ok" ? `: ${t(unreadableReason(record))}` : ""}.`}
         </p>
       </div>
     </details>

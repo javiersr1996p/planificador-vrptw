@@ -1,6 +1,8 @@
 "use client";
 
+import { caseText } from "@/lib/case-names";
 import type { CaseSummary } from "@/lib/cases";
+import { useT, type Pair } from "@/lib/i18n";
 
 type Props = {
   cases: CaseSummary[] | null;
@@ -10,17 +12,18 @@ type Props = {
 };
 
 /** Nombre corto del caso: «Madrid», «Solomon C101», «TFE 2024: problema 10c-1». */
-function shortName(c: CaseSummary): string {
-  const name = c.name.split(",")[0];
+function shortName(c: CaseSummary, t: (pair: Pair) => string): string {
+  const name = t(caseText(c.id, "name", c.name)).split(",")[0];
   return c.source === "real" ? name.split(":")[0] : name;
 }
 
 /** Chips de los ejemplos precalculados: número grande, nombre y una línea. Se desplazan en horizontal. */
 export function ExamplePicker({ cases, activeId, pendingId, onPick }: Props) {
+  const t = useT();
   return (
     <div data-zone className="flex min-w-0 items-center gap-3">
       <span id="cases-label" className="flex-none font-mono text-[12px] leading-none font-semibold tracking-[0.16em] text-fg-3 uppercase max-[760px]:sr-only">
-        Casos
+        {t({ es: "Casos", en: "Cases" })}
       </span>
       {!cases ? (
         <ul aria-hidden="true" className="flex min-w-0 gap-2 overflow-hidden">
@@ -64,13 +67,17 @@ export function ExamplePicker({ cases, activeId, pendingId, onPick }: Props) {
                     )}
                   </span>
                   <span className="flex flex-col gap-[3px] leading-[1.1]">
-                    <b className="text-base font-semibold whitespace-nowrap text-fg">{shortName(c)}</b>
+                    <b className="text-base font-semibold whitespace-nowrap text-fg">{shortName(c, t)}</b>
                     <small
                       className={`font-mono text-[12px] leading-none font-medium tracking-[0.08em] whitespace-nowrap uppercase ${
                         llm && !c.has_map ? "text-veh-3" : "text-fg-3"
                       }`}
                     >
-                      {c.has_map ? "paradas · mapa real" : llm ? "clientes · con IA" : "clientes"}
+                      {c.has_map
+                        ? t({ es: "paradas · mapa real", en: "stops · real map" })
+                        : llm
+                          ? t({ es: "clientes · con IA", en: "customers · with AI" })
+                          : t({ es: "clientes", en: "customers" })}
                     </small>
                   </span>
                 </button>

@@ -12,7 +12,7 @@ import type { MapStatus, ViewControls } from "./MapGL";
 import { MapTools } from "./MapTools";
 import type { StopView } from "./markers";
 import PlaneView from "./PlaneView";
-import { useLang } from "@/lib/i18n";
+import { useLang, useT } from "@/lib/i18n";
 import { buildSchedules, unitsOf } from "./schedule";
 import { StopCard } from "./StopCard";
 
@@ -77,12 +77,14 @@ export function RouteMap({ instance, routes, evaluation, selectedRoute, onSelect
   const stops = useMemo(() => stopIndex(routes, evaluation), [routes, evaluation]);
   const schedules = useMemo(() => buildSchedules(instance, routes, evaluation), [instance, routes, evaluation]);
   const [lang] = useLang();
+  const t = useT();
   const units = useMemo(() => unitsOf(instance, lang), [instance, lang]);
   const coords = useMemo(() => planeCoords(instance, geo), [instance, geo]);
   const depotLabel = useMemo(() => {
     const name = placeName(instance.depot.address);
-    return name ? `Base · ${name}` : "Base";
-  }, [instance]);
+    const base = lang === "en" ? "Depot" : "Base";
+    return name ? `${base} · ${name}` : base;
+  }, [instance, lang]);
 
   const stopViews = useMemo<StopView[]>(
     () =>
@@ -90,17 +92,31 @@ export function RouteMap({ instance, routes, evaluation, selectedRoute, onSelect
         const info = stops.get(c.id);
         const late = isLate(info);
         const name = placeName(c.address);
-        const window = c.due == null ? `desde ${units.clock(c.ready)}` : `de ${units.clock(c.ready)} a ${units.clock(c.due)}`;
-        const served = info ? `Furgoneta ${info.route + 1}, parada ${info.position}` : "Sin atender";
+        const en = lang === "en";
+        const window =
+          c.due == null
+            ? `${en ? "from" : "desde"} ${units.clock(c.ready)}`
+            : en
+              ? `${units.clock(c.ready)} to ${units.clock(c.due)}`
+              : `de ${units.clock(c.ready)} a ${units.clock(c.due)}`;
+        const served = info
+          ? en
+            ? `Van ${info.route + 1}, stop ${info.position}`
+            : `Furgoneta ${info.route + 1}, parada ${info.position}`
+          : en
+            ? "Unserved"
+            : "Sin atender";
         return {
           customer: c.id,
           node: i + 1,
           route: info?.route ?? null,
           late,
-          label: `Cliente ${c.id}${name ? `, ${name}` : ""}. ${served}. Ventana ${window}${late ? ". Llega tarde" : ""}`,
+          label: en
+            ? `Customer ${c.id}${name ? `, ${name}` : ""}. ${served}. Time window ${window}${late ? ". Arrives late" : ""}`
+            : `Cliente ${c.id}${name ? `, ${name}` : ""}. ${served}. Ventana ${window}${late ? ". Llega tarde" : ""}`,
         };
       }),
-    [instance, stops, units],
+    [instance, stops, units, lang],
   );
 
   const onStatus = useCallback((value: MapStatus) => setStatus({ key: instanceKey, value }), [instanceKey]);
@@ -209,12 +225,12 @@ export function RouteMap({ instance, routes, evaluation, selectedRoute, onSelect
           <div className={`pointer-events-none absolute right-[4.75rem] top-[4.5rem] z-[5] flex flex-col items-end gap-2 ${wide ? "w-[20rem]" : "left-3"}`}>
             {geo && failed && (
               <p data-testid="map-notice" role="status" className="hud pointer-events-auto px-3 py-1.5 text-base text-fg">
-                Sin mapa base: rutas en plano
+                {t({ es: "Sin mapa base: rutas en plano", en: "No base map: routes on a plane" })}
               </p>
             )}
             {slowNotice && (
               <p data-testid="motion-notice" role="status" className="hud pointer-events-auto flex items-center gap-2 py-1 pl-3 pr-1 text-base text-fg">
-                Animación quitada para ir más fluido
+                {t({ es: "Animación quitada para ir más fluido", en: "Animation turned off to run smoother" })}
                 <button
                   type="button"
                   className="h-9 rounded-full border border-line-2 px-3 font-semibold text-amber hover:bg-white/5"
@@ -223,7 +239,7 @@ export function RouteMap({ instance, routes, evaluation, selectedRoute, onSelect
                     setDegraded(false);
                   }}
                 >
-                  Reactivar
+                  {t({ es: "Reactivar", en: "Turn on" })}
                 </button>
               </p>
             )}

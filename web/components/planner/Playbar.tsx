@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, type CSSProperties } from "react";
 import { formatNumber } from "@/lib/format";
-import { useLang } from "@/lib/i18n";
+import { useLang, useT } from "@/lib/i18n";
 import { nextSpeed, playback, usePlayback } from "@/lib/playback";
 import type { components } from "@/lib/types";
 import { axisTicks, dayRange, vehicleDays, type SegmentKind } from "./schedule";
@@ -91,6 +91,7 @@ function Clock({ t, real }: { t: number; real: boolean }) {
  */
 export function Playbar({ instance, evaluation }: { instance: S["Instance"]; evaluation: S["Evaluation"] | null }) {
   const snap = usePlayback();
+  const tr = useT();
   const [lang] = useLang();
   const real = isReal(instance);
   const [start, end] = useMemo(
@@ -125,7 +126,7 @@ export function Playbar({ instance, evaluation }: { instance: S["Instance"]; eva
         data-testid="play-button"
         aria-pressed={snap.playing}
         disabled={!canPlay}
-        title={canPlay ? undefined : "Movimiento reducido: recorre el día con el deslizador"}
+        title={canPlay ? undefined : tr({ es: "Movimiento reducido: recorre el día con el deslizador", en: "Reduced motion: go through the day with the slider" })}
         onClick={() => (snap.playing ? playback.pause() : playback.play())}
         className="inline-flex min-h-[50px] min-w-[146px] items-center gap-2.5 rounded-full bg-amber pr-4 pl-2.5 text-base font-bold text-amber-ink shadow-[0_8px_28px_-8px_rgb(255_181_71/0.7)] transition-[transform,background-color] duration-150 ease-[var(--ease-out)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-55 @min-[700px]:min-w-[206px] @min-[700px]:pr-[22px] @min-[700px]:pl-3.5 [@media(hover:hover)]:hover:enabled:bg-amber-2"
       >
@@ -133,11 +134,11 @@ export function Playbar({ instance, evaluation }: { instance: S["Instance"]; eva
           <PlayIcon playing={snap.playing} />
         </span>
         {snap.playing ? (
-          "Pausa"
+          tr({ es: "Pausa", en: "Pause" })
         ) : (
           <span>
-            {atEnd ? "Repetir" : "Reproducir"}
-            <span className="@max-[699px]:hidden"> el día</span>
+            {atEnd ? tr({ es: "Repetir", en: "Replay" }) : tr({ es: "Reproducir", en: "Play" })}
+            <span className="@max-[699px]:hidden"> {tr({ es: "el día", en: "the day" })}</span>
           </span>
         )}
       </button>
@@ -146,10 +147,11 @@ export function Playbar({ instance, evaluation }: { instance: S["Instance"]; eva
         <span className="font-mono text-[12px] leading-none font-semibold tracking-[0.14em] text-fg-3 uppercase">
           {real ? (
             <>
-              Hora<span className="@max-[699px]:hidden"> del día</span>
+              {tr({ es: "Hora", en: "Time" })}
+              <span className="@max-[699px]:hidden"> {tr({ es: "del día", en: "of day" })}</span>
             </>
           ) : (
-            "Tiempo"
+            tr({ es: "Tiempo", en: "Time" })
           )}
         </span>
         <output
@@ -166,7 +168,7 @@ export function Playbar({ instance, evaluation }: { instance: S["Instance"]; eva
         <input
           type="range"
           data-testid="scrubber"
-          aria-label={real ? "Hora del día simulada" : "Tiempo simulado"}
+          aria-label={real ? tr({ es: "Hora del día simulada", en: "Simulated time of day" }) : tr({ es: "Tiempo simulado", en: "Simulated time" })}
           aria-valuetext={formatClock(t, real, lang)}
           min={start}
           max={end}
@@ -193,12 +195,12 @@ export function Playbar({ instance, evaluation }: { instance: S["Instance"]; eva
       <button
         type="button"
         data-testid="speed-button"
-        aria-label={`Velocidad de reproducción: ×${snap.speed}`}
+        aria-label={`${tr({ es: "Velocidad de reproducción", en: "Playback speed" })}: ×${snap.speed}`}
         onClick={() => playback.setSpeed(nextSpeed(snap.speed))}
         className="col-start-3 row-start-1 min-h-11 min-w-16 rounded-[10px] border border-line-2 bg-white/[0.03] px-3 font-mono text-[16px] font-semibold @min-[700px]:col-start-4 [@media(hover:hover)]:hover:border-amber/55"
       >
         <span aria-hidden="true" className="mb-1 block text-[12px] leading-none tracking-[0.1em] text-fg-3 uppercase">
-          Vel.
+          {tr({ es: "Vel.", en: "Speed" })}
         </span>
         ×{snap.speed}
       </button>
