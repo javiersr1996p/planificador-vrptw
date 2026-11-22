@@ -7,8 +7,9 @@ import { useLatest } from "@/components/solve/useLatest";
 import { Button } from "@/components/ui/Button";
 import { Help } from "@/components/ui/Help";
 import { ApiError, solveLlm } from "@/lib/api";
-import { formatCost, formatEuro, formatNumber } from "@/lib/format";
+import { formatEuro, formatNumber, useFormat } from "@/lib/format";
 import { GLOSSARY } from "@/lib/glossary";
+import { useT, type Lang } from "@/lib/i18n";
 import { unreadableReason } from "@/lib/labels";
 import type { components } from "@/lib/types";
 import { KEY_NOTE, isSendableKey, llmErrorText, useLlm, withoutKey, type Role } from "./scope";
@@ -39,21 +40,23 @@ function clock(ms: number): string {
 }
 
 /** Precio por millón de tokens: `2`, `0,10`. */
-function price(value: number): string {
-  return formatNumber(value, Number.isInteger(value) ? 0 : 2);
+function price(value: number, lang: Lang): string {
+  return formatNumber(value, Number.isInteger(value) ? 0 : 2, lang);
 }
 
 /** Tokens y coste de API de una ejecución, tal como los devuelve el servicio. */
-function spend(record: S["RunRecord"]): string {
+function spend(record: S["RunRecord"], lang: Lang): string {
   const parts: string[] = [];
   if (record.tokens_in != null && record.tokens_out != null) {
-    parts.push(`${formatNumber(record.tokens_in, 0)} / ${formatNumber(record.tokens_out, 0)} tokens`);
+    parts.push(`${formatNumber(record.tokens_in, 0, lang)} / ${formatNumber(record.tokens_out, 0, lang)} tokens`);
   }
-  if (record.api_cost_eur != null) parts.push(formatEuro(record.api_cost_eur));
+  if (record.api_cost_eur != null) parts.push(formatEuro(record.api_cost_eur, 4, lang));
   return parts.join(" · ");
 }
 
 function StatusText({ status, now }: { status: Status; now: number }) {
+  const t = useT();
+  const { lang, formatCost } = useFormat();
   switch (status.kind) {
     case "idle":
       return null;
@@ -69,11 +72,11 @@ function StatusText({ status, now }: { status: Status; now: number }) {
       const { record } = status;
       const ev = record.evaluation;
       const model = record.model_returned ?? record.model_requested ?? "";
-      const cost = spend(record);
+      const cost = spend(record, lang);
       if (record.parse_status !== "ok" || !record.solution || !ev) {
         return (
           <span className="text-late">
-            <span className="font-semibold">Sin plan legible:</span> {unreadableReason(record)}.
+            <span className="font-semibold">Sin plan legible:</span> {t(unreadableReason(record))}.
             <span className="block text-fg-2">
               {model}
               {cost && ` · ${cost}`}
@@ -134,6 +137,8 @@ function RoleIcon({ role }: { role: Role }) {
  * de `POST /solve/llm`. El resultado entra en la comparativa como «en vivo».
  */
 export function LlmPanel() {
+  const t = useT();
+  const { lang } = useFormat();
   const { state, actions } = usePlanner();
   const { service } = useService();
   const { llmKey, setLlmKey, model, setModel, models, loadModels, keyField, forgetKey } = useLlm();
@@ -326,7 +331,7 @@ export function LlmPanel() {
           ))}
         </div>
         <p data-testid="llm-role-hint" className="mt-2 mb-0 text-base leading-snug text-fg-2">
-          {GLOSSARY[role].hint}.
+          {t(GLOSSARY[role].hint)}.
         </p>
       </fieldset>
 
@@ -356,8 +361,8 @@ export function LlmPanel() {
         </select>
         {info && (
           <p data-testid="llm-price" className="m-0 text-base leading-snug text-fg-2">
-            <span className="num text-fg">{price(info.price_in_per_mtok)}</span> {info.currency} entrada ·{" "}
-            <span className="num text-fg">{price(info.price_out_per_mtok)}</span> {info.currency} salida, por millón de tokens ·{" "}
+            <span className="num text-fg">{price(info.price_in_per_mtok, lang)}</span> {info.currency} entrada ·{" "}
+            <span className="num text-fg">{price(info.price_out_per_mtok, lang)}</span> {info.currency} salida, por millón de tokens ·{" "}
             <a
               data-testid="llm-price-source"
               href={info.source_url}

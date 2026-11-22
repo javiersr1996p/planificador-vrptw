@@ -139,15 +139,15 @@ test("el «?» se abre y se cierra con teclado y su texto sale del glosario", as
   await page.goto("/no-existe");
   const button = page.locator('[data-testid="help-button"][data-help="valido"]');
   const popover = page.getByTestId("help-popover");
-  await expect(button).toHaveAccessibleName(GLOSSARY.valido.ask);
+  await expect(button).toHaveAccessibleName(GLOSSARY.valido.ask.es);
 
   await button.focus();
   await page.keyboard.press("Enter");
   await expect(popover).toBeVisible();
   await expect(button).toHaveAttribute("aria-expanded", "true");
   await expect(popover).toHaveAttribute("role", "dialog");
-  await expect(popover.getByRole("heading")).toHaveText(GLOSSARY.valido.title);
-  await expect(popover.getByTestId("help-text")).toHaveText(GLOSSARY.valido.text);
+  await expect(popover.getByRole("heading")).toHaveText(GLOSSARY.valido.title.es);
+  await expect(popover.getByTestId("help-text")).toHaveText(GLOSSARY.valido.text.es);
   await expect(popover.getByRole("button", { name: "Cerrar" })).toBeFocused();
 
   // El globo cabe en la ventana.
@@ -201,9 +201,12 @@ test.describe("lib/glossary", () => {
     const required = ["ventana", "espera", "retraso", "capacidad", "coste", "valido", "heuristic", "aco", "ga", "tabu", "llm_direct", "llm_agent", "tokens"];
     expect(Object.keys(GLOSSARY)).toEqual(expect.arrayContaining(required));
     for (const [term, entry] of Object.entries(GLOSSARY)) {
-      expect(entry.text.length, term).toBeLessThanOrEqual(140);
-      expect(entry.text.split(/[.!?](?=\s|$)/).filter((s) => s.trim()).length, term).toBeLessThanOrEqual(2);
-      expect(entry.ask, term).toMatch(/^¿.+\?$/);
+      for (const lang of ["es", "en"] as const) {
+        expect(entry.text[lang].length, `${term} ${lang}`).toBeLessThanOrEqual(140);
+        expect(entry.text[lang].split(/[.!?](?=\s|$)/).filter((s) => s.trim()).length, `${term} ${lang}`).toBeLessThanOrEqual(2);
+      }
+      expect(entry.ask.es, term).toMatch(/^¿.+\?$/);
+      expect(entry.ask.en, term).toMatch(/^What .+\?$/);
     }
   });
 

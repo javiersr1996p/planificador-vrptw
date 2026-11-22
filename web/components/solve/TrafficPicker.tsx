@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { evaluate } from "@/lib/api";
+import { useT } from "@/lib/i18n";
 import { methodLabel } from "@/lib/labels";
 import type { components } from "@/lib/types";
 import { hasSolution, usePlanner } from "@/components/planner/store";
@@ -34,6 +35,7 @@ export function TrafficPicker({
   reason?: string;
 }) {
   const { state, actions } = usePlanner();
+  const t = useT();
   const [profiles, setProfiles] = useState<Profile[] | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
@@ -170,7 +172,7 @@ export function TrafficPicker({
           <ul data-testid="reevaluated" className="m-0 mt-1.5 flex list-none flex-wrap gap-1.5 p-0">
             {marked.map((r) => (
               <li key={r.key} className="rounded-full border border-line-2 px-2.5 py-0.5 text-base leading-snug text-fg-2">
-                {methodLabel(r.record.method)} · {r.origin}
+                {t(methodLabel(r.record.method))} · {r.origin}
                 <span className="sr-only">: reevaluada con tráfico</span>
               </li>
             ))}

@@ -3,8 +3,9 @@
 import type { CSSProperties } from "react";
 import { hasGeo } from "@/components/map/geometry";
 import { Help } from "@/components/ui/Help";
-import { formatCost, formatDuration, formatEuro, formatNumber } from "@/lib/format";
+import { useFormat } from "@/lib/format";
 import { methodHint } from "@/lib/glossary";
+import { useT, type Pair } from "@/lib/i18n";
 import { groupViolations, methodLabel, unreadableReason } from "@/lib/labels";
 import type { components } from "@/lib/types";
 import { AgentTrace } from "./AgentTrace";
@@ -25,8 +26,8 @@ function scaleMax(runs: PlannerRun[]): number {
 }
 
 /** Línea que explica el método; en las ejecuciones LLM, además, el modelo. */
-export function runHint(record: S["RunRecord"]): string {
-  const hint = methodHint(record.method) ?? methodLabel(record.method);
+export function runHint(record: S["RunRecord"], t: (pair: Pair) => string): string {
+  const hint = t(methodHint(record.method) ?? methodLabel(record.method));
   const model = record.model_returned ?? record.model_requested;
   return record.role !== "classic" && model ? `${hint} · ${model}` : hint;
 }
@@ -94,6 +95,8 @@ function Row({
   showOrigin: boolean;
   onSelect: () => void;
 }) {
+  const t = useT();
+  const { formatCost, formatDuration, formatEuro, formatNumber } = useFormat();
   const { record, origin } = run;
   const ev = record.evaluation;
   const solved = hasSolution(run);
@@ -118,7 +121,7 @@ function Row({
         {index + 1}
       </span>
       <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-base leading-tight font-semibold text-fg">
-        {methodLabel(record.method)}
+        {t(methodLabel(record.method))}
         {best && (
           <span className="rounded-full bg-amber px-[7px] py-[3px] font-mono text-[12px] leading-none font-bold tracking-[0.08em] whitespace-nowrap text-amber-ink uppercase shadow-[0_0_14px_-2px_rgb(255_181_71/0.8)]">
             Mejor válida
@@ -180,15 +183,15 @@ function Row({
       ) : (
         <span className="col-span-2 flex min-w-0 flex-wrap items-baseline gap-x-2 text-fg">
           <span className="font-semibold">Sin respuesta legible</span>
-          <span className="text-fg-3">{unreadableReason(record)}</span>
+          <span className="text-fg-3">{t(unreadableReason(record))}</span>
         </span>
       )}
       <span
         data-testid="method-hint"
-        title={runHint(record)}
+        title={runHint(record, t)}
         className={`min-w-0 truncate text-base leading-tight text-fg-2 ${selected ? "max-[760px]:whitespace-normal" : ""}`}
       >
-        {runHint(record)}
+        {runHint(record, t)}
       </span>
       <span className="flex items-center justify-end gap-1.5 text-base leading-none whitespace-nowrap text-fg-2 tabular-nums">
         <VanIcon />
@@ -252,7 +255,7 @@ function Row({
               <span className="font-semibold text-late">No válida</span>
               {groupViolations(ev!.violations).map((g) => (
                 <span key={g.type} className="rounded-tag bg-late/15 px-1.5 leading-7 text-late">
-                  {g.label} ({g.count})
+                  {t(g.label)} ({g.count})
                 </span>
               ))}
             </p>

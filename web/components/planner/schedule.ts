@@ -1,3 +1,4 @@
+import type { Lang } from "@/lib/i18n";
 import type { components } from "@/lib/types";
 import { customerName, depotName, formatClock, formatSpan, isReal } from "./units";
 
@@ -109,10 +110,10 @@ export type RadioEvent = { t: number; text: string };
  * Sucesos del día para la línea de estado, en orden de hora: salidas,
  * llegadas, esperas, retrasos y vueltas, con las horas de la evaluación.
  */
-export function radioEvents(instance: S["Instance"], ev: S["Evaluation"]): RadioEvent[] {
+export function radioEvents(instance: S["Instance"], ev: S["Evaluation"], lang: Lang = "es"): RadioEvent[] {
   const real = isReal(instance);
   const byId = customersById(instance);
-  const at = (t: number) => (real ? `a las ${formatClock(t, true)}` : `en t = ${formatClock(t, false)}`);
+  const at = (t: number) => (real ? `a las ${formatClock(t, true, lang)}` : `en t = ${formatClock(t, false, lang)}`);
   const base = depotName(instance);
   const events: RadioEvent[] = [];
   vehicleDays(instance, ev).forEach(({ route, stops, departure, back }) => {
@@ -121,13 +122,13 @@ export function radioEvents(instance: S["Instance"], ev: S["Evaluation"]): Radio
     events.push({ t: departure, text: `${f} sale de la base${base ? ` de ${base}` : ""}` });
     for (const s of stops) {
       const c = byId.get(s.customer);
-      const name = customerName(c, s.customer, real);
+      const name = customerName(c, s.customer, real, lang);
       if (s.late > EPS) {
-        events.push({ t: s.arrival, text: `${f} llega ${formatSpan(s.late, real)} tarde a ${name}` });
+        events.push({ t: s.arrival, text: `${f} llega ${formatSpan(s.late, real, lang)} tarde a ${name}` });
       } else if (s.wait > EPS && c) {
         events.push({
           t: s.arrival,
-          text: `${f} llega a ${name}, que abre ${at(c.ready)}: espera ${formatSpan(s.wait, real)}`,
+          text: `${f} llega a ${name}, que abre ${at(c.ready)}: espera ${formatSpan(s.wait, real, lang)}`,
         });
         events.push({ t: s.start, text: `${f} empieza a entregar en ${name}` });
       } else {

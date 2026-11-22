@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useService } from "@/components/planner/ServiceStatus";
 import { hasSolution, usePlanner, type PlannerRun } from "@/components/planner/store";
 import { ApiError, explain } from "@/lib/api";
-import { formatEuro, formatNumber } from "@/lib/format";
+import { useFormat } from "@/lib/format";
 import { methodLabel } from "@/lib/labels";
 import type { components } from "@/lib/types";
 import { isSendableKey, llmErrorText, useLlm, withoutKey } from "./scope";
@@ -49,6 +49,7 @@ function SparkIcon({ className }: { className?: string }) {
  * clave, el botón abre el panel «Con IA» y lleva el foco al campo.
  */
 export function LlmExplain({ run }: { run: PlannerRun | null }) {
+  const { formatEuro, formatNumber } = useFormat();
   const { state, actions } = usePlanner();
   const { service } = useService();
   const { llmKey, model, focusKey } = useLlm();
@@ -88,7 +89,7 @@ export function LlmExplain({ run }: { run: PlannerRun | null }) {
     put({ record: rec, kind: "running", ctrl });
     try {
       const reply = await explain(
-        { instance, routes: rec.solution!.routes, method: methodLabel(rec.method).slice(0, 40), model },
+        { instance, routes: rec.solution!.routes, method: methodLabel(rec.method).es.slice(0, 40), model },
         key,
         ctrl.signal,
       );

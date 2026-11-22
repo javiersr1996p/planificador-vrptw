@@ -1,4 +1,5 @@
 import { formatNumber, formatTime } from "@/lib/format";
+import type { Lang } from "@/lib/i18n";
 import type { components } from "@/lib/types";
 
 type S = components["schemas"];
@@ -11,14 +12,14 @@ export function isReal(instance: S["Instance"]): boolean {
   return instance.source === "real";
 }
 
-/** Un instante: `08:03` en casos reales, `90,2` en el resto. */
-export function formatClock(value: number, real: boolean): string {
-  return real ? formatTime(value) : formatNumber(value, 1);
+/** Un instante: `08:03` en casos reales, `90,2` (`90.2` en inglés) en el resto. */
+export function formatClock(value: number, real: boolean, lang: Lang = "es"): string {
+  return real ? formatTime(value) : formatNumber(value, 1, lang);
 }
 
-/** Una duración: `36 min` o `3 h 56 min` en casos reales, `36,4` en el resto. */
-export function formatSpan(value: number, real: boolean): string {
-  if (!real) return formatNumber(value, 1);
+/** Una duración: `36 min` o `3 h 56 min` en casos reales, `36,4` (`36.4` en inglés) en el resto. */
+export function formatSpan(value: number, real: boolean, lang: Lang = "es"): string {
+  if (!real) return formatNumber(value, 1, lang);
   const total = Math.round(value);
   if (total < 60) return `${total} min`;
   const h = Math.floor(total / 60);
@@ -31,10 +32,10 @@ export function hasGeo(instance: S["Instance"]): boolean {
   return instance.depot.lat != null && instance.depot.lon != null;
 }
 
-/** Nombre de un cliente: el lugar en casos reales, «Cliente N» en el resto. */
-export function customerName(c: S["Customer"] | undefined, id: number, real: boolean): string {
+/** Nombre de un cliente: el lugar en casos reales, «Cliente N» («Customer N») en el resto. */
+export function customerName(c: S["Customer"] | undefined, id: number, real: boolean, lang: Lang = "es"): string {
   if (real && c?.address) return c.address.split(",")[0].trim();
-  return `Cliente ${id}`;
+  return `${lang === "en" ? "Customer" : "Cliente"} ${id}`;
 }
 
 /** Nombre de la base en casos reales (primer campo de su dirección), o `null`. */

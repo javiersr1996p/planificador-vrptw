@@ -1,4 +1,5 @@
 import { formatNumber, formatTime } from "@/lib/format";
+import type { Lang } from "@/lib/i18n";
 import type { Evaluation, Instance, Pt, StopEvaluation } from "./geometry";
 
 /**
@@ -120,9 +121,9 @@ export function progressOf(acc: number[], p: Pick<VanPosition, "from" | "to" | "
 export type Units = { clock: (v: number) => string; span: (v: number) => string };
 
 /** Casos reales: `HH:MM` y minutos. El resto, en las unidades de la instancia. */
-export function unitsOf(instance: Instance): Units {
+export function unitsOf(instance: Instance, lang: Lang = "es"): Units {
   if (instance.source !== "real") {
-    const plain = (v: number) => formatNumber(v, 1);
+    const plain = (v: number) => formatNumber(v, 1, lang);
     return { clock: plain, span: plain };
   }
   return {

@@ -1,7 +1,8 @@
 "use client";
 
 import { Help } from "@/components/ui/Help";
-import { formatNumber } from "@/lib/format";
+import { useFormat } from "@/lib/format";
+import { useT } from "@/lib/i18n";
 import { groupViolations } from "@/lib/labels";
 import type { components } from "@/lib/types";
 import { CaseSource } from "./CaseInfo";
@@ -41,6 +42,8 @@ function Mark({ ok }: { ok: boolean }) {
  */
 export function Validity() {
   const { state, selected } = usePlanner();
+  const t = useT();
+  const { lang, formatNumber } = useFormat();
   const instance = state.instance;
   const ev = selected && hasSolution(selected) ? selected.record.evaluation! : null;
   if (!instance) return null;
@@ -54,7 +57,7 @@ export function Validity() {
   const late = ev.violations.filter((v) => v.type === "late").length;
   // Retraso con los clientes. `total_late` suma además la vuelta tarde a la base, que va en su propia fila.
   const lateAtStops = ev.stops.flat().reduce((sum, s) => sum + s.late, 0);
-  const lateText = real ? formatSpan(lateAtStops, true) : formatNumber(lateAtStops, 1);
+  const lateText = real ? formatSpan(lateAtStops, true, lang) : formatNumber(lateAtStops, 1);
 
   const rows = RULES.map((rule) => {
     const groups = groupViolations(ev.violations.filter((v) => rule.types.includes(v.type)));
@@ -118,7 +121,7 @@ export function Validity() {
                 <span className="font-semibold text-late">No se cumple:</span>
                 {r.groups.map((g) => (
                   <span key={g.type} className="rounded-tag bg-late/15 px-1.5 text-late">
-                    {g.label} ({g.count})
+                    {t(g.label)} ({g.count})
                   </span>
                 ))}
               </span>

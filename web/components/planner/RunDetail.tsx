@@ -4,6 +4,7 @@ import { useMemo, useRef, useState, useSyncExternalStore, type CSSProperties, ty
 import { LlmExplain } from "@/components/llm/LlmPanel";
 import { Help } from "@/components/ui/Help";
 import { formatNumber } from "@/lib/format";
+import { useLang, useT } from "@/lib/i18n";
 import { methodLabel } from "@/lib/labels";
 import { playback } from "@/lib/playback";
 import type { components } from "@/lib/types";
@@ -57,6 +58,7 @@ function VehicleTabs({
   capacity: number | null | undefined;
   onPick: (route: number) => void;
 }) {
+  const [lang] = useLang();
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
   const n = days.length;
 
@@ -118,8 +120,8 @@ function VehicleTabs({
                   style={{ background: `linear-gradient(90deg,var(--c) ${share * 100}%,rgb(255 255 255/0.12) ${share * 100}%)` }}
                 />
                 <span className="max-[760px]:hidden">carga </span>
-                {formatNumber(load, 0)}
-                {capacity ? `/${formatNumber(capacity, 0)}` : ""}
+                {formatNumber(load, 0, lang)}
+                {capacity ? `/${formatNumber(capacity, 0, lang)}` : ""}
               </span>
             </button>
           );
@@ -131,6 +133,7 @@ function VehicleTabs({
 
 /** Cursor de la hora simulada sobre la línea de tiempo. */
 function NowCursor({ lo, hi, real }: { lo: number; hi: number; real: boolean }) {
+  const [lang] = useLang();
   const t = useSyncExternalStore(playback.subscribe, () => playback.getSnapshot().t, () => lo);
   if (t < lo || t > hi) return null;
   const p = ((t - lo) / (hi - lo)) * 100;
@@ -143,7 +146,7 @@ function NowCursor({ lo, hi, real }: { lo: number; hi: number; real: boolean }) 
         className="num absolute top-0 left-0 rounded-[4px] bg-amber px-1.5 py-[3px] text-[12px] leading-none font-semibold whitespace-nowrap text-amber-ink"
         style={{ transform: `translateX(-${p}%)` }}
       >
-        {formatClock(t, real)}
+        {formatClock(t, real, lang)}
       </span>
     </span>
   );
@@ -178,6 +181,7 @@ function TimeMark({ p, children, testId }: { p: number; children: string; testId
 
 /** Línea de tiempo de una furgoneta: salida, cada parada con su ventana, y vuelta. */
 function Timeline({ instance, day, lo, hi }: { instance: S["Instance"]; day: VehicleDay; lo: number; hi: number }) {
+  const [lang] = useLang();
   const [open, setOpen] = useState(false);
   // Sin paradas no hay salida ni vuelta: la hora que trae `depot_arrival` es la de apertura de la base.
   if (day.stops.length === 0) {
@@ -223,11 +227,11 @@ function Timeline({ instance, day, lo, hi }: { instance: S["Instance"]; day: Veh
               <span key={t} className={`absolute top-1 ${shift}`} style={{ left: `${p}%` }}>
                 {real ? (
                   <>
-                    {formatClock(t, true).slice(0, 2)}
+                    {formatClock(t, true, lang).slice(0, 2)}
                     <span className="max-[760px]:hidden">:00</span>
                   </>
                 ) : (
-                  formatClock(t, false).replace(/,0$/, "")
+                  formatClock(t, false, lang).replace(/,0$/, "")
                 )}
               </span>
             );
@@ -248,7 +252,7 @@ function Timeline({ instance, day, lo, hi }: { instance: S["Instance"]; day: Veh
           </span>
           <span className="relative h-[22px]">
             <span className="absolute top-1/2 size-2.5 -translate-1/2 rounded-full" style={{ left: `${pct(day.departure)}%`, background: color }} />
-            <TimeMark p={pct(day.departure)}>{formatClock(day.departure, real)}</TimeMark>
+            <TimeMark p={pct(day.departure)}>{formatClock(day.departure, real, lang)}</TimeMark>
           </span>
           <StopColumns className="col-span-2 pb-0.5 min-[761px]:hidden" />
         </li>
@@ -273,7 +277,7 @@ function Timeline({ instance, day, lo, hi }: { instance: S["Instance"]; day: Veh
                   {String(s.customer)}
                 </Badge>
                 <span className="truncate text-fg" title={c?.address ?? undefined}>
-                  {customerName(c, s.customer, real)}
+                  {customerName(c, s.customer, real, lang)}
                 </span>
               </span>
               <span className="relative h-[22px] [grid-area:track]">
@@ -307,7 +311,7 @@ function Timeline({ instance, day, lo, hi }: { instance: S["Instance"]; day: Veh
                 <div>
                   <dt className="sr-only">Llegada</dt>
                   <dd data-testid="stop-arrival" className="font-semibold text-fg-2">
-                    {formatClock(s.arrival, real)}
+                    {formatClock(s.arrival, real, lang)}
                   </dd>
                 </div>
                 {/* Quien llega tarde no espera: en su columna va el retraso, en rojo y con su nombre. */}
@@ -315,21 +319,21 @@ function Timeline({ instance, day, lo, hi }: { instance: S["Instance"]; day: Veh
                   <div>
                     <dt className="sr-only">Espera</dt>
                     <dd data-testid="stop-wait" className="font-semibold text-fg-2">
-                      {s.wait > 0 ? formatSpan(s.wait, real) : "–"}
+                      {s.wait > 0 ? formatSpan(s.wait, real, lang) : "–"}
                     </dd>
                   </div>
                 )}
                 {late && (
                   <div className="flex flex-wrap gap-x-1 font-bold text-late">
                     <dt>Retraso</dt>
-                    <dd data-testid="stop-late">{formatSpan(s.late, real)}</dd>
+                    <dd data-testid="stop-late">{formatSpan(s.late, real, lang)}</dd>
                   </div>
                 )}
                 <div>
                   <dt className="sr-only">Carga</dt>
                   <dd data-testid="stop-load" className="font-semibold text-fg-2">
-                    {formatNumber(s.load, 0)}
-                    {capacity ? ` / ${formatNumber(capacity, 0)}` : ""}
+                    {formatNumber(s.load, 0, lang)}
+                    {capacity ? ` / ${formatNumber(capacity, 0, lang)}` : ""}
                   </dd>
                 </div>
               </dl>
@@ -371,7 +375,7 @@ function Timeline({ instance, day, lo, hi }: { instance: S["Instance"]; day: Veh
               />
               <span className="absolute top-1/2 size-2.5 -translate-1/2 rounded-full" style={{ left: `${pct(day.back)}%`, background: color }} />
               <TimeMark p={pct(day.back)} testId="depot-return">
-                {formatClock(day.back, real)}
+                {formatClock(day.back, real, lang)}
               </TimeMark>
             </span>
           </li>
@@ -399,6 +403,8 @@ function Key({ swatch, children }: { swatch: CSSProperties; children: ReactNode 
  * tiempo con la salida, cada parada y la vuelta a la base (`depot_arrival`).
  */
 export function RunDetail({ onShowLate }: { onShowLate?: () => void }) {
+  const t = useT();
+  const [lang] = useLang();
   const { state, selected, actions } = usePlanner();
   const instance = state.instance;
   const ev = selected && hasSolution(selected) ? selected.record.evaluation! : null;
@@ -489,7 +495,7 @@ export function RunDetail({ onShowLate }: { onShowLate?: () => void }) {
           <p className="flex flex-wrap gap-1.5">
             {unserved.map((c) => (
               <span key={c} className="rounded-tag bg-ink-2 px-1.5 text-fg">
-                {customerName(byId.get(c), c, real)}
+                {customerName(byId.get(c), c, real, lang)}
               </span>
             ))}
           </p>
@@ -498,7 +504,7 @@ export function RunDetail({ onShowLate }: { onShowLate?: () => void }) {
 
       {/* Hueco a la derecha para «Explicar», que se pinta sobre esta línea. */}
       <p className="mt-2.5 truncate border-t border-line pt-2 pr-24 font-mono text-[12px] leading-tight tracking-[0.06em] text-fg-3 uppercase">
-        {methodLabel(record.method)} · {origin}
+        {t(methodLabel(record.method))} · {origin}
         {model ? ` · ${model}` : ""} · run_id <span data-testid="detail-run-id">{record.run_id}</span>
       </p>
 

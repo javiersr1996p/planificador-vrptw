@@ -1,3 +1,4 @@
+import type { Pair } from "@/lib/i18n";
 import type { components } from "@/lib/types";
 
 type S = components["schemas"];
@@ -24,6 +25,11 @@ export class ApiError extends Error {
   readonly rows?: CsvRowError[];
   readonly fields?: Record<string, string>;
   readonly retryAfterS?: number;
+  /**
+   * El mensaje en los dos idiomas. El servicio responde en español: `es` es lo que dijo y `en` la
+   * traducción de los errores conocidos, por estado HTTP y situación. Para la pantalla, `t(e.text)`.
+   */
+  readonly text: Pair;
 
   constructor(init: {
     status: number;
@@ -32,8 +38,10 @@ export class ApiError extends Error {
     rows?: CsvRowError[];
     fields?: Record<string, string>;
     retryAfterS?: number;
+    text?: Pair;
   }) {
     super(init.message);
+    this.text = init.text ?? { es: init.message, en: init.message };
     this.name = "ApiError";
     this.status = init.status;
     this.kind = init.kind;
@@ -59,6 +67,26 @@ function parseRetryAfter(value: string | null): number | undefined {
   return Number.isFinite(n) && n >= 0 ? n : undefined;
 }
 
+/** Traducción al inglés de un `detail` de texto del servicio, según su estado y lo que cuenta. */
+function englishDetail(status: number, kind: ApiErrorKind, detail: string, retryAfterS?: number): string {
+  const retry = retryAfterS !== undefined ? ` Try again in ${Math.ceil(retryAfterS)} s.` : "";
+  if (kind === "auth") return "The API key is missing or was not accepted.";
+  if (kind === "rate-limit") {
+    return /geocodificaci/i.test(detail)
+      ? "Daily geocoding limit reached. It resets at 00:00 UTC. Meanwhile, the CSV accepts LAT and LON instead of ADDRESS."
+      : `Too many requests or usage limit reached (error 429).${retry}`;
+  }
+  if (kind === "unavailable") {
+    if (/geocodificaci/i.test(detail)) return "Geocoding is not available: it has not been set up.";
+    if (/otro c[aá]lculo/i.test(detail)) return `The service is busy with another calculation.${retry}`;
+    return `The service is unavailable.${retry}`;
+  }
+  if (kind === "provider") return "The model provider failed (error 502).";
+  if (kind === "payload") return "The case is too large for the service.";
+  if (kind === "validation") return "The request is not valid.";
+  return status === 500 ? "Internal error in the service." : `Service error (${status}).`;
+}
+
 /** Convierte una respuesta de error del servicio en un `ApiError`. */
 export async function errorFromResponse(res: Response): Promise<ApiError> {
   let body: unknown = null;
@@ -71,7 +99,14 @@ export async function errorFromResponse(res: Response): Promise<ApiError> {
   const retryAfterS = parseRetryAfter(res.headers.get("Retry-After"));
 
   if (typeof detail === "string") {
-    return new ApiError({ status: res.status, kind: kindOf(res.status), message: detail, retryAfterS });
+    const kind = kindOf(res.status);
+    return new ApiError({
+      status: res.status,
+      kind,
+      message: detail,
+      retryAfterS,
+      text: { es: detail, en: englishDetail(res.status, kind, detail, retryAfterS) },
+    });
   }
 
   if (Array.isArray(detail) && res.status === 422) {
@@ -83,6 +118,11 @@ export async function errorFromResponse(res: Response): Promise<ApiError> {
         kind: "csv",
         message: `El CSV tiene ${rows.length} ${rows.length === 1 ? "fila con error" : "filas con error"}`,
         rows,
+        // Los errores por fila los redacta el servicio en español: el aviso de la intro lo dice.
+        text: {
+          es: `El CSV tiene ${rows.length} ${rows.length === 1 ? "fila con error" : "filas con error"}`,
+          en: `Errors in your CSV (${rows.length} ${rows.length === 1 ? "row" : "rows"}, listed in Spanish)`,
+        },
       });
     }
     const fields: Record<string, string> = {};
@@ -96,10 +136,20 @@ export async function errorFromResponse(res: Response): Promise<ApiError> {
       kind: "validation",
       message: first ? `${String(first.loc ?? "")}: ${String(first.msg ?? "")}` : "Petición no válida",
       fields,
+      text: {
+        es: first ? `${String(first.loc ?? "")}: ${String(first.msg ?? "")}` : "Petición no válida",
+        en: first?.loc ? `The request is not valid (${String(first.loc)}).` : "The request is not valid.",
+      },
     });
   }
 
-  return new ApiError({ status: res.status, kind: kindOf(res.status), message: `Error ${res.status}`, retryAfterS });
+  return new ApiError({
+    status: res.status,
+    kind: kindOf(res.status),
+    message: `Error ${res.status}`,
+    retryAfterS,
+    text: { es: `Error ${res.status}`, en: `Error ${res.status}` },
+  });
 }
 
 type Options = { method?: "GET" | "POST"; body?: unknown; signal?: AbortSignal; headers?: Record<string, string> };
@@ -115,9 +165,14 @@ async function request<T>(path: string, { method = "GET", body, signal, headers 
     });
   } catch (e) {
     if (e instanceof DOMException && e.name === "AbortError") {
-      throw new ApiError({ status: 0, kind: "aborted", message: "Petición cancelada" });
+      throw new ApiError({ status: 0, kind: "aborted", message: "Petición cancelada", text: { es: "Petición cancelada", en: "Request canceled" } });
     }
-    throw new ApiError({ status: 0, kind: "network", message: "No se pudo contactar con el servicio" });
+    throw new ApiError({
+      status: 0,
+      kind: "network",
+      message: "No se pudo contactar con el servicio",
+      text: { es: "No se pudo contactar con el servicio", en: "Could not reach the service" },
+    });
   }
   if (!res.ok) throw await errorFromResponse(res);
   return (await res.json()) as T;

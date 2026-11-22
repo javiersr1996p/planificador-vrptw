@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { Help } from "@/components/ui/Help";
-import { formatCost, formatDuration, formatNumber } from "@/lib/format";
+import { useFormat } from "@/lib/format";
 import { GLOSSARY, type GlossaryTerm } from "@/lib/glossary";
+import { useT, type Pair } from "@/lib/i18n";
 import { groupViolations, methodLabel, unreadableReason } from "@/lib/labels";
 import type { components } from "@/lib/types";
 import { CasePlane, lateCustomers } from "./CasePlane";
@@ -21,9 +22,9 @@ export const solved = (r: Run): r is Run & { evaluation: S["Evaluation"] } =>
   r.parse_status === "ok" && r.evaluation != null && r.solution != null;
 
 /** Una línea con las violaciones: «fuera de ventana (4)». */
-export const violationText = (ev: S["Evaluation"]) =>
+export const violationText = (ev: S["Evaluation"], t: (pair: Pair) => string) =>
   groupViolations(ev.violations)
-    .map((g) => `${g.label} (${g.count})`)
+    .map((g) => `${t(g.label)} (${g.count})`)
     .join(", ");
 
 /** Rutas de una solución en forma canónica, para saber si dos planes son el mismo. */
@@ -54,6 +55,8 @@ export function CaseFallback({ data, onRetry }: { data: CaseState; onRetry: () =
 /** Escena 5: los cuatro métodos clásicos, su idea y su resultado real en el caso. */
 export function SceneMethods({ data, motion, onRetry }: { data: CaseState; motion: boolean; onRetry: () => void }) {
   const [pick, setPick] = useState(ORDER[0]);
+  const t = useT();
+  const { formatCost, formatDuration, formatNumber } = useFormat();
   if (data.status !== "ready")
     return (
       <SceneFrame n={5} title="Cuatro métodos, un mismo caso" real lead="Así resolvió cada método un caso real del trabajo." stage={<CaseFallback data={data} onRetry={onRetry} />} />
@@ -96,7 +99,7 @@ export function SceneMethods({ data, motion, onRetry }: { data: CaseState; motio
                     r === current ? "border-amber/60 bg-amber/[0.08]" : "border-line bg-white/[0.03] [@media(hover:hover)]:hover:bg-white/[0.07]"
                   }`}
                 >
-                  <span className="min-w-0 truncate text-base leading-tight font-semibold">{methodLabel(r.method)}</span>
+                  <span className="min-w-0 truncate text-base leading-tight font-semibold">{t(methodLabel(r.method))}</span>
                   <span className="num text-right text-base leading-none font-semibold" data-testid="learn-cost">
                     {ev ? formatCost(ev.score) : "–"}
                   </span>
@@ -113,7 +116,7 @@ export function SceneMethods({ data, motion, onRetry }: { data: CaseState; motio
                     {ev ? (
                       <>
                         <StateIcon state={ev.feasible ? "ok" : "bad"} className="size-4 flex-none" />
-                        <span className={`truncate ${ev.feasible ? "text-ok" : "text-late"}`}>{ev.feasible ? "Válido" : `No válido: ${violationText(ev)}`}</span>
+                        <span className={`truncate ${ev.feasible ? "text-ok" : "text-late"}`}>{ev.feasible ? "Válido" : `No válido: ${violationText(ev, t)}`}</span>
                         {isBest && (
                           <span className="rounded-full bg-amber px-[7px] py-[3px] font-mono text-[12px] leading-none font-bold tracking-[0.08em] whitespace-nowrap text-amber-ink uppercase">
                             Mejor válida
@@ -121,7 +124,7 @@ export function SceneMethods({ data, motion, onRetry }: { data: CaseState; motio
                         )}
                       </>
                     ) : (
-                      <span className="truncate text-fg-2">Sin respuesta legible: {unreadableReason(r)}</span>
+                      <span className="truncate text-fg-2">Sin respuesta legible: {t(unreadableReason(r))}</span>
                     )}
                   </span>
                   <span className="flex items-center justify-end gap-1.5 text-base leading-none text-fg-2">
@@ -146,8 +149,8 @@ export function SceneMethods({ data, motion, onRetry }: { data: CaseState; motio
           {best && (
             <p className="text-base leading-snug text-fg" data-testid="learn-methods-summary">
               {cheaper.length > 0
-                ? `Más baratos que la mejor válida, pero no valen: ${cheaper.map((r) => methodLabel(r.method)).join(" y ")}.`
-                : `Mejor válida: ${methodLabel(best.method)}.`}
+                ? `Más baratos que la mejor válida, pero no valen: ${cheaper.map((r) => t(methodLabel(r.method))).join(" y ")}.`
+                : `Mejor válida: ${t(methodLabel(best.method))}.`}
             </p>
           )}
         </div>
@@ -158,11 +161,11 @@ export function SceneMethods({ data, motion, onRetry }: { data: CaseState; motio
             <div className="flex min-w-0 flex-col gap-3">
               <p className="kicker">La idea</p>
               <h3 className="flex items-center gap-2 text-[28px] font-bold">
-                {methodLabel(current.method)}
+                {t(methodLabel(current.method))}
                 {entry && <Help term={current.method as GlossaryTerm} size="sm" />}
               </h3>
               <div className="max-w-[380px]">{Idea && <Idea key={current.method} motion={motion} />}</div>
-              {entry && <p className="text-base leading-snug text-fg-2">{entry.text}</p>}
+              {entry && <p className="text-base leading-snug text-fg-2">{t(entry.text)}</p>}
             </div>
             <div className="flex min-w-0 flex-col gap-3">
               <p className="kicker">Su plan</p>
@@ -171,7 +174,7 @@ export function SceneMethods({ data, motion, onRetry }: { data: CaseState; motio
                 instance={instance}
                 routes={current.solution?.routes ?? null}
                 late={lateCustomers(current.evaluation)}
-                label={planLabel(current)}
+                label={planLabel(current, t)}
                 className="max-w-[240px] lg:max-w-[330px]"
               />
               {solved(current) && (
@@ -191,11 +194,11 @@ export function SceneMethods({ data, motion, onRetry }: { data: CaseState; motio
 }
 
 /** Texto alternativo del plano: rutas por furgoneta y clientes con retraso. */
-export function planLabel(r: Run): string {
+export function planLabel(r: Run, t: (pair: Pair) => string): string {
   const routes = r.solution?.routes;
-  if (!routes) return `${methodLabel(r.method)}: sin respuesta legible, sin rutas.`;
+  if (!routes) return `${t(methodLabel(r.method))}: sin respuesta legible, sin rutas.`;
   const late = [...lateCustomers(r.evaluation)];
-  return `Plan de ${methodLabel(r.method)}: ${routes.map((x, i) => `F${i + 1} visita ${x.join(", ")}`).join("; ")}.${
+  return `Plan de ${t(methodLabel(r.method))}: ${routes.map((x, i) => `F${i + 1} visita ${x.join(", ")}`).join("; ")}.${
     late.length ? ` Llega tarde a ${late.join(", ")}.` : ""
   }`;
 }

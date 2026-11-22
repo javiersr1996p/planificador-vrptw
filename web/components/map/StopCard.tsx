@@ -1,6 +1,7 @@
 "use client";
 
 import { formatNumber } from "@/lib/format";
+import { useLang } from "@/lib/i18n";
 import { type Instance, type StopInfo, isLate, placeName, vehicleColor } from "./geometry";
 import type { Units } from "./schedule";
 
@@ -12,10 +13,10 @@ type Props = {
   onClose: () => void;
 };
 
-const qty = (v: number) => formatNumber(v, Number.isInteger(v) ? 0 : 1);
-
 /** Ficha de una parada: nombre, ventana, llegada, espera, retraso y carga, tal como vienen en la evaluación. */
 export function StopCard({ instance, customer, info, units, onClose }: Props) {
+  const [lang] = useLang();
+  const qty = (v: number) => formatNumber(v, Number.isInteger(v) ? 0 : 1, lang);
   const c = instance.customers.find((x) => x.id === customer);
   const ev = info?.evaluation ?? null;
   const late = isLate(info);

@@ -12,6 +12,7 @@ import type { MapStatus, ViewControls } from "./MapGL";
 import { MapTools } from "./MapTools";
 import type { StopView } from "./markers";
 import PlaneView from "./PlaneView";
+import { useLang } from "@/lib/i18n";
 import { buildSchedules, unitsOf } from "./schedule";
 import { StopCard } from "./StopCard";
 
@@ -75,7 +76,8 @@ export function RouteMap({ instance, routes, evaluation, selectedRoute, onSelect
 
   const stops = useMemo(() => stopIndex(routes, evaluation), [routes, evaluation]);
   const schedules = useMemo(() => buildSchedules(instance, routes, evaluation), [instance, routes, evaluation]);
-  const units = useMemo(() => unitsOf(instance), [instance]);
+  const [lang] = useLang();
+  const units = useMemo(() => unitsOf(instance, lang), [instance, lang]);
   const coords = useMemo(() => planeCoords(instance, geo), [instance, geo]);
   const depotLabel = useMemo(() => {
     const name = placeName(instance.depot.address);

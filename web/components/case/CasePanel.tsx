@@ -6,6 +6,8 @@ import { useLatest } from "@/components/solve/useLatest";
 import { usePlanner } from "@/components/planner/store";
 import { Button } from "@/components/ui/Button";
 import { ApiError, parseCsv, type CsvRowError } from "@/lib/api";
+import { formatNumber } from "@/lib/format";
+import { useLang } from "@/lib/i18n";
 import type { components } from "@/lib/types";
 import { CaseForm, Field, INPUT } from "./CaseForm";
 import { MAX_CSV_CHARS, formToCsv, newForm, rowTarget } from "./csv";
@@ -67,6 +69,7 @@ const legend = "kicker mb-1 p-0 text-fg-3";
  */
 export function CasePanel() {
   const { state, actions } = usePlanner();
+  const [lang] = useLang();
   const { service } = useService();
   const metaNow = useLatest(state.meta);
 
@@ -109,7 +112,7 @@ export function CasePanel() {
     const text = file.size > MAX_CSV_CHARS * 4 ? null : await file.text().catch(() => null);
     if (text === null || text.length > MAX_CSV_CHARS) {
       setCsv(null);
-      setCsvWarn(`«${file.name}» es demasiado grande: el máximo son ${MAX_CSV_CHARS.toLocaleString("es-ES")} caracteres. Recórtalo y vuelve a subirlo.`);
+      setCsvWarn(`«${file.name}» es demasiado grande: el máximo son ${formatNumber(MAX_CSV_CHARS, 0, lang)} caracteres. Recórtalo y vuelve a subirlo.`);
       return;
     }
     setCsv({ name: file.name, text });
@@ -177,7 +180,7 @@ export function CasePanel() {
     if (text === undefined || busy) return;
     reset();
     if (text.length > MAX_CSV_CHARS) {
-      setFailure(`El caso tiene ${text.length.toLocaleString("es-ES")} caracteres: el máximo son ${MAX_CSV_CHARS.toLocaleString("es-ES")}.`);
+      setFailure(`El caso tiene ${formatNumber(text.length, 0, lang)} caracteres: el máximo son ${formatNumber(MAX_CSV_CHARS, 0, lang)}.`);
       return;
     }
     const ctrl = new AbortController();
@@ -336,10 +339,10 @@ export function CasePanel() {
           <p data-testid="csv-info" className="text-base leading-snug text-fg-2">
             {csv ? (
               <>
-                <span className="font-semibold text-fg">{csv.name}</span> · {csv.text.length.toLocaleString("es-ES")} caracteres
+                <span className="font-semibold text-fg">{csv.name}</span> · {formatNumber(csv.text.length, 0, lang)} caracteres
               </>
             ) : (
-              `Dirección o LAT y LON por fila, horas HH:MM. Máximo ${MAX_CSV_CHARS.toLocaleString("es-ES")} caracteres.`
+              `Dirección o LAT y LON por fila, horas HH:MM. Máximo ${formatNumber(MAX_CSV_CHARS, 0, lang)} caracteres.`
             )}
           </p>
           {csvWarn && (

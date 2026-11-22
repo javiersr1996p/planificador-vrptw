@@ -1,7 +1,8 @@
 "use client";
 
 import type { CSSProperties, ReactNode } from "react";
-import { formatNumber } from "@/lib/format";
+import { useFormat } from "@/lib/format";
+import { useT } from "@/lib/i18n";
 import { methodLabel } from "@/lib/labels";
 import { hasSolution, usePlanner } from "./store";
 import { formatSpan, isReal } from "./units";
@@ -59,10 +60,12 @@ function Gauge({
 /** Indicadores del plan seleccionado, tal cual los trae su evaluación. */
 export function Kpis() {
   const { state, selected } = usePlanner();
+  const t = useT();
+  const { lang, formatNumber } = useFormat();
   const instance = state.instance;
   const ev = selected && hasSolution(selected) ? selected.record.evaluation! : null;
   const real = instance ? isReal(instance) : false;
-  const span = (v: number) => (real ? formatSpan(v, true) : formatNumber(v, 1));
+  const span = (v: number) => (real ? formatSpan(v, true, lang) : formatNumber(v, 1));
 
   return (
     <section data-testid="kpis" data-zone aria-labelledby="kpi-title" className="panel pt-3 pb-3.5">
@@ -71,7 +74,7 @@ export function Kpis() {
           Plan en el mapa
         </span>
         <b className="truncate font-display text-[20px] leading-none font-bold tracking-[0.03em]">
-          {selected ? methodLabel(selected.record.method) : "–"}
+          {selected ? t(methodLabel(selected.record.method)) : "–"}
         </b>
       </div>
       {ev && instance ? (

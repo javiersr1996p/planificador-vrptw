@@ -1,5 +1,11 @@
 import { expect, test, type Page } from "@playwright/test";
-import { expectNoHorizontalOverflow, stubMapStyle } from "./helpers";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { ApiError, health, parseCsv } from "../lib/api";
+import { formatNumber, formatTime } from "../lib/format";
+import { GLOSSARY } from "../lib/glossary";
+import { VIOLATION_LABELS, methodLabel } from "../lib/labels";
+import { blockService, expectNoHorizontalOverflow, stubMapStyle } from "./helpers";
 
 // El motor de idioma (lib/i18n.tsx) y el conmutador de la cabecera. Se prueba en /sobre y en el 404:
 // páginas sin mapa ni servicio.
@@ -140,4 +146,105 @@ test("en inglés, de 768 a 1920 px, la marca y el lema no se solapan con la nave
     expect(brandRight, `${width} px`).toBeLessThanOrEqual(navLeft);
     expect(navRight, `${width} px`).toBeLessThanOrEqual(width);
   }
+});
+
+// Módulos compartidos: formatos, etiquetas, glosario y errores del servicio, en inglés.
+
+type CaseRun = { method: string; tokens_in: number | null; tokens_out: number | null; evaluation: { score: number; distance: number; feasible: boolean } | null };
+const readCase = (id: string): { runs: CaseRun[] } =>
+  JSON.parse(readFileSync(path.join(__dirname, "..", "public", "data", "cases", `${id}.json`), "utf8"));
+
+test("en inglés: etiquetas de método y violación, y cifras con punto decimal", async ({ page }) => {
+  await blockService(page);
+  await page.goto("/?lang=en");
+  // El caso por defecto: la distancia del plan seleccionado (la mejor válida) lleva punto decimal y coma de millares.
+  const best = readCase("madrid-12").runs.filter((r) => r.evaluation?.feasible).sort((a, b) => a.evaluation!.score - b.evaluation!.score)[0];
+  await expect(page.getByTestId("kpi-distance")).toContainText(formatNumber(best.evaluation!.distance, 1, "en"));
+  const tfe = readCase("tfe2024-10c-1");
+  const card = page.locator('[data-testid="example-card"][data-case-id="tfe2024-10c-1"]');
+  await card.click();
+  const rows = page.getByTestId("comparison-row");
+  await expect(rows).toHaveCount(tfe.runs.length);
+  await expect(rows.filter({ hasText: methodLabel("heuristic").en }).first()).toBeVisible();
+  await expect(rows.filter({ hasText: VIOLATION_LABELS.late.en }).first()).toBeVisible();
+  await expect(rows.filter({ hasText: VIOLATION_LABELS.late.es })).toHaveCount(0);
+  // Las cifras de la ficha siguen el idioma: tokens con coma de millares y distancia con punto.
+  const llm = readCase("c101-25-trunc").runs.filter((r) => r.tokens_in != null && r.tokens_out != null);
+  const tokens = llm.map((r) => `${formatNumber(r.tokens_in!, 0, "en")} / ${formatNumber(r.tokens_out!, 0, "en")} tokens`);
+  const c101 = page.locator('[data-testid="example-card"][data-case-id="c101-25-trunc"]');
+  await c101.click();
+  await expect(c101).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByTestId("comparison-row")).toHaveCount(readCase("c101-25-trunc").runs.length);
+  const withTokens = page.getByTestId("comparison-row").filter({ hasText: "tokens" }).first();
+  const shown = (await withTokens.textContent()) ?? "";
+  expect(tokens.some((x) => shown.includes(x))).toBe(true);
+  // La hora no cambia con el idioma.
+  expect(formatTime(845)).toBe("14:05");
+});
+
+test("en inglés: el globo «?» del glosario habla inglés", async ({ page }) => {
+  await blockService(page);
+  await page.goto("/?lang=en");
+  const button = page.locator('[data-testid="help-button"][data-help="valido"]').first();
+  await expect(button).toHaveAccessibleName(GLOSSARY.valido.ask.en);
+  await button.click();
+  const popover = page.getByTestId("help-popover");
+  await expect(popover.getByRole("heading")).toHaveText(GLOSSARY.valido.title.en);
+  await expect(popover.getByTestId("help-text")).toHaveText(GLOSSARY.valido.text.en);
+  await expect(popover.getByRole("button", { name: "Close" })).toBeVisible();
+});
+
+test.describe("errores del servicio en inglés", () => {
+  const originalFetch = globalThis.fetch;
+  test.afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+  const stub = (status: number, body: unknown, headers: Record<string, string> = {}) => {
+    globalThis.fetch = (async () =>
+      new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json", ...headers } })) as typeof fetch;
+  };
+  const failure = async (call: () => Promise<unknown>): Promise<ApiError> => {
+    try {
+      await call();
+    } catch (e) {
+      return e as ApiError;
+    }
+    throw new Error("la llamada debía fallar");
+  };
+
+  test("por estado y situación; el español conserva lo que dijo el servicio", async () => {
+    stub(401, { detail: "falta la cabecera X-LLM-Key" });
+    let err = await failure(() => health());
+    expect(err.text).toEqual({ es: "falta la cabecera X-LLM-Key", en: "The API key is missing or was not accepted." });
+
+    stub(503, { detail: "Hay otro cálculo en curso" }, { "Retry-After": "5" });
+    err = await failure(() => health());
+    expect(err.text.es).toBe("Hay otro cálculo en curso");
+    expect(err.text.en).toBe("The service is busy with another calculation. Try again in 5 s.");
+
+    stub(503, { detail: "Geocodificación no disponible: falta configurarla" });
+    err = await failure(() => health());
+    expect(err.text.en).toBe("Geocoding is not available: it has not been set up.");
+
+    stub(422, { detail: [{ loc: "model", msg: "modelo no disponible" }] });
+    err = await failure(() => health());
+    expect(err.text).toEqual({ es: "model: modelo no disponible", en: "The request is not valid (model)." });
+
+    stub(500, { detail: "error interno" });
+    err = await failure(() => health());
+    expect(err.text.en).toBe("Internal error in the service.");
+  });
+
+  test("CSV: la intro avisa en inglés de que las filas vienen en español; sin red, el aviso de conexión", async () => {
+    stub(422, { detail: [{ row: 2, msg: "falta la dirección" }] });
+    let err = await failure(() => parseCsv({ csv: "x", name: "n", fleet: {} as never }));
+    expect(err.text.en).toBe("Errors in your CSV (1 row, listed in Spanish)");
+    expect(err.rows).toEqual([{ row: 2, msg: "falta la dirección" }]);
+
+    globalThis.fetch = (async () => {
+      throw new TypeError("Failed to fetch");
+    }) as typeof fetch;
+    err = await failure(() => health());
+    expect(err.text).toEqual({ es: "No se pudo contactar con el servicio", en: "Could not reach the service" });
+  });
 });

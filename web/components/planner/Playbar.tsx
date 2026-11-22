@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, type CSSProperties } from "react";
 import { formatNumber } from "@/lib/format";
+import { useLang } from "@/lib/i18n";
 import { nextSpeed, playback, usePlayback } from "@/lib/playback";
 import type { components } from "@/lib/types";
 import { axisTicks, dayRange, vehicleDays, type SegmentKind } from "./schedule";
@@ -71,7 +72,8 @@ function PlayIcon({ playing }: { playing: boolean }) {
 
 /** Reloj grande: en casos reales, `HH:MM` con los dos puntos latiendo. */
 function Clock({ t, real }: { t: number; real: boolean }) {
-  const text = formatClock(t, real);
+  const [lang] = useLang();
+  const text = formatClock(t, real, lang);
   if (!real) return <>{text}</>;
   const [h, m] = text.split(":");
   return (
@@ -89,6 +91,7 @@ function Clock({ t, real }: { t: number; real: boolean }) {
  */
 export function Playbar({ instance, evaluation }: { instance: S["Instance"]; evaluation: S["Evaluation"] | null }) {
   const snap = usePlayback();
+  const [lang] = useLang();
   const real = isReal(instance);
   const [start, end] = useMemo(
     () => (evaluation ? dayRange(instance, evaluation) : [instance.depot.ready, instance.depot.ready + 1]),
@@ -164,7 +167,7 @@ export function Playbar({ instance, evaluation }: { instance: S["Instance"]; eva
           type="range"
           data-testid="scrubber"
           aria-label={real ? "Hora del día simulada" : "Tiempo simulado"}
-          aria-valuetext={formatClock(t, real)}
+          aria-valuetext={formatClock(t, real, lang)}
           min={start}
           max={end}
           step={real ? 1 : "any"}
@@ -180,7 +183,7 @@ export function Playbar({ instance, evaluation }: { instance: S["Instance"]; eva
             const shift = p < 4 ? "" : p > 96 ? "-translate-x-full" : "-translate-x-1/2";
             return (
               <span key={tick} className={`absolute top-0 ${shift}`} style={{ left: `${p}%` }}>
-                {real ? formatClock(tick, true).slice(0, 2) : formatNumber(tick, 0)}
+                {real ? formatClock(tick, true, lang).slice(0, 2) : formatNumber(tick, 0, lang)}
               </span>
             );
           })}

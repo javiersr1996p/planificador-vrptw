@@ -5,7 +5,8 @@ import { ServiceNotice, useService } from "@/components/planner/ServiceStatus";
 import { bestRunKey, makeRun, usePlanner, type PlannerRun } from "@/components/planner/store";
 import { Button } from "@/components/ui/Button";
 import { ApiError } from "@/lib/api";
-import { formatCost } from "@/lib/format";
+import { useFormat } from "@/lib/format";
+import { useT } from "@/lib/i18n";
 import { methodHint } from "@/lib/glossary";
 import { methodLabel } from "@/lib/labels";
 import type { components } from "@/lib/types";
@@ -34,6 +35,7 @@ function clock(ms: number): string {
 }
 
 function StatusText({ status, now }: { status: Status; now: number }) {
+  const { formatCost } = useFormat();
   switch (status.kind) {
     case "idle":
       return null;
@@ -80,6 +82,7 @@ function StatusText({ status, now }: { status: Status; now: number }) {
  * método en curso y vacía la cola. El estado sobrevive a cerrar el panel.
  */
 export function ClassicPanel() {
+  const t = useT();
   const { state, actions } = usePlanner();
   const { service } = useService();
   const [picked, setPicked] = useState<Record<ClassicMethod, boolean>>({ heuristic: true, aco: true, ga: true, tabu: true });
@@ -238,8 +241,8 @@ export function ClassicPanel() {
                     className="size-5 flex-none accent-[var(--amber)]"
                   />
                   <span className="min-w-0 flex-1 py-1">
-                    <span className="block text-base leading-tight font-semibold text-fg">{methodLabel(m)}</span>
-                    <span className="block text-base leading-snug text-fg-2">{methodHint(m)}</span>
+                    <span className="block text-base leading-tight font-semibold text-fg">{t(methodLabel(m))}</span>
+                    <span className="block text-base leading-snug text-fg-2">{t(methodHint(m) ?? { es: "", en: "" })}</span>
                   </span>
                 </label>
                 {st.kind !== "idle" && (

@@ -8,6 +8,7 @@ import { useLatest } from "@/components/solve/useLatest";
 import { Button } from "@/components/ui/Button";
 import { ApiError, evaluate } from "@/lib/api";
 import { formatCost } from "@/lib/format";
+import { useLang, type Lang, type Pair } from "@/lib/i18n";
 import { groupViolations } from "@/lib/labels";
 import type { components } from "@/lib/types";
 import { EMPTY_DRAFT, chooseVehicle, pendingOf, tap, type Draft } from "./draft";
@@ -45,10 +46,10 @@ function manualRecord(instance: S["Instance"], routes: number[][], evaluation: S
 type Verdict = { state: "valid-best" | "valid-beats" | "valid-tie" | "valid-behind" | "valid" | "invalid"; text: string };
 
 /** Qué le pasa al plan del visitante frente a los métodos de la comparativa (todas las cifras salen de `/evaluate`). */
-function verdictOf(manual: S["Evaluation"], others: S["RunRecord"][]): Verdict {
+function verdictOf(manual: S["Evaluation"], others: S["RunRecord"][], t: (pair: Pair) => string, lang: Lang): Verdict {
   if (!manual.feasible) {
     const why = groupViolations(manual.violations)
-      .map((g) => `${g.label} (${g.count})`)
+      .map((g) => `${t(g.label)} (${g.count})`)
       .join(", ");
     return { state: "invalid", text: `Todavía no es un plan válido: ${why}.` };
   }
@@ -58,7 +59,7 @@ function verdictOf(manual: S["Evaluation"], others: S["RunRecord"][]): Verdict {
   const heur = Math.min(...heuristic);
   const best = Math.min(...valid.map((r) => r.evaluation!.score));
   const mine = manual.score;
-  const nums = `Tu coste: ${formatCost(mine)}. Heurística: ${formatCost(heur)}.`;
+  const nums = `Tu coste: ${formatCost(mine, 1, lang)}. Heurística: ${formatCost(heur, 1, lang)}.`;
   if (mine < best - 1e-6) return { state: "valid-best", text: `¡Mejor que todos los métodos! ${nums}` };
   if (mine < heur - 1e-6) return { state: "valid-beats", text: `Le ganas a la heurística, aunque otro método va por delante. ${nums}` };
   if (Math.abs(mine - heur) <= 1e-6) return { state: "valid-tie", text: `Empatas con la heurística. ${nums}` };
@@ -85,6 +86,8 @@ const VERDICT_TONE: Record<Verdict["state"], string> = {
  * cerrar el panel y se vacía al cambiar de caso.
  */
 export function ManualBuilder() {
+  const [lang] = useLang();
+  const t = (pair: Pair) => pair[lang];
   const { state, actions, setStopClickHandler } = usePlanner();
   const { service } = useService();
   const instance = state.instance;
@@ -203,6 +206,8 @@ export function ManualBuilder() {
       ? verdictOf(
           evaluation,
           state.runs.filter((r) => r.key !== "manual").map((r) => r.record),
+          t,
+          lang,
         )
       : null;
   const reason = tooBig

@@ -3,6 +3,7 @@
 import { useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { GLOSSARY, type GlossaryEntry, type GlossaryTerm } from "@/lib/glossary";
+import { useT } from "@/lib/i18n";
 
 type HelpProps = {
   term: GlossaryTerm;
@@ -19,6 +20,7 @@ type HelpProps = {
  */
 export function Help({ term, note, size = "md", className }: HelpProps) {
   const entry: GlossaryEntry = GLOSSARY[term];
+  const t = useT();
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const popRef = useRef<HTMLDivElement>(null);
@@ -77,7 +79,7 @@ export function Help({ term, note, size = "md", className }: HelpProps) {
         ref={buttonRef}
         type="button"
         className={["help", size === "sm" && "help-sm", className].filter(Boolean).join(" ")}
-        aria-label={entry.ask}
+        aria-label={t(entry.ask)}
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={open ? popId : undefined}
@@ -98,13 +100,13 @@ export function Help({ term, note, size = "md", className }: HelpProps) {
             data-testid="help-popover"
             data-help={term}
           >
-            <button type="button" className="pop-close" aria-label="Cerrar" onClick={closeAndFocus}>
+            <button type="button" className="pop-close" aria-label={t({ es: "Cerrar", en: "Close" })} onClick={closeAndFocus}>
               <span aria-hidden="true">×</span>
             </button>
-            <span className="kicker">¿Qué es?</span>
-            <h3 id={titleId}>{entry.title}</h3>
-            {entry.figure === "ventana" && <WindowFigure patternId={`help-wait${id.replace(/[^\w-]/g, "")}`} />}
-            <p data-testid="help-text">{entry.text}</p>
+            <span className="kicker">{t({ es: "¿Qué es?", en: "What is it?" })}</span>
+            <h3 id={titleId}>{t(entry.title)}</h3>
+            {entry.figure === "ventana" && <WindowFigure t={t} patternId={`help-wait${id.replace(/[^\w-]/g, "")}`} />}
+            <p data-testid="help-text">{t(entry.text)}</p>
             {note && <p data-testid="help-note">{note}</p>}
           </div>,
           document.body,
@@ -114,7 +116,7 @@ export function Help({ term, note, size = "md", className }: HelpProps) {
 }
 
 /** La ventana horaria en una línea: antes se espera, dentro se entrega, después es retraso. */
-function WindowFigure({ patternId }: { patternId: string }) {
+function WindowFigure({ patternId, t }: { patternId: string; t: ReturnType<typeof useT> }) {
   const label = { fontFamily: "var(--ff-body), sans-serif", fontSize: 13, fontWeight: 600 };
   return (
     <svg viewBox="0 0 330 104" aria-hidden="true">
@@ -125,7 +127,7 @@ function WindowFigure({ patternId }: { patternId: string }) {
       </defs>
       <rect x="104" y="30" width="126" height="34" rx="6" style={{ fill: "rgb(255 255 255 / 0.06)", stroke: "var(--fg-2)" }} strokeWidth="1.5" />
       <text x="167" y="22" textAnchor="middle" style={{ fill: "var(--fg)", fontFamily: "var(--ff-mono), monospace", fontSize: 12 }}>
-        09:00 a 12:00
+        {t({ es: "09:00 a 12:00", en: "09:00 to 12:00" })}
       </text>
       <line x1="12" y1="47" x2="318" y2="47" style={{ stroke: "rgb(185 197 216 / 0.35)" }} strokeWidth="1.5" />
       <rect x="46" y="43" width="58" height="8" fill={`url(#${patternId})`} />
@@ -134,13 +136,13 @@ function WindowFigure({ patternId }: { patternId: string }) {
       <rect x="230" y="43" width="44" height="8" style={{ fill: "var(--late)" }} />
       <circle cx="274" cy="47" r="8" style={{ fill: "var(--late)" }} />
       <text x="46" y="88" textAnchor="middle" style={{ ...label, fill: "var(--wait)" }}>
-        antes: espera
+        {t({ es: "antes: espera", en: "before: wait" })}
       </text>
       <text x="150" y="88" textAnchor="middle" style={{ ...label, fill: "var(--ok)" }}>
-        dentro: entrega
+        {t({ es: "dentro: entrega", en: "inside: delivery" })}
       </text>
       <text x="274" y="88" textAnchor="middle" style={{ ...label, fill: "var(--late)" }}>
-        después: retraso
+        {t({ es: "después: retraso", en: "after: late" })}
       </text>
     </svg>
   );

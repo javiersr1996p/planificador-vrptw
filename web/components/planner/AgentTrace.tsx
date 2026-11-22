@@ -1,6 +1,7 @@
 "use client";
 
-import { formatCost, formatDuration } from "@/lib/format";
+import { useFormat } from "@/lib/format";
+import { useT, type Pair } from "@/lib/i18n";
 import { methodLabel, unreadableReason } from "@/lib/labels";
 import type { components } from "@/lib/types";
 
@@ -16,14 +17,16 @@ type ToolCall = {
   time_s?: number;
 };
 
-function callLabel(call: ToolCall): string {
-  if (call.name === "solve_classic") return `Resolver: ${methodLabel(call.arguments?.method ?? "?").toLowerCase()}`;
+function callLabel(call: ToolCall, t: (pair: Pair) => string): string {
+  if (call.name === "solve_classic") return `Resolver: ${t(methodLabel(call.arguments?.method ?? "?")).toLowerCase()}`;
   if (call.name === "evaluate_routes") return "Evaluar rutas";
   return call.name ?? "Herramienta";
 }
 
 /** Llamadas del agente a sus herramientas y su texto final. Plegada por defecto. */
 export function AgentTrace({ record }: { record: S["RunRecord"] }) {
+  const t = useT();
+  const { formatCost, formatDuration } = useFormat();
   const calls = (record.tool_calls ?? []) as ToolCall[];
   const result = (c: ToolCall) => (!c.is_error && typeof c.result === "object" && c.result !== null ? c.result : null);
   const max = Math.max(1, ...calls.map((c) => result(c)?.score ?? 0));
@@ -50,7 +53,7 @@ export function AgentTrace({ record }: { record: S["RunRecord"] }) {
             return (
               <li key={i} data-testid="trace-call" className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-base">
                 <span className="num w-6 text-fg-3">{String(i + 1).padStart(2, "0")}</span>
-                <span className="font-medium">{callLabel(call)}</span>
+                <span className="font-medium">{callLabel(call, t)}</span>
                 {r ? (
                   <>
                     <span className="flex min-w-[8rem] flex-1 items-center gap-2">
@@ -83,7 +86,7 @@ export function AgentTrace({ record }: { record: S["RunRecord"] }) {
         )}
         <p data-testid="trace-final" className={`text-base whitespace-pre-wrap ${record.raw_response ? "" : "text-fg-3"}`}>
           {record.raw_response ||
-            `Sin texto final${record.parse_status !== "ok" ? `: ${unreadableReason(record)}` : ""}.`}
+            `Sin texto final${record.parse_status !== "ok" ? `: ${t(unreadableReason(record))}` : ""}.`}
         </p>
       </div>
     </details>

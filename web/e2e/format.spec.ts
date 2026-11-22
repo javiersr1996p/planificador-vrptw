@@ -36,4 +36,22 @@ test.describe("lib/format", () => {
     expect(formatDuration(0.9996)).toBe("1,0 s");
     expect(formatDuration(-1)).toBe("–");
   });
+
+  test("en inglés: punto decimal, coma de millares desde 1 000 y euro delante", () => {
+    expect(formatNumber(1234.5, 1, "en")).toBe("1,234.5");
+    expect(formatNumber(1234567.891, 2, "en")).toBe("1,234,567.89");
+    expect(formatNumber(999, 0, "en")).toBe("999");
+    expect(formatNumber(-2.5, 1, "en")).toBe("-2.5");
+    expect(formatCost(1523.456, 1, "en")).toBe("1,523.5");
+    expect(formatEuro(0.0312, 4, "en")).toBe("€0.0312");
+    expect(formatDuration(12.34, "en")).toBe("12.3 s");
+    expect(formatDuration(125, "en")).toBe("2 min 5 s");
+    // La hora va en 24 h en los dos idiomas.
+    expect(formatTime(845)).toBe("14:05");
+  });
+
+  test("el español no cambia sin idioma explícito", () => {
+    expect(formatNumber(1234.5, 1, "es")).toBe(formatNumber(1234.5, 1));
+    expect(formatNumber(12345.6, 1)).toBe("12.345,6");
+  });
 });

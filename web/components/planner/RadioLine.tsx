@@ -2,6 +2,7 @@
 
 import { useMemo, useSyncExternalStore } from "react";
 import { hasGeo } from "@/components/map/geometry";
+import { useLang } from "@/lib/i18n";
 import { playback } from "@/lib/playback";
 import type { components } from "@/lib/types";
 import { lastEventAt, radioEvents, type RadioEvent } from "./schedule";
@@ -32,7 +33,8 @@ function useRadioState(events: RadioEvent[]): { index: number; playing: boolean;
  */
 export function RadioLine({ instance, evaluation }: { instance: S["Instance"]; evaluation: S["Evaluation"] | null }) {
   const real = isReal(instance);
-  const events = useMemo(() => (evaluation ? radioEvents(instance, evaluation) : []), [instance, evaluation]);
+  const [lang] = useLang();
+  const events = useMemo(() => (evaluation ? radioEvents(instance, evaluation, lang) : []), [instance, evaluation, lang]);
   const { index, playing, canPlay } = useRadioState(events);
   if (!evaluation) return null;
 
@@ -57,7 +59,7 @@ export function RadioLine({ instance, evaluation }: { instance: S["Instance"]; e
         className="decor size-[9px] flex-none animate-[breathe_0.9s_ease-in-out_infinite_alternate] rounded-full bg-ok shadow-[0_0_10px_var(--ok)]"
       />
       <span className="num flex-none text-base font-semibold text-amber">
-        {formatClock(event?.t ?? instance.depot.ready, real)}
+        {formatClock(event?.t ?? instance.depot.ready, real, lang)}
       </span>
       <span className="line-clamp-2 min-w-0">{text}</span>
     </div>

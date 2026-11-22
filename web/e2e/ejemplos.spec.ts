@@ -398,7 +398,7 @@ test("cada fila explica su método y los indicadores siguen al plan seleccionado
   for (const run of tfe.runs) {
     const hint = row(page, run.run_id).getByTestId("method-hint");
     await expect(hint).not.toHaveText("");
-    await expect(hint).toContainText(methodHint(run.method)!);
+    await expect(hint).toContainText(methodHint(run.method)!.es);
     const model = run.model_returned ?? run.model_requested;
     if (run.role !== "classic" && model) await expect(hint).toContainText(model);
   }
