@@ -444,3 +444,20 @@ export const solverTest = test.extend<{ classicSolver: void }>({
     { auto: true },
   ],
 });
+
+/** Letras y palabras que delatan español en la interfaz en inglés. */
+const SPANISH_HINTS =
+  /[áéíóúüñ¿¡]|\b(el|la|los|las|del|al|una|unos|para|con|sin|por|que|son|de|tu|ruta|rutas|furgoneta|furgonetas|parada|paradas|cliente|clientes|coste|ventana|caso|casos|resolver|planes|método|métodos|válido|llega|tarde|espera)\b/i;
+
+/**
+ * Líneas de texto visible bajo `scope` que parecen español. `allow` quita antes
+ * los nombres propios y los datos de los casos (direcciones, nombres de lugares),
+ * que no se traducen.
+ */
+export async function spanishLeaks(page: Page, { scope = "body", allow = [] as (string | RegExp)[] } = {}): Promise<string[]> {
+  const text = await page.locator(scope).first().evaluate((el) => (el as HTMLElement).innerText);
+  return text
+    .split("\n")
+    .map((line) => allow.reduce<string>((acc, a) => acc.replace(typeof a === "string" ? a : new RegExp(a.source, a.flags.includes("g") ? a.flags : a.flags + "g"), " "), line).trim())
+    .filter((line) => SPANISH_HINTS.test(line));
+}
