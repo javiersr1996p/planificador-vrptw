@@ -1,4 +1,4 @@
-"""Algoritmo genético con DEAP, portado de GA.ipynb (2024) y corregido.
+"""Algoritmo genético con DEAP, portado de GA.ipynb (2024) y actualizado.
 
 El individuo es una lista de rutas de `customer.id`. El bucle equivale a
 `eaSimple` (torneo de 3 y `varAnd`, mismo orden de llamadas al generador). Si se
@@ -7,7 +7,7 @@ un individuo) o se descarta la generación en curso antes del siguiente cruce, y
 se devuelve el mejor individuo evaluado. La aptitud es `score`, o infinito si
 algún cliente aparece dos veces. La mutación es la de 2024 tal cual.
 
-Modo corregido (por defecto), siempre con `fleet.vehicles` rutas (vacías o no):
+Modo actual (por defecto), siempre con `fleet.vehicles` rutas (vacías o no):
 
 - Inicialización: permutación aleatoria de clientes; cada uno se añade al final
   de la primera ruta no vacía que lo admite según `feasible_stop` o, si no, de
@@ -19,7 +19,7 @@ Modo corregido (por defecto), siempre con `fleet.vehicles` rutas (vacías o no):
   los clientes que faltan con la regla de la inicialización.
 
 Con `legacy=True` se reproducen las piezas de 2024: reparto en módulo 5 fijo
-(como el original, falla con menos de 5 vehículos y más clientes que vehículos),
+(como en 2024, supone al menos 5 vehículos si hay más clientes que vehículos),
 cruce con dos cortes independientes y `correct_duplicates`, que solo actúa si
 faltan clientes, cambia uno al azar por ruta y no quita repeticiones.
 

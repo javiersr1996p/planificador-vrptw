@@ -8,8 +8,8 @@ quedan sin atender. Tras cada iteración la feromona se evapora (`rho`) y las
 mejor solución encontrada.
 
 Cambios respecto a 2024: generador local con semilla; si todos los candidatos
-están a distancia 0 se elige uno al azar (el original dividía por cero; como
-entonces, un candidato a distancia 0 tiene probabilidad 0 mientras haya otro);
+están a distancia 0 se elige uno al azar (caso nuevo; como en 2024, un
+candidato a distancia 0 tiene probabilidad 0 mientras haya otro);
 factibilidad con `feasible_stop`, que añade capacidad y regreso al depósito
 antes de su `due`; una hormiga con score no positivo no deposita feromona.
 """

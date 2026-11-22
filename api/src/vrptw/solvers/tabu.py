@@ -1,11 +1,11 @@
-"""Búsqueda tabú, portada de `tabu_search` (TabuSearch.ipynb, 2024) y corregida.
+"""Búsqueda tabú, portada de `tabu_search` (TabuSearch.ipynb, 2024) y actualizada.
 
 La solución inicial es `generate_initial_solution` tal cual: una permutación
 aleatoria de los clientes se reparte en turno rotatorio entre todos los vehículos
 y cada ruta se ordena por vecino más cercano desde el depósito, sin mirar
 ventanas ni capacidad. Con `iterations=0` se devuelve esa solución (modo legado).
 
-Correcciones frente a 2024:
+Cambios respecto a 2024:
 - El vecindario se genera desde la solución actual, que pasa a ser el mejor
   vecino no tabú aunque empeore; la mejor global se guarda aparte.
 - Al intercambio entre rutas y la recolocación dentro de una ruta se añade la
