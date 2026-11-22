@@ -1,10 +1,12 @@
-export type NavLink = { href: string; label: string };
+import type { Pair } from "./i18n";
+
+export type NavLink = { href: string; label: Pair };
 
 /** Entradas de la cabecera. Cada página nueva añade aquí la suya. */
 export const NAV_LINKS: NavLink[] = [
-  { href: "/", label: "Planificador" },
-  { href: "/aprende", label: "Aprende" },
-  { href: "/sobre", label: "Sobre el TFE" },
+  { href: "/", label: { es: "Planificador", en: "Planner" } },
+  { href: "/aprende", label: { es: "Aprende", en: "Learn" } },
+  { href: "/sobre", label: { es: "Sobre el TFE", en: "About the thesis" } },
 ];
 
 export const REPO_URL = "https://github.com/javiersr1996p/planificador-vrptw";

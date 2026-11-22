@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Big_Shoulders, Instrument_Sans, Martian_Mono } from "next/font/google";
 import { Header } from "@/components/layout/Header";
+import { LANG_INIT_SCRIPT } from "@/lib/i18n";
 import "./globals.css";
 
 // Big Shoulders con su eje de tamaño óptico: globals.css fija opsz 72, el corte "Display".
@@ -29,7 +30,11 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="es" className={`${display.variable} ${body.variable} ${mono.variable} antialiased`}>
+    // El script de <head> cambia `lang`, `data-lang` y la clase de <html> antes del primer pintado.
+    <html lang="es" suppressHydrationWarning className={`${display.variable} ${body.variable} ${mono.variable} antialiased`}>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: LANG_INIT_SCRIPT }} />
+      </head>
       <body>
         <div className="shell">
           <Header />

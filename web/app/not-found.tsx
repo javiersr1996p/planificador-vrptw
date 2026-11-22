@@ -4,29 +4,36 @@ import { buttonClass } from "@/components/ui/Button";
 import { Corners } from "@/components/ui/Corners";
 import { Help } from "@/components/ui/Help";
 import { Kicker } from "@/components/ui/Kicker";
+import { T } from "@/lib/i18n";
 import { TowerIcon } from "@/components/ui/TowerIcon";
 
 export default function NotFound() {
   return (
     <main className="wrap grid flex-1 content-center items-center gap-8 py-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,480px)] lg:gap-16 lg:py-12">
       <div className="flex flex-col items-start gap-4" style={{ animation: "rise 700ms var(--ease-out) both" }}>
-        <Kicker>Error 404 · Parada desconocida</Kicker>
+        <Kicker>
+          <T es="Error 404 · Parada desconocida" en="Error 404 · Unknown stop" />
+        </Kicker>
         <p
           className="pt-2 font-display text-[clamp(104px,15vw,208px)] leading-[0.78] font-extrabold text-amber [text-shadow:0_0_42px_rgb(255_181_71/0.45)]"
           aria-hidden="true"
         >
           404
         </p>
-        <h1 className="text-[clamp(36px,4vw,56px)] font-extrabold">Esta ruta no existe</h1>
+        <h1 className="text-[clamp(36px,4vw,56px)] font-extrabold">
+          <T es="Esta ruta no existe" en="This route does not exist" />
+        </h1>
         <p className="max-w-[32rem] text-lg leading-snug text-fg-2">
-          Ninguna furgoneta para en esta dirección, así que no entra en ningún{" "}
+          <T es="Ninguna furgoneta para en esta dirección, así que no entra en ningún" en="No van stops at this address, so it is not part of any" />{" "}
           <span className="whitespace-nowrap">
-            <span className="term-mark text-fg">plan válido</span>
+            <span className="term-mark text-fg">
+              <T es="plan válido" en="valid plan" />
+            </span>
             <Help term="valido" size="sm" className="ml-2" />
           </span>
         </p>
         <Link href="/" className={buttonClass("primary", "mt-2")}>
-          Volver al planificador
+          <T es="Volver al planificador" en="Back to the planner" />
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M5 12h14M13 6l6 6-6 6" />
           </svg>
@@ -87,7 +94,7 @@ function Radar() {
           textAnchor="middle"
           style={{ fill: "var(--late)", font: "600 12px var(--ff-mono), monospace", letterSpacing: "0.12em", textTransform: "uppercase" }}
         >
-          Sin ruta
+          <T es="Sin ruta" en="No route" />
         </text>
       </svg>
       <span className="absolute top-1/2 left-1/2 grid size-11 -translate-1/2 place-items-center">
