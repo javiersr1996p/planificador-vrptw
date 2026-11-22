@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { TOUR_BUTTON_ID, connectTour } from "@/components/layout/tour-slot";
 import { buttonClass } from "@/components/ui/Button";
+import { useT } from "@/lib/i18n";
 import { playback } from "@/lib/playback";
 import { placeBubble } from "./place";
 import { markSeen, readSeen } from "./seen";
@@ -33,6 +34,7 @@ function bringIntoView(el: Element) {
  * (`connectTour`). Mientras está abierto, el mapa deja de moverse.
  */
 export function Tour() {
+  const t = useT();
   const [steps, setSteps] = useState<TourStep[] | null>(null);
   const [index, setIndex] = useState(0);
   // El aro late solo si el visitante no había pausado el movimiento (ni lo pide reducido).
@@ -200,18 +202,18 @@ export function Tour() {
         />
         <div className="flex items-center justify-between gap-3">
           <span id="tour-title" className="kicker">
-            Recorrido guiado
+            {t({ es: "Recorrido guiado", en: "Guided tour" })}
           </span>
           <span data-testid="tour-step" className="num text-base leading-none font-semibold text-amber">
             {index + 1}/{steps.length}
           </span>
         </div>
         <p data-testid="tour-text" aria-live="polite" className="mt-2.5 mb-3 text-[17px] leading-[1.4] text-fg">
-          {step.text}
+          {t(step.text)}
         </p>
         <div className="flex justify-end gap-2">
           <button type="button" data-testid="tour-close" className={buttonClass()} onClick={closeTour}>
-            Salir
+            {t({ es: "Salir", en: "Exit" })}
           </button>
           <button
             type="button"
@@ -220,7 +222,7 @@ export function Tour() {
             className={buttonClass("primary")}
             onClick={() => (last ? closeTour() : setIndex(index + 1))}
           >
-            {last ? "Terminar" : "Siguiente"}
+            {last ? t({ es: "Terminar", en: "Finish" }) : t({ es: "Siguiente", en: "Next" })}
           </button>
         </div>
       </div>

@@ -4,6 +4,7 @@ import { useId, useState } from "react";
 import { formatSpan } from "@/components/planner/units";
 import { Help } from "@/components/ui/Help";
 import { formatTime } from "@/lib/format";
+import { useT } from "@/lib/i18n";
 import { Stage, StateIcon } from "./parts";
 import { SceneFrame } from "./SceneFrame";
 import { TOY_ARRIVAL, TOY_DAY, TOY_WINDOW } from "./toy";
@@ -21,36 +22,38 @@ const TONE: Record<WindowState, string> = {
 
 /** Escena 2: un deslizador mueve la hora de llegada frente a la ventana del cliente. */
 export function SceneWindow() {
+  const t = useT();
   const [arrival, setArrival] = useState(TOY_ARRIVAL);
   const sliderId = useId();
   const state: WindowState = arrival < TOY_WINDOW.ready ? "wait" : arrival > TOY_WINDOW.due ? "late" : "ok";
   const label =
     state === "wait"
-      ? `Espera ${formatSpan(TOY_WINDOW.ready - arrival, true)}`
+      ? t({ es: `Espera ${formatSpan(TOY_WINDOW.ready - arrival, true)}`, en: `Wait ${formatSpan(TOY_WINDOW.ready - arrival, true)}` })
       : state === "late"
-        ? `Retraso de ${formatSpan(arrival - TOY_WINDOW.due, true)}`
-        : "Entrega a tiempo";
+        ? t({ es: `Retraso de ${formatSpan(arrival - TOY_WINDOW.due, true)}`, en: `Late by ${formatSpan(arrival - TOY_WINDOW.due, true)}` })
+        : t({ es: "Entrega a tiempo", en: "On-time delivery" });
   const hint =
     state === "wait"
-      ? "Llega antes de que abra: la furgoneta espera parada."
+      ? t({ es: "Llega antes de que abra: la furgoneta espera parada.", en: "Arrives before it opens: the van waits, parked." })
       : state === "late"
-        ? "Llega cuando ya cerró: el plan deja de ser válido."
-        : "Llega con la ventana abierta: entrega y sigue.";
+        ? t({ es: "Llega cuando ya cerró: el plan deja de ser válido.", en: "Arrives after it closed: the plan is no longer valid." })
+        : t({ es: "Llega con la ventana abierta: entrega y sigue.", en: "Arrives with the window open: it delivers and moves on." });
 
   return (
     <SceneFrame
       n={2}
-      title="Cada cliente tiene su horario"
+      title={t({ es: "Cada cliente tiene su horario", en: "Each customer has set hours" })}
       real={false}
       stageFirst
       lead={
         <>
-          Este cliente solo recibe de {formatTime(TOY_WINDOW.ready)} a {formatTime(TOY_WINDOW.due)}: es su{" "}
+          {t({ es: "Este cliente solo recibe de", en: "This customer only receives from" })} {formatTime(TOY_WINDOW.ready)}{" "}
+          {t({ es: "a", en: "to" })} {formatTime(TOY_WINDOW.due)}: {t({ es: "es su", en: "that is its" })}{" "}
           <span className="whitespace-nowrap">
-            <span className="term-mark text-fg">ventana horaria</span>
+            <span className="term-mark text-fg">{t({ es: "ventana horaria", en: "time window" })}</span>
             <Help term="ventana" size="sm" className="ml-1.5" />
           </span>
-          . Mueve la hora de llegada.
+          . {t({ es: "Mueve la hora de llegada.", en: "Move the arrival time." })}
         </>
       }
       controls={
@@ -58,7 +61,7 @@ export function SceneWindow() {
           <div>
             <div className="flex items-baseline justify-between gap-3">
               <label htmlFor={sliderId} className="text-base font-semibold">
-                Hora de llegada
+                {t({ es: "Hora de llegada", en: "Arrival time" })}
               </label>
               <output htmlFor={sliderId} className="font-display text-[40px] leading-none font-extrabold text-amber [font-variant-numeric:tabular-nums]">
                 {formatTime(arrival)}
@@ -101,12 +104,18 @@ export function SceneWindow() {
 
 /** La calle: la furgoneta ante la tienda del cliente, abierta o con la persiana bajada. */
 function Street({ arrival, state }: { arrival: number; state: WindowState }) {
+  const t = useT();
   const open = state === "ok";
   // El sol recorre el cielo con la hora.
   const k = (arrival - TOY_DAY.start) / (TOY_DAY.end - TOY_DAY.start);
   const sunX = 24 + k * 252;
   const sunY = 58 - Math.sin(k * Math.PI) * 36;
-  const shop = state === "wait" ? "Aún cerrado" : state === "late" ? "Ya cerró" : "Abierto";
+  const shop =
+    state === "wait"
+      ? t({ es: "Aún cerrado", en: "Not open yet" })
+      : state === "late"
+        ? t({ es: "Ya cerró", en: "Closed" })
+        : t({ es: "Abierto", en: "Open" });
   const sign = state === "ok" ? "var(--ok)" : state === "wait" ? "var(--wait)" : "var(--late)";
   const mono = (size: number, weight = 600) => ({ font: `${weight} ${size}px var(--ff-mono), monospace` });
   return (
@@ -123,7 +132,7 @@ function Street({ arrival, state }: { arrival: number; state: WindowState }) {
         {shop}
       </text>
       <text x="225" y="120" textAnchor="middle" style={{ ...mono(12), fill: "var(--fg-2)" }}>
-        {formatTime(TOY_WINDOW.ready)} a {formatTime(TOY_WINDOW.due)}
+        {formatTime(TOY_WINDOW.ready)} {t({ es: "a", en: "to" })} {formatTime(TOY_WINDOW.due)}
       </text>
       {/* puerta y persiana */}
       <rect x="203" y="128" width="44" height="44" fill="#132542" />
@@ -155,19 +164,22 @@ function Street({ arrival, state }: { arrival: number; state: WindowState }) {
 
 /** El día en una línea: la ventana, la llegada y la espera o el retraso. */
 function Timeline({ arrival, state }: { arrival: number; state: WindowState }) {
+  const t = useT();
   const a = pct(arrival);
   const r = pct(TOY_WINDOW.ready);
   const d = pct(TOY_WINDOW.due);
   return (
     <div className="relative mx-7 mt-2 mb-9 shrink-0 sm:mx-10 lg:mx-12">
-      <p className="mb-2 font-mono text-[12px] leading-none font-semibold tracking-[0.12em] text-fg-3 uppercase">El día del cliente</p>
+      <p className="mb-2 font-mono text-[12px] leading-none font-semibold tracking-[0.12em] text-fg-3 uppercase">
+        {t({ es: "El día del cliente", en: "The customer's day" })}
+      </p>
       <div className="relative h-14">
         {/* eje */}
         <div className="absolute inset-x-0 top-1/2 h-px bg-fg-3/50" />
         {/* ventana */}
         <div className="absolute inset-y-0 rounded-tag border-2 border-ok/70 bg-ok/10" style={{ left: `${r}%`, width: `${d - r}%` }}>
           <span className="absolute top-1 left-1/2 -translate-x-1/2 font-mono text-[12px] leading-none font-semibold tracking-[0.1em] whitespace-nowrap text-ok uppercase">
-            Ventana
+            {t({ es: "Ventana", en: "Window" })}
           </span>
         </div>
         {/* espera o retraso */}

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { vehicleColor } from "@/components/planner/units";
+import { useT } from "@/lib/i18n";
 import { BaseMarker, RouteSegments, Stage, StageSvg, VanGlyph, at } from "./parts";
 import { SceneFrame } from "./SceneFrame";
 import { TOY_BASE, TOY_CLIENTS, loopPoints, loopStops, routesLength, type Pt } from "./toy";
@@ -10,6 +11,7 @@ const VANS = 2;
 
 /** Escena 1: el visitante traza las rutas pulsando clientes. */
 export function SceneProblem({ motion }: { motion: boolean }) {
+  const t = useT();
   const [routes, setRoutes] = useState<string[][]>(() => Array.from({ length: VANS }, () => []));
   const [van, setVan] = useState(0);
   const [trip, setTrip] = useState(0);
@@ -27,20 +29,26 @@ export function SceneProblem({ motion }: { motion: boolean }) {
 
   const pending = TOY_CLIENTS.filter((c) => !where.has(c.id)).map((c) => c.id);
   const status = done
-    ? "Plan completo: cada cliente, una vez. Las furgonetas salen y vuelven a la base."
+    ? t({ es: "Plan completo: cada cliente, una vez. Las furgonetas salen y vuelven a la base.", en: "Plan complete: each customer, once. The vans set out and return to the depot." })
     : where.size === 0
-      ? `Pulsa un cliente para sumarlo a la ruta de la furgoneta ${van + 1}.`
-      : `Faltan ${pending.length === 1 ? "el cliente" : "los clientes"} ${pending.join(", ")}.`;
+      ? t({ es: `Pulsa un cliente para sumarlo a la ruta de la furgoneta ${van + 1}.`, en: `Tap a customer to add it to van ${van + 1}'s route.` })
+      : t({
+          es: `Faltan ${pending.length === 1 ? "el cliente" : "los clientes"} ${pending.join(", ")}.`,
+          en: `Still missing: ${pending.length === 1 ? "customer" : "customers"} ${pending.join(", ")}.`,
+        });
 
   return (
     <SceneFrame
       n={1}
-      title="Repartir sin dar vueltas de más"
+      title={t({ es: "Repartir sin dar vueltas de más", en: "Deliver without detours" })}
       real={false}
-      lead="Las furgonetas salen de la base, visitan a cada cliente una vez y vuelven. El problema: quién va a cada cliente, y en qué orden."
+      lead={t({
+        es: "Las furgonetas salen de la base, visitan a cada cliente una vez y vuelven. El problema: quién va a cada cliente, y en qué orden.",
+        en: "Vans leave the depot, visit each customer once and come back. The problem: who serves which customer, and in what order.",
+      })}
       controls={
         <div className="flex flex-col gap-3">
-          <div role="group" aria-label="Furgoneta que traza" className="flex flex-wrap gap-2">
+          <div role="group" aria-label={t({ es: "Furgoneta que traza", en: "Van to draw" })} className="flex flex-wrap gap-2">
             {routes.map((_, v) => (
               <button
                 key={v}
@@ -52,7 +60,7 @@ export function SceneProblem({ motion }: { motion: boolean }) {
                 style={van === v ? { borderColor: vehicleColor(v), background: "rgb(255 255 255 / 0.07)" } : undefined}
               >
                 <span aria-hidden="true" className="h-1 w-5 rounded-full" style={{ background: vehicleColor(v), boxShadow: `0 0 8px ${vehicleColor(v)}` }} />
-                Furgoneta {v + 1}
+                {t({ es: "Furgoneta", en: "Van" })} {v + 1}
               </button>
             ))}
           </div>
@@ -61,11 +69,11 @@ export function SceneProblem({ motion }: { motion: boolean }) {
           </p>
           <div className="flex flex-wrap gap-2">
             <button type="button" className="btn" onClick={() => setRoutes(routes.map(() => []))} disabled={where.size === 0}>
-              Borrar rutas
+              {t({ es: "Borrar rutas", en: "Clear routes" })}
             </button>
             {done && motion && (
               <button type="button" className="btn" onClick={() => setTrip((t) => t + 1)}>
-                Repetir el reparto
+                {t({ es: "Repetir el reparto", en: "Repeat the delivery" })}
               </button>
             )}
           </div>
@@ -89,7 +97,10 @@ export function SceneProblem({ motion }: { motion: boolean }) {
                 data-testid="toy-client"
                 data-client={c.id}
                 aria-pressed={!!w}
-                aria-label={`Cliente ${c.id}: ${w ? `furgoneta ${w.van + 1}, parada ${w.pos + 1}` : "sin ruta"}`}
+                aria-label={t({
+                  es: `Cliente ${c.id}: ${w ? `furgoneta ${w.van + 1}, parada ${w.pos + 1}` : "sin ruta"}`,
+                  en: `Customer ${c.id}: ${w ? `van ${w.van + 1}, stop ${w.pos + 1}` : "no route"}`,
+                })}
                 onClick={() => toggle(c.id)}
                 className="absolute z-[2] grid size-11 -translate-1/2 cursor-pointer place-items-center rounded-full border-2 text-base font-bold transition-[background-color,border-color,box-shadow] duration-200 ease-[var(--ease-out)]"
                 style={{
@@ -111,7 +122,7 @@ export function SceneProblem({ motion }: { motion: boolean }) {
                     className="absolute -top-2.5 left-[70%] rounded-tag px-1 py-0.5 font-mono text-[12px] leading-none font-bold whitespace-nowrap text-ink-0 uppercase"
                     style={{ background: color }}
                   >
-                    F{w.van + 1}·{w.pos + 1}
+                    {t({ es: "F", en: "V" })}{w.van + 1}·{w.pos + 1}
                   </span>
                 )}
               </button>
@@ -126,6 +137,7 @@ export function SceneProblem({ motion }: { motion: boolean }) {
 
 /** Las furgonetas recorren su ruta, una vez o en bucle (WAAPI: solo transform y opacidad). */
 export function Vans({ routes, trip = 0, loop = false }: { routes: string[][]; trip?: number; loop?: boolean }) {
+  const t = useT();
   const layers = useRef<(HTMLDivElement | null)[]>([]);
 
   useEffect(() => {
@@ -164,7 +176,7 @@ export function Vans({ routes, trip = 0, loop = false }: { routes: string[][]; t
       >
         <VanGlyph color={vehicleColor(v)} className="h-4 w-7" />
         <span className="font-mono text-[12px] leading-none font-bold uppercase" style={{ color: vehicleColor(v) }}>
-          F{v + 1}
+          {t({ es: "F", en: "V" })}{v + 1}
         </span>
       </span>
     </div>

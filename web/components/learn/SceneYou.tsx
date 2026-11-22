@@ -4,12 +4,20 @@ import Link from "next/link";
 import type { RefObject } from "react";
 import { vehicleColor } from "@/components/planner/units";
 import { buttonClass } from "@/components/ui/Button";
+import { useT, type Pair } from "@/lib/i18n";
 import { Arrow, BaseMarker, RouteSegments, Stage, StageSvg, at } from "./parts";
 import { SceneFrame } from "./SceneFrame";
 import { Vans } from "./SceneProblem";
 import { TOY_BASE, TOY_CLIENTS, TOY_PLANS, loopStops } from "./toy";
 
-const RECAP = ["Rutas", "Ventanas", "Capacidad", "Coste", "Métodos", "IA"];
+const RECAP: Pair[] = [
+  { es: "Rutas", en: "Routes" },
+  { es: "Ventanas", en: "Windows" },
+  { es: "Capacidad", en: "Capacity" },
+  { es: "Coste", en: "Cost" },
+  { es: "Métodos", en: "Methods" },
+  { es: "IA", en: "AI" },
+];
 const PLAN = TOY_PLANS.find((p) => p.late.length === 0 && p.unserved.length === 0)!;
 
 /** Escena 7: de la historia al planificador. */
@@ -22,25 +30,29 @@ export function SceneYou({
   ctaRef: RefObject<HTMLAnchorElement | null>;
   onPick: (scene: number) => void;
 }) {
+  const t = useT();
   return (
     <SceneFrame
       n={7}
-      title="Ahora tú"
-      lead="En el planificador eliges un caso, reproduces el día con su reloj y comparas los métodos con cifras reales."
+      title={t({ es: "Ahora tú", en: "Your turn" })}
+      lead={t({
+        es: "En el planificador eliges un caso, reproduces el día con su reloj y comparas los métodos con cifras reales.",
+        en: "In the planner you pick a case, play the day with its clock and compare the methods with real figures.",
+      })}
       controls={
         <div className="flex flex-col gap-4">
           <Link ref={ctaRef} href="/" className={buttonClass("primary", "h-14 self-start px-6 text-lg")} data-testid="learn-go">
-            Abrir el planificador
+            {t({ es: "Abrir el planificador", en: "Open the planner" })}
             <Arrow />
           </Link>
           <div>
-            <p className="kicker mb-2">Repasar</p>
+            <p className="kicker mb-2">{t({ es: "Repasar", en: "Review" })}</p>
             <ul className="flex flex-wrap gap-2">
               {RECAP.map((label, i) => (
-                <li key={label}>
+                <li key={i}>
                   <button type="button" className="btn" onClick={() => onPick(i)}>
                     <span className="font-mono text-[12px] text-amber uppercase">{i + 1}</span>
-                    {label}
+                    {t(label)}
                   </button>
                 </li>
               ))}

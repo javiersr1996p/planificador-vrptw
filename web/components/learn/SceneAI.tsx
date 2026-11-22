@@ -18,8 +18,8 @@ type S = components["schemas"];
 type Run = S["RunRecord"];
 
 const ROLES = [
-  { role: "llm_direct", term: "llm_direct", title: "Resolvedor directo" },
-  { role: "llm_agent", term: "llm_agent", title: "Agente con herramientas" },
+  { role: "llm_direct", term: "llm_direct", title: { es: "Resolvedor directo", en: "Direct solver" } },
+  { role: "llm_agent", term: "llm_agent", title: { es: "Agente con herramientas", en: "Agent with tools" } },
 ] as const;
 
 type ToolCall = { name?: string; arguments?: { method?: string } };
@@ -27,18 +27,25 @@ type ToolCall = { name?: string; arguments?: { method?: string } };
 /** Pasos de la traza del agente: cada método lanzado y las evaluaciones seguidas, agrupadas. */
 function traceSteps(r: Run, t: (pair: Pair) => string): string[] {
   const calls = (Array.isArray(r.tool_calls) ? r.tool_calls : []) as ToolCall[];
-  const steps: { label: string; n: number }[] = [];
+  const steps: { label: string; evaluates: boolean; n: number }[] = [];
   for (const c of calls) {
+    const evaluates = c.name === "evaluate_routes";
     const label =
-      c.name === "solve_classic" ? `Lanza ${t(methodLabel(c.arguments?.method ?? "")).toLowerCase()}` : c.name === "evaluate_routes" ? "Evalúa" : (c.name ?? "Herramienta");
+      c.name === "solve_classic"
+        ? t({ es: "Lanza", en: "Runs" }) + ` ${t(methodLabel(c.arguments?.method ?? "")).toLowerCase()}`
+        : evaluates
+          ? ""
+          : (c.name ?? t({ es: "Herramienta", en: "Tool" }));
     const last = steps[steps.length - 1];
-    if (last && last.label === label && label === "Evalúa") last.n += 1;
-    else steps.push({ label, n: 1 });
+    if (last && evaluates && last.evaluates) last.n += 1;
+    else steps.push({ label, evaluates, n: 1 });
   }
-  return steps.map((s) => (s.label === "Evalúa" ? `Evalúa ${s.n} ${s.n === 1 ? "plan" : "planes"}` : s.label));
+  return steps.map((s) =>
+    s.evaluates ? t({ es: `Evalúa ${s.n} ${s.n === 1 ? "plan" : "planes"}`, en: `Evaluates ${s.n} ${s.n === 1 ? "plan" : "plans"}` }) : s.label,
+  );
 }
 
-const modelOf = (r: Run) => r.model_returned ?? r.model_requested ?? "modelo";
+const modelOf = (r: Run, t: (pair: Pair) => string) => r.model_returned ?? r.model_requested ?? t({ es: "modelo", en: "model" });
 
 /** Escena 6: la IA como resolvedor directo y como agente, con sus ejecuciones reales. */
 export function SceneAI({ data, motion, onRetry }: { data: CaseState; motion: boolean; onRetry: () => void }) {
@@ -47,7 +54,13 @@ export function SceneAI({ data, motion, onRetry }: { data: CaseState; motion: bo
   const { formatDuration, formatNumber } = useFormat();
   if (data.status !== "ready")
     return (
-      <SceneFrame n={6} title="¿Y si lo resuelve una IA?" real lead="Ejecuciones reales de modelos de lenguaje en el mismo caso." stage={<CaseFallback data={data} onRetry={onRetry} />} />
+      <SceneFrame
+        n={6}
+        title={t({ es: "¿Y si lo resuelve una IA?", en: "What if an AI solves it?" })}
+        real
+        lead={t({ es: "Ejecuciones reales de modelos de lenguaje en el mismo caso.", en: "Real runs of language models on the same case." })}
+        stage={<CaseFallback data={data} onRetry={onRetry} />}
+      />
     );
 
   const { instance, runs: all } = data.file;
@@ -61,14 +74,17 @@ export function SceneAI({ data, motion, onRetry }: { data: CaseState; motion: bo
   return (
     <SceneFrame
       n={6}
-      title="¿Y si lo resuelve una IA?"
+      title={t({ es: "¿Y si lo resuelve una IA?", en: "What if an AI solves it?" })}
       real
-      lead="Un modelo de lenguaje puede escribir el plan de una vez o usar los métodos como herramientas y corregir."
+      lead={t({
+        es: "Un modelo de lenguaje puede escribir el plan de una vez o usar los métodos como herramientas y corregir.",
+        en: "A language model can write the plan in one go, or use the methods as tools and correct itself.",
+      })}
       controls={
         <div className="flex flex-col gap-3">
           <figure className="flex flex-col gap-1 rounded-hud border border-line bg-ink-0/50 p-3" data-testid="learn-ai-idea" data-role={role.role}>
             <figcaption className="flex items-center gap-2 text-base leading-tight font-semibold">
-              {role.title}
+              {t(role.title)}
               <Help term={role.term} size="sm" />
             </figcaption>
             <div className="mx-auto w-full max-w-[300px]">
@@ -76,15 +92,18 @@ export function SceneAI({ data, motion, onRetry }: { data: CaseState; motion: bo
             </div>
           </figure>
           <p className="text-base leading-snug text-fg" data-testid="learn-ai-summary">
-            En este caso, {validCount} de {llm.length} ejecuciones con IA dieron un plan válido y {unreadable} no dejaron una respuesta legible.
+            {t({
+              es: `En este caso, ${validCount} de ${llm.length} ejecuciones con IA dieron un plan válido y ${unreadable} no dejaron una respuesta legible.`,
+              en: `In this case, ${validCount} of ${llm.length} AI runs gave a valid plan and ${unreadable} left no readable answer.`,
+            })}
           </p>
           <p className="text-base leading-snug text-fg-2">
-            Cada una gasta{" "}
+            {t({ es: "Cada una gasta", en: "Each one uses" })}{" "}
             <span className="whitespace-nowrap">
               <span className="term-mark text-fg">tokens</span>
               <Help term="tokens" size="sm" className="ml-1.5" />
             </span>
-            , con su coste en euros.
+            {t({ es: ", con su coste en euros.", en: ", with a cost in euros." })}
           </p>
         </div>
       }
@@ -92,8 +111,8 @@ export function SceneAI({ data, motion, onRetry }: { data: CaseState; motion: bo
         <Stage className="flex flex-col gap-4 p-4 sm:p-8 lg:min-h-[560px] lg:gap-5" data-dense="true">
           <div className="grid gap-4 md:grid-cols-2">
             {ROLES.map((x) => (
-              <div key={x.role} className="flex min-w-0 flex-col gap-1.5" role="group" aria-label={x.title}>
-                <p className="kicker">{x.title}</p>
+              <div key={x.role} className="flex min-w-0 flex-col gap-1.5" role="group" aria-label={t(x.title)}>
+                <p className="kicker">{t(x.title)}</p>
                 {llm
                   .filter((r) => r.role === x.role)
                   .map((r) => (
@@ -118,23 +137,23 @@ export function SceneAI({ data, motion, onRetry }: { data: CaseState; motion: bo
               >
                 {!solved(current) && (
                   <span className="absolute inset-x-3 top-1/2 z-[3] -translate-y-1/2 rounded-hud border border-late/60 bg-[#1f0d10]/95 px-3 py-2 text-center text-base leading-snug">
-                    Sin plan: {t(unreadableReason(current))}
+                    {t({ es: "Sin plan", en: "No plan" })}: {t(unreadableReason(current))}
                   </span>
                 )}
               </CasePlane>
               <div className="flex min-w-0 flex-col gap-3">
                 <p className="text-base leading-snug">
-                  <span className="font-semibold">{modelOf(current)}</span>
+                  <span className="font-semibold">{modelOf(current, t)}</span>
                   <span className="text-fg-2"> · {current.role === "llm_agent" ? t(GLOSSARY.llm_agent.hint) : t(GLOSSARY.llm_direct.hint)}</span>
                 </p>
                 <dl className="grid grid-cols-3 gap-2">
-                  <Fact label="Tiempo" value={formatDuration(current.wall_time_s)} testId="learn-llm-time" />
-                  <Fact label="Furgonetas" value={solved(current) ? String(current.evaluation.vehicles_used) : "–"} />
-                  <Fact label="Retraso" value={solved(current) ? formatNumber(current.evaluation.total_late, 1) : "–"} />
+                  <Fact label={t({ es: "Tiempo", en: "Time" })} value={formatDuration(current.wall_time_s)} testId="learn-llm-time" />
+                  <Fact label={t({ es: "Furgonetas", en: "Vans" })} value={solved(current) ? String(current.evaluation.vehicles_used) : "–"} />
+                  <Fact label={t({ es: "Retraso", en: "Late" })} value={solved(current) ? formatNumber(current.evaluation.total_late, 1) : "–"} />
                 </dl>
                 {current.role === "llm_agent" && (
-                  <ol className="flex flex-wrap items-center gap-1.5 text-base" aria-label="Lo que hizo el agente" data-testid="learn-trace">
-                    {[...traceSteps(current, t), solved(current) ? "Entrega su plan" : "Se queda sin respuesta"].map((step, i, list) => (
+                  <ol className="flex flex-wrap items-center gap-1.5 text-base" aria-label={t({ es: "Lo que hizo el agente", en: "What the agent did" })} data-testid="learn-trace">
+                    {[...traceSteps(current, t), solved(current) ? t({ es: "Entrega su plan", en: "Hands in its plan" }) : t({ es: "Se queda sin respuesta", en: "Ends with no answer" })].map((step, i, list) => (
                       <li key={i} className="flex items-center gap-1.5">
                         <span
                           className={`rounded-tag border px-2 py-1 leading-tight ${
@@ -154,7 +173,8 @@ export function SceneAI({ data, motion, onRetry }: { data: CaseState; motion: bo
                 )}
                 {current.solution && classicByPlan.has(planKey(current.solution.routes)) && (
                   <p className="text-base leading-snug text-fg" data-testid="learn-same-plan">
-                    Es el mismo plan que dio {t(methodLabel(classicByPlan.get(planKey(current.solution.routes))!.method))} en la escena anterior.
+                    {t({ es: "Es el mismo plan que dio", en: "This is the same plan that" })} {t(methodLabel(classicByPlan.get(planKey(current.solution.routes))!.method))}{" "}
+                    {t({ es: "en la escena anterior.", en: "gave in the previous scene." })}
                   </p>
                 )}
                 <RunId id={current.run_id} />
@@ -192,7 +212,7 @@ function RunCard({ run, selected, onSelect }: { run: Run; selected: boolean; onS
     >
       <span className="flex w-full items-baseline justify-between gap-2 text-base leading-tight">
         {!selected && <StateIcon state={state} className="size-4 flex-none self-center lg:hidden" />}
-        <span className="mr-auto truncate font-semibold">{modelOf(run)}</span>
+        <span className="mr-auto truncate font-semibold">{modelOf(run, t)}</span>
         {ev && (
           <span className="num font-semibold" data-testid="learn-llm-cost">
             {formatCost(ev.score)}
@@ -202,7 +222,11 @@ function RunCard({ run, selected, onSelect }: { run: Run; selected: boolean; onS
       <span className={`flex items-center gap-1.5 text-base leading-tight ${folded}`}>
         <StateIcon state={state} className="size-4 flex-none" />
         <span className={ev?.feasible ? "text-ok" : "text-late"} data-testid="learn-llm-status">
-          {ev ? (ev.feasible ? "Válido" : `No válido: ${violationText(ev, t)}`) : `Sin respuesta legible: ${t(unreadableReason(run))}`}
+          {ev
+            ? ev.feasible
+              ? t({ es: "Válido", en: "Valid" })
+              : `${t({ es: "No válido", en: "Not valid" })}: ${violationText(ev, t)}`
+            : `${t({ es: "Sin respuesta legible", en: "No readable answer" })}: ${t(unreadableReason(run))}`}
         </span>
       </span>
       <span className={`text-base leading-tight text-fg-3 tabular-nums ${folded}`}>

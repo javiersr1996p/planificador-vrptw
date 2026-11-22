@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import { Corners } from "@/components/ui/Corners";
 import { TowerIcon } from "@/components/ui/TowerIcon";
+import { useT } from "@/lib/i18n";
 import type { Pt } from "./toy";
 
 /** Posición absoluta de un marcador, centrado en `pt` (en % del escenario). */
@@ -27,13 +28,14 @@ export function StageSvg({ children }: { children: ReactNode }) {
 
 /** La base: torre ámbar con su rótulo. */
 export function BaseMarker({ pt }: { pt: Pt }) {
+  const t = useT();
   return (
     <span className="absolute z-[1] grid -translate-1/2 justify-items-center gap-1" style={at(pt)} aria-hidden="true">
       <span className="grid size-11 place-items-center rounded-xl border-2 border-amber bg-[#1a1203] text-amber shadow-[0_0_28px_4px_rgb(255_181_71/0.45)]">
         <TowerIcon className="size-6" />
       </span>
       <span className="absolute top-full mt-1 rounded-tag bg-ink-0/80 px-1.5 py-0.5 font-mono text-[12px] leading-none font-semibold tracking-[0.12em] text-amber uppercase">
-        Base
+        {t({ es: "Base", en: "Depot" })}
       </span>
     </span>
   );
@@ -70,6 +72,7 @@ export function RouteSegments({ stops, color }: { stops: { id: string; pt: Pt }[
 
 /** Marca «ejemplo ilustrativo» o «datos reales». */
 export function SourceTag({ real }: { real: boolean }) {
+  const t = useT();
   return (
     <span
       className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[12px] leading-none font-semibold tracking-[0.1em] uppercase ${
@@ -77,7 +80,7 @@ export function SourceTag({ real }: { real: boolean }) {
       }`}
     >
       <span aria-hidden="true" className={`size-1.5 rounded-full ${real ? "bg-ok" : "bg-fg-3"}`} />
-      {real ? "Datos reales" : "Ejemplo ilustrativo"}
+      {real ? t({ es: "Datos reales", en: "Real data" }) : t({ es: "Ejemplo ilustrativo", en: "Illustrative example" })}
     </span>
   );
 }

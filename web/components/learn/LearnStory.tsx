@@ -3,6 +3,7 @@
 import { Activity, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { fetchCase, type CaseFile } from "@/lib/cases";
 import { MotionIcon } from "@/components/ui/MotionIcon";
+import { useT, type Pair } from "@/lib/i18n";
 import { playback } from "@/lib/playback";
 import { Arrow } from "./parts";
 import { sceneTitleId } from "./SceneFrame";
@@ -20,7 +21,15 @@ export const LEARN_CASE_ID = "tfe2024-10c-1";
 
 export type CaseState = { status: "loading" } | { status: "error" } | { status: "ready"; file: CaseFile };
 
-const TITLES = ["El problema", "La ventana horaria", "La capacidad", "El coste", "Los métodos", "La IA", "Ahora tú"];
+const TITLES: Pair[] = [
+  { es: "El problema", en: "The problem" },
+  { es: "La ventana horaria", en: "The time window" },
+  { es: "La capacidad", en: "Capacity" },
+  { es: "El coste", en: "Cost" },
+  { es: "Los métodos", en: "Methods" },
+  { es: "La IA", en: "AI" },
+  { es: "Ahora tú", en: "Your turn" },
+];
 const LAST = TITLES.length - 1;
 
 /** Solo cambia con el nivel de movimiento (compartido con el planificador), no a cada fotograma. */
@@ -46,6 +55,7 @@ function usesArrows(target: EventTarget | null): boolean {
  * (`Activity`): lo que el visitante dibujó sigue ahí al volver.
  */
 export function LearnStory() {
+  const t = useT();
   const [scene, setScene] = useState(0);
   const [dir, setDir] = useState<1 | -1>(1);
   const [data, setData] = useState<CaseState>({ status: "loading" });
@@ -127,20 +137,22 @@ export function LearnStory() {
       <div className="mb-4 flex flex-wrap items-end justify-between gap-x-6 gap-y-2 lg:mb-6 lg:gap-y-3">
         <div className="min-w-0">
           <p className="kicker">
-            Aprende · escena {scene + 1} de {TITLES.length}
+            {t({ es: "Aprende", en: "Learn" })} · {t({ es: "escena", en: "scene" })} {scene + 1} {t({ es: "de", en: "of" })} {TITLES.length}
           </p>
-          <h1 className="mt-2 text-[24px] font-extrabold sm:text-[clamp(28px,2.6vw,38px)]">Rutas con horario, en siete escenas</h1>
+          <h1 className="mt-2 text-[24px] font-extrabold sm:text-[clamp(28px,2.6vw,38px)]">
+            {t({ es: "Rutas con horario, en siete escenas", en: "Routes with time windows, in seven scenes" })}
+          </h1>
         </div>
-        <nav aria-label="Escenas" className="-mx-1.5 max-w-full">
+        <nav aria-label={t({ es: "Escenas", en: "Scenes" })} className="-mx-1.5 max-w-full">
           <ol className="flex">
             {TITLES.map((title, i) => (
-              <li key={title}>
+              <li key={i}>
                 <button
                   type="button"
                   data-testid="learn-dot"
-                  aria-label={`Escena ${i + 1}: ${title}`}
+                  aria-label={`${t({ es: "Escena", en: "Scene" })} ${i + 1}: ${t(title)}`}
                   aria-current={i === scene ? "step" : undefined}
-                  title={title}
+                  title={t(title)}
                   onClick={() => go(i)}
                   className="group grid h-11 w-11 cursor-pointer place-items-center"
                 >
@@ -162,7 +174,7 @@ export function LearnStory() {
       </div>
 
       <p className="sr-only" aria-live="polite">
-        Escena {scene + 1} de {TITLES.length}: {TITLES[scene]}
+        {t({ es: "Escena", en: "Scene" })} {scene + 1} {t({ es: "de", en: "of" })} {TITLES.length}: {t(TITLES[scene])}
       </p>
 
       {/* La entrada lateral de cada escena no debe ensanchar la página: se recorta con margen para los anillos de foco. */}
@@ -191,30 +203,31 @@ export function LearnStory() {
           onClick={() => go(scene - 1)}
         >
           <Arrow back />
-          Anterior
+          {t({ es: "Anterior", en: "Previous" })}
         </button>
         <button
           type="button"
           role="switch"
           className="btn max-md:btn-icon"
           aria-checked={motion}
-          aria-label="Animación"
+          aria-label={t({ es: "Animación", en: "Animation" })}
           data-testid="learn-motion"
           onClick={() => playback.setMotion(!motion)}
         >
           <MotionIcon on={motion} />
-          <span className="max-md:hidden">{motion ? "Animación: sí" : "Animación: no"}</span>
+          <span className="max-md:hidden">{motion ? t({ es: "Animación: sí", en: "Animation: on" }) : t({ es: "Animación: no", en: "Animation: off" })}</span>
         </button>
         {scene < LAST ? (
           <button key="next" ref={nextRef} type="button" className="btn btn-amber" data-testid="learn-next" onClick={() => go(scene + 1)}>
             <span>
-              Siguiente<span className="font-normal max-lg:sr-only">: {TITLES[scene + 1]}</span>
+              {t({ es: "Siguiente", en: "Next" })}
+              <span className="font-normal max-lg:sr-only">: {t(TITLES[scene + 1])}</span>
             </span>
             <Arrow />
           </button>
         ) : (
           <button key="restart" type="button" className="btn" data-testid="learn-restart" onClick={() => go(0)}>
-            Volver a empezar
+            {t({ es: "Volver a empezar", en: "Start over" })}
           </button>
         )}
       </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, type ReactNode } from "react";
+import { useT } from "@/lib/i18n";
 
 /**
  * Dibujos de la idea de cada método y de los dos papeles de la IA. Son SVG
@@ -39,6 +40,7 @@ function anim(attr: string, frames: [number, string | number][], dur = 6) {
 
 /** Heurística: desde cada parada, al cliente más cercano. */
 function Heuristic({ motion }: { motion: boolean }) {
+  const t = useT();
   const P: [number, number][] = [
     [30, 112],
     [78, 92],
@@ -47,7 +49,12 @@ function Heuristic({ motion }: { motion: boolean }) {
     [206, 28],
   ];
   return (
-    <Svg label="Desde la base, la furgoneta va al cliente más cercano, y desde ahí al siguiente más cercano, hasta volver.">
+    <Svg
+      label={t({
+        es: "Desde la base, la furgoneta va al cliente más cercano, y desde ahí al siguiente más cercano, hasta volver.",
+        en: "From the depot, the van goes to the nearest customer, then to the next nearest, until it returns.",
+      })}
+    >
       {P.slice(0, -1).map(([x, y], i) => {
         const s = 0.08 + i * 0.16;
         return (
@@ -72,7 +79,7 @@ function Heuristic({ motion }: { motion: boolean }) {
         </circle>
       ))}
       <text x="120" y="134" textAnchor="middle" style={LABEL}>
-        Siempre al más cercano
+        {t({ es: "Siempre al más cercano", en: "Always the nearest" })}
       </text>
     </Svg>
   );
@@ -80,6 +87,7 @@ function Heuristic({ motion }: { motion: boolean }) {
 
 /** Colonia de hormigas: muchas hormigas, y el atajo bueno acumula rastro. */
 function Ants({ motion }: { motion: boolean }) {
+  const t = useT();
   const id = useId().replace(/[^\w-]/g, "");
   const paths = {
     top: "M30 104 C60 18 150 6 210 40",
@@ -97,7 +105,12 @@ function Ants({ motion }: { motion: boolean }) {
     ["mid", -1.65],
   ];
   return (
-    <Svg label="Muchas hormigas prueban caminos; el más corto acumula más rastro y atrae a las siguientes.">
+    <Svg
+      label={t({
+        es: "Muchas hormigas prueban caminos; el más corto acumula más rastro y atrae a las siguientes.",
+        en: "Many ants try paths; the shortest builds up more trail and attracts the next ones.",
+      })}
+    >
       {(Object.keys(paths) as (keyof typeof paths)[]).map((k) => (
         <path
           key={k}
@@ -125,7 +138,7 @@ function Ants({ motion }: { motion: boolean }) {
       <rect x="21" y="95" width="18" height="18" rx="4" fill="#1a1203" stroke={AMBER} strokeWidth="2" />
       <circle cx="210" cy="40" r="8" fill={NODE} stroke={C1} strokeWidth="2.5" />
       <text x="120" y="134" textAnchor="middle" style={LABEL}>
-        El atajo deja más rastro
+        {t({ es: "El atajo deja más rastro", en: "Shortcut gets more trail" })}
       </text>
     </Svg>
   );
@@ -133,21 +146,27 @@ function Ants({ motion }: { motion: boolean }) {
 
 /** Algoritmo genético: dos planes se cruzan y el hijo hereda una mitad de cada uno. */
 function Genetic({ motion }: { motion: boolean }) {
+  const t = useT();
   const A = [C1, C1, C2, C2, C3, C3];
   const B = [C3, C2, C1, C1, C2, C3];
   const child = [...A.slice(0, 3), ...B.slice(3)];
   const x = (i: number) => 76 + i * 26;
   const rows = { a: 14, b: 44, child: 96 };
   return (
-    <Svg label="Dos planes buenos se cruzan: el hijo toma una mitad de cada uno y a veces cambia algo al azar.">
+    <Svg
+      label={t({
+        es: "Dos planes buenos se cruzan: el hijo toma una mitad de cada uno y a veces cambia algo al azar.",
+        en: "Two good plans are crossed: the child takes one half of each and sometimes changes something at random.",
+      })}
+    >
       <text x="10" y={rows.a + 14} style={LABEL}>
-        Plan A
+        {t({ es: "Plan A", en: "Plan A" })}
       </text>
       <text x="10" y={rows.b + 14} style={LABEL}>
-        Plan B
+        {t({ es: "Plan B", en: "Plan B" })}
       </text>
       <text x="10" y={rows.child + 14} style={{ ...LABEL, fill: AMBER }}>
-        Hijo
+        {t({ es: "Hijo", en: "Child" })}
       </text>
       {A.map((c, i) => (
         <rect key={`a${i}`} x={x(i)} y={rows.a} width="23" height="20" rx="4" fill={c} opacity={i < 3 ? 1 : 0.3} />
@@ -180,7 +199,7 @@ function Genetic({ motion }: { motion: boolean }) {
         );
       })}
       <text x={x(4) + 11} y="132" textAnchor="middle" style={{ ...LABEL, fill: AMBER }}>
-        Mutación
+        {t({ es: "Mutación", en: "Mutation" })}
       </text>
     </Svg>
   );
@@ -188,6 +207,7 @@ function Genetic({ motion }: { motion: boolean }) {
 
 /** Búsqueda tabú: deshace un cruce con un cambio pequeño y prohíbe volver atrás. */
 function Tabu({ motion }: { motion: boolean }) {
+  const t = useT();
   const base: [number, number] = [22, 68];
   const TL: [number, number] = [64, 26];
   const TR: [number, number] = [134, 26];
@@ -195,7 +215,12 @@ function Tabu({ motion }: { motion: boolean }) {
   const BL: [number, number] = [64, 108];
   const seg = (a: [number, number], b: [number, number]) => ({ x1: a[0], y1: a[1], x2: b[0], y2: b[1] });
   return (
-    <Svg label="Un cambio pequeño deshace el cruce de la ruta; el movimiento contrario queda prohibido un tiempo.">
+    <Svg
+      label={t({
+        es: "Un cambio pequeño deshace el cruce de la ruta; el movimiento contrario queda prohibido un tiempo.",
+        en: "A small change undoes the crossing in the route; the opposite move is banned for a while.",
+      })}
+    >
       {[seg(base, TL), seg(TR, BR), seg(BL, base)].map((s, i) => (
         <line key={i} {...s} stroke={C1} strokeWidth="3" strokeLinecap="round" />
       ))}
@@ -221,11 +246,11 @@ function Tabu({ motion }: { motion: boolean }) {
         <path d="M168 66v-4a5 5 0 0 1 10 0v4" fill="none" stroke="var(--late)" strokeWidth="2" />
         <rect x="165" y="66" width="16" height="12" rx="2" fill="var(--late)" />
         <text x="208" y="72" textAnchor="middle" style={{ ...LABEL, fill: "var(--late)" }}>
-          Tabú
+          {t({ es: "Tabú", en: "Tabu" })}
         </text>
       </g>
       <text x="120" y="134" textAnchor="middle" style={LABEL}>
-        Sin volver atrás
+        {t({ es: "Sin volver atrás", en: "No going back" })}
       </text>
     </Svg>
   );
@@ -233,9 +258,15 @@ function Tabu({ motion }: { motion: boolean }) {
 
 /** LLM directo: lee el problema y escribe el plan de una sola vez. */
 export function DirectIdea({ motion }: { motion: boolean }) {
+  const t = useT();
   const lines = [70, 92, 56, 84, 64];
   return (
-    <Svg label="El modelo lee el problema y escribe el plan entero de una vez, sin calcular aparte.">
+    <Svg
+      label={t({
+        es: "El modelo lee el problema y escribe el plan entero de una vez, sin calcular aparte.",
+        en: "The model reads the problem and writes the whole plan at once, with no separate calculation.",
+      })}
+    >
       <rect x="14" y="12" width="118" height="104" rx="10" fill="#0c1729" stroke="var(--line-2)" strokeWidth="1.5" />
       {lines.map((w, i) => (
         <rect key={i} x="28" y={28 + i * 16} width={w} height="7" rx="3.5" fill={i === 4 ? AMBER : "rgb(185 197 216 / 0.55)"}>
@@ -251,7 +282,7 @@ export function DirectIdea({ motion }: { motion: boolean }) {
         <circle cx="226" cy="70" r="6" fill={NODE} stroke={C2} strokeWidth="2.5" />
       </g>
       <text x="120" y="134" textAnchor="middle" style={LABEL}>
-        Todo de una vez
+        {t({ es: "Todo de una vez", en: "All at once" })}
       </text>
     </Svg>
   );
@@ -259,10 +290,16 @@ export function DirectIdea({ motion }: { motion: boolean }) {
 
 /** Agente: lanza herramientas (métodos y evaluador), mira el resultado y decide. */
 export function AgentIdea({ motion }: { motion: boolean }) {
+  const t = useT();
   const id = useId().replace(/[^\w-]/g, "");
   const loop = "M92 62 C104 16 144 16 156 62 C144 108 104 108 92 62 Z";
   return (
-    <Svg label="El modelo lanza los métodos y el evaluador como herramientas, mira el resultado y vuelve a probar antes de entregar.">
+    <Svg
+      label={t({
+        es: "El modelo lanza los métodos y el evaluador como herramientas, mira el resultado y vuelve a probar antes de entregar.",
+        en: "The model runs the methods and the evaluator as tools, checks the result and tries again before handing in.",
+      })}
+    >
       <path id={`${id}-loop`} d={loop} fill="none" stroke="rgb(255 181 71 / 0.45)" strokeWidth="2" strokeDasharray="4 5" />
       {motion &&
         [0, -1.2].map((begin) => (
@@ -274,23 +311,23 @@ export function AgentIdea({ motion }: { motion: boolean }) {
         ))}
       <rect x="8" y="40" width="84" height="44" rx="10" fill="#0c1729" stroke={C3} strokeWidth="2" />
       <text x="50" y="67" textAnchor="middle" style={{ ...LABEL, fill: "var(--fg)" }}>
-        Modelo
+        {t({ es: "Modelo", en: "Model" })}
       </text>
       <rect x="156" y="40" width="78" height="44" rx="10" fill="#0c1729" stroke={C1} strokeWidth="2" />
       <text x="195" y="60" textAnchor="middle" style={{ ...LABEL, fill: "var(--fg)" }}>
-        Métodos
+        {t({ es: "Métodos", en: "Methods" })}
       </text>
       <text x="195" y="76" textAnchor="middle" style={{ ...LABEL, fill: "var(--fg)" }}>
-        Evaluar
+        {t({ es: "Evaluar", en: "Evaluate" })}
       </text>
       <text x="124" y="16" textAnchor="middle" style={LABEL}>
-        Lanza
+        {t({ es: "Lanza", en: "Run" })}
       </text>
       <text x="124" y="118" textAnchor="middle" style={LABEL}>
-        Mira
+        {t({ es: "Mira", en: "Check" })}
       </text>
       <text x="120" y="136" textAnchor="middle" style={LABEL}>
-        Prueba y corrige
+        {t({ es: "Prueba y corrige", en: "Try and correct" })}
       </text>
     </Svg>
   );
