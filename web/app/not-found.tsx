@@ -4,12 +4,16 @@ import { buttonClass } from "@/components/ui/Button";
 import { Corners } from "@/components/ui/Corners";
 import { Help } from "@/components/ui/Help";
 import { Kicker } from "@/components/ui/Kicker";
-import { T } from "@/lib/i18n";
+import { DocMeta, T } from "@/lib/i18n";
 import { TowerIcon } from "@/components/ui/TowerIcon";
 
 export default function NotFound() {
   return (
     <main className="wrap grid flex-1 content-center items-center gap-8 py-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,480px)] lg:gap-16 lg:py-12">
+      <DocMeta
+        es={{ title: "Página no encontrada · Planificador VRPTW" }}
+        en={{ title: "Page not found · VRPTW Planner" }}
+      />
       <div className="flex flex-col items-start gap-4" style={{ animation: "rise 700ms var(--ease-out) both" }}>
         <Kicker>
           <T es="Error 404 · Parada desconocida" en="Error 404 · Unknown stop" />

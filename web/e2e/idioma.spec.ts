@@ -73,6 +73,7 @@ test("el 404 y la marca también cambian de idioma", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "This route does not exist" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Back to the planner" })).toBeVisible();
   await expect(page.getByRole("link", { name: "VRPTW Planner, home" })).toBeVisible();
+  await expect(page).toHaveTitle("Page not found · VRPTW Planner");
 });
 
 test("sin errores de hidratación al cargar en inglés", async ({ page }) => {
