@@ -209,7 +209,7 @@ def test_deadline_starts_after_acquiring_lock() -> None:
     [load_tfe2024("20c-1"), load_solomon("c101", 25, truncated=True)],
     ids=["20c-1", "c101-25"],
 )
-def test_corrected_respects_fleet_without_repeats(instance: Instance) -> None:
+def test_current_respects_fleet_without_repeats(instance: Instance) -> None:
     known = {c.id for c in instance.customers}
     for seed in range(20):
         solution = solve(instance, seed=seed, **FAST)
@@ -241,9 +241,9 @@ def test_legacy_10_customers_five_routes_all_served() -> None:
 
 
 @pytest.mark.parametrize("label", ["10c-3", "20c-8"])
-def test_corrected_serves_customers_without_feasible_slot(label: str) -> None:
+def test_current_serves_customers_without_feasible_slot(label: str) -> None:
     # En 20c-8 el cliente 9 no puede llegar a tiempo desde el depósito; en 2024
-    # el GA lo atendía con retraso. El corregido también, en lugar de dejarlo fuera.
+    # el GA lo atendía con retraso. El actual también, en lugar de dejarlo fuera.
     instance = load_tfe2024(label)
     for seed in range(3):
         solution = solve(instance, seed=seed, population=20, generations=5)

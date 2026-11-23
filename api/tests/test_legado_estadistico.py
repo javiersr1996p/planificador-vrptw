@@ -13,7 +13,7 @@ Criterio:
 - Un método pasa si ninguna de las 12 instancias tiene p < 0.05/12 y como mucho
   2 tienen p < 0.05.
 - Anclas exactas por método y control negativo: la misma prueba debe rechazar
-  (p < 0.05/12) el tabú y el GA corregidos.
+  (p < 0.05/12) el tabú y el GA actuales.
 
 Las muestras de ACO y GA cuestan minutos y llevan además el marcador `lento`,
 que `uv run pytest` excluye por defecto (`addopts` en pyproject.toml). Como la
@@ -27,7 +27,7 @@ los hilos no lo aceleran.
 
 El control usa 10 semillas. Con 30 referencias y 10 ejecuciones la prueba
 rechaza al nivel 0.05/12 a partir de D de alrededor de 0.65, y los métodos
-corregidos dan D = 1 (ninguna ejecución corregida cae dentro del rango de
+actuales dan D = 1 (ninguna ejecución actual cae dentro del rango de
 costes de 2024), así que más semillas solo añadirían tiempo.
 """
 
@@ -63,8 +63,8 @@ SAMPLES: dict[str, tuple[str, dict[str, Any], int, tuple[str, ...]]] = {
     "aco": ("aco", {}, 30, TFE2024_USED),
     "ga": ("ga", {"legacy": True}, 30, TFE2024_USED),
     "tabu": ("tabu", {"iterations": 0}, 1000, TFE2024_USED),
-    "tabu_corregido": ("tabu", {}, 10, TFE2024_USED),
-    "ga_corregido": ("ga", {}, 10, LABELS_20),
+    "tabu_actual": ("tabu", {}, 10, TFE2024_USED),
+    "ga_actual": ("ga", {}, 10, LABELS_20),
 }
 
 Run = tuple[float, int, int]  # coste al céntimo, vehículos usados, no atendidos
@@ -170,7 +170,7 @@ def test_tabu_uses_whole_fleet_and_serves_everyone(label: str) -> None:
 
 @lento
 @pytest.mark.parametrize(
-    ("sample", "min_rejected"), [("tabu_corregido", 10), ("ga_corregido", 5)]
+    ("sample", "min_rejected"), [("tabu_actual", 10), ("ga_actual", 5)]
 )
 def test_negative_control_is_rejected(sample: str, min_rejected: int) -> None:
     p_values = _p_values(sample)

@@ -19,7 +19,7 @@ from vrptw.solvers.heuristic import solve
 REFERENCE = Path(__file__).parent / "data" / "tfe2024_reference.json"
 PUBLISHED = json.loads(REFERENCE.read_text(encoding="utf-8"))["costs"]["heuristic"]
 
-# Score del port sin ajuste (coste corregido)
+# Score del port sin ajuste (coste actual)
 EXPECTED_SCORE = {
     "10c-1": 6107.44,
     "10c-3": 15899.12,
@@ -57,7 +57,7 @@ def test_matches_published_cost(label: str) -> None:
 
 @pytest.mark.legado
 @pytest.mark.parametrize("label", TFE2024_USED)
-def test_corrected_score_regression(label: str) -> None:
+def test_current_score_regression(label: str) -> None:
     instance = load_tfe2024(label)
     assert score(instance, _routes(instance)) == pytest.approx(
         EXPECTED_SCORE[label], abs=0.01
