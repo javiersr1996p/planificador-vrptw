@@ -234,6 +234,8 @@ test("escena 6: las seis ejecuciones con IA, también las no válidas y las ileg
     await expect(detail.getByTestId("learn-run-id")).toHaveText(run.run_id);
     await expect(detail.getByTestId("learn-llm-time")).toHaveText(formatDuration(run.wall_time_s));
     if (run.role === "llm_agent") await expect(detail.getByTestId("learn-trace")).toBeVisible();
+    // Techo por estado: cada ejecución elegida, también las del agente con la traza larga.
+    expect(await pageHeight(page), `escena 6, ${run.run_id}`).toBeLessThanOrEqual(LEARN_SCENE_HEIGHT[page.viewportSize()!.width]);
   }
 });
 

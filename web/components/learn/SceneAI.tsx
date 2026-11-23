@@ -70,6 +70,9 @@ export function SceneAI({ data, motion, onRetry }: { data: CaseState; motion: bo
   const validCount = llm.filter((r) => solved(r) && r.evaluation.feasible).length;
   const unreadable = llm.filter((r) => !solved(r)).length;
   const role = ROLES.find((x) => x.role === current?.role) ?? ROLES[0];
+  // Método clásico que dio en la escena anterior el mismo plan que la ejecución elegida.
+  const same = current?.solution ? classicByPlan.get(planKey(current.solution.routes)) : undefined;
+  const sameName = same ? t(methodLabel(same.method)) : "";
 
   return (
     <SceneFrame
@@ -122,8 +125,9 @@ export function SceneAI({ data, motion, onRetry }: { data: CaseState; motion: bo
             ))}
           </div>
           {current && (
+            // En móvil, plano y cifras van lado a lado y el resto ocupa las dos columnas, para no pasar del techo de altura.
             <div
-              className="grid min-h-0 gap-4 border-t border-line pt-4 sm:grid-cols-[minmax(0,220px)_minmax(0,1fr)]"
+              className="grid min-h-0 gap-4 border-t border-line pt-4 max-sm:grid-cols-[156px_minmax(0,1fr)] max-sm:gap-x-3 sm:grid-cols-[minmax(0,220px)_minmax(0,1fr)]"
               data-testid="learn-llm-detail"
               data-run-id={current.run_id}
             >
@@ -133,7 +137,6 @@ export function SceneAI({ data, motion, onRetry }: { data: CaseState; motion: bo
                 late={lateCustomers(current.evaluation)}
                 label={planLabel(current, t)}
                 key={current.run_id}
-                className="max-w-[240px] sm:max-w-none"
               >
                 {!solved(current) && (
                   <span className="absolute inset-x-3 top-1/2 z-[3] -translate-y-1/2 rounded-hud border border-late/60 bg-[#1f0d10]/95 px-3 py-2 text-center text-base leading-snug">
@@ -141,22 +144,34 @@ export function SceneAI({ data, motion, onRetry }: { data: CaseState; motion: bo
                   </span>
                 )}
               </CasePlane>
-              <div className="flex min-w-0 flex-col gap-3">
-                <p className="text-base leading-snug">
+              <div className="flex min-w-0 flex-col gap-3 max-sm:contents">
+                <p className="text-base leading-snug max-sm:order-first max-sm:col-span-2">
                   <span className="font-semibold">{modelOf(current, t)}</span>
-                  <span className="text-fg-2"> · {current.role === "llm_agent" ? t(GLOSSARY.llm_agent.hint) : t(GLOSSARY.llm_direct.hint)}</span>
+                  {/* En móvil sobra: la ilustración de arriba ya nombra el papel. */}
+                  <span className="text-fg-2 max-sm:hidden"> · {current.role === "llm_agent" ? t(GLOSSARY.llm_agent.hint) : t(GLOSSARY.llm_direct.hint)}</span>
                 </p>
-                <dl className="grid grid-cols-3 gap-2">
+                <dl className="grid grid-cols-3 gap-2 max-sm:grid-cols-1 max-sm:content-center max-sm:gap-1.5 max-sm:[&>div]:py-1.5">
                   <Fact label={t({ es: "Tiempo", en: "Time" })} value={formatDuration(current.wall_time_s)} testId="learn-llm-time" />
                   <Fact label={t({ es: "Furgonetas", en: "Vans" })} value={solved(current) ? String(current.evaluation.vehicles_used) : "–"} />
                   <Fact label={t({ es: "Retraso", en: "Late" })} value={solved(current) ? formatNumber(current.evaluation.total_late, 1) : "–"} />
                 </dl>
                 {current.role === "llm_agent" && (
-                  <ol className="flex flex-wrap items-center gap-1.5 text-base" aria-label={t({ es: "Lo que hizo el agente", en: "What the agent did" })} data-testid="learn-trace">
-                    {[...traceSteps(current, t), solved(current) ? t({ es: "Entrega su plan", en: "Submits its plan" }) : t({ es: "Se queda sin respuesta", en: "Ends with no answer" })].map((step, i, list) => (
-                      <li key={i} className="flex items-center gap-1.5">
+                  <ol
+                    className="flex flex-wrap items-center gap-1.5 text-base max-sm:col-span-2 max-sm:gap-1"
+                    aria-label={t({ es: "Lo que hizo el agente", en: "What the agent did" })}
+                    data-testid="learn-trace"
+                  >
+                    {[
+                      ...traceSteps(current, t),
+                      !solved(current)
+                        ? t({ es: "Se queda sin respuesta", en: "Ends with no answer" })
+                        : same
+                          ? t({ es: `Entrega el mismo plan que ${sameName.toLowerCase()}`, en: `Submits the same plan as ${sameName.toLowerCase()}` })
+                          : t({ es: "Entrega su plan", en: "Submits its plan" }),
+                    ].map((step, i, list) => (
+                      <li key={i} className="flex items-center gap-1.5 max-sm:gap-1">
                         <span
-                          className={`rounded-tag border px-2 py-1 leading-tight ${
+                          className={`rounded-tag border px-2 py-1 leading-tight max-sm:py-0.5 ${
                             i === list.length - 1 ? (solved(current) ? "border-amber/60 text-amber" : "border-late/60 text-late") : "border-line-2 text-fg-2"
                           }`}
                         >
@@ -171,13 +186,16 @@ export function SceneAI({ data, motion, onRetry }: { data: CaseState; motion: bo
                     ))}
                   </ol>
                 )}
-                {current.solution && classicByPlan.has(planKey(current.solution.routes)) && (
-                  <p className="text-base leading-snug text-fg" data-testid="learn-same-plan">
-                    {t({ es: "Es el mismo plan que dio", en: "This is the same plan that" })} {t(methodLabel(classicByPlan.get(planKey(current.solution.routes))!.method))}{" "}
+                {/* En el agente, la coincidencia ya va en el último paso de la traza. */}
+                {same && current.role !== "llm_agent" && (
+                  <p className="text-base leading-snug text-fg max-sm:col-span-2" data-testid="learn-same-plan">
+                    {t({ es: "Es el mismo plan que dio", en: "This is the same plan that" })} {sameName}{" "}
                     {t({ es: "en la escena anterior.", en: "gave in the previous scene." })}
                   </p>
                 )}
-                <RunId id={current.run_id} />
+                <div className="max-sm:col-span-2 max-sm:[&_p]:tracking-[-0.04em]">
+                  <RunId id={current.run_id} />
+                </div>
               </div>
             </div>
           )}

@@ -101,6 +101,7 @@ async function exercise(page: Page, n: number): Promise<void> {
     for (const [i, button] of (await s.getByTestId("learn-llm-run").all()).entries()) {
       await button.click();
       await expectEnglish(page, '[data-testid="learn-story"]', `escena 6, ejecución ${i + 1}`);
+      expect(await pageHeight(page), `altura de la escena 6, ejecución ${i + 1}`).toBeLessThanOrEqual(LEARN_SCENE_HEIGHT[page.viewportSize()!.width]);
     }
   }
 }
@@ -129,8 +130,7 @@ test.describe("Aprende en inglés", () => {
       }
       expect(await pageHeight(page), `altura de la escena ${n}`).toBeLessThanOrEqual(LEARN_SCENE_HEIGHT[width]);
       await exercise(page, n);
-      // En la escena 6 las ejecuciones largas pasan del techo también en español: solo cuenta la elegida por defecto.
-      if (n !== 6) expect(await pageHeight(page), `altura de la escena ${n} tras pulsar`).toBeLessThanOrEqual(LEARN_SCENE_HEIGHT[width]);
+      expect(await pageHeight(page), `altura de la escena ${n} tras pulsar`).toBeLessThanOrEqual(LEARN_SCENE_HEIGHT[width]);
       await expectNoHorizontalOverflow(page);
       await expectBodyText16(page);
     }
