@@ -21,8 +21,8 @@ export const SERVICE_DOWN_TEXT: Pair = {
 
 /** Texto del aviso mientras el servicio despierta. */
 export const SERVICE_WAKING_TEXT: Pair = {
-  es: "Despertando el servicio (hasta un minuto)…",
-  en: "Waking up the service (up to a minute)…",
+  es: "Despertando el servicio (en torno a un minuto)…",
+  en: "Waking up the service (about a minute)…",
 };
 
 /** Sin servicio utilizable ahora (caído o despertando): las acciones en vivo se desactivan. */

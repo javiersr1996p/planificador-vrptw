@@ -6,8 +6,8 @@ import { API_ORIGIN, blockService, stubMapStyle } from "./helpers";
 // El reloj de la página es simulado para no esperar de verdad.
 
 const LANGS = [
-  { lang: "es", waking: "Despertando el servicio (hasta un minuto)…", down: "Servicio no disponible: se muestran los resultados precalculados" },
-  { lang: "en", waking: "Waking up the service (up to a minute)…", down: "Service unavailable: showing the precomputed results" },
+  { lang: "es", waking: "Despertando el servicio (en torno a un minuto)…", down: "Servicio no disponible: se muestran los resultados precalculados" },
+  { lang: "en", waking: "Waking up the service (about a minute)…", down: "Service unavailable: showing the precomputed results" },
 ] as const;
 
 const status = (page: Page) => page.getByTestId("service-status");
