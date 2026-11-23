@@ -110,6 +110,9 @@ test("el cambio de idioma en caliente repinta la comparativa, el detalle y el ma
   await expect(page.getByTestId("detail")).toContainText("El día de la furgoneta");
   const canvas = page.locator("canvas.maplibregl-canvas");
   await expect(canvas).toHaveAttribute("aria-label", "Mapa de rutas");
+  // El aviso de gestos del mapa (oculto hasta que se hace scroll sin Ctrl) también cambia de idioma.
+  const gestures = page.locator(".maplibregl-cooperative-gesture-screen");
+  await expect(gestures).toContainText("para ampliar el mapa");
   const stop = page.getByTestId("stop").first();
   await expect(stop).toHaveAttribute("aria-label", /^Cliente \d+/);
   await expect(page.getByTestId("legend-route").first()).toHaveAttribute("aria-label", /^Furgoneta 1: \d+ paradas?$/);
@@ -120,6 +123,9 @@ test("el cambio de idioma en caliente repinta la comparativa, el detalle y el ma
   await expect(page.getByTestId("detail")).toContainText(/Van \d+'s day/);
   await expect(page.getByTestId("kpis")).toContainText("Plan on the map");
   await expect(canvas).toHaveAttribute("aria-label", "Route map");
+  await expect(gestures).toContainText("to zoom the map");
+  await expect(gestures).toContainText("Use two fingers to move the map");
+  await expect(gestures).not.toContainText("ampliar");
   await expect(stop).toHaveAttribute("aria-label", /^Customer \d+/);
   await expect(stop).toHaveAttribute("aria-label", /Time window/);
   await expect(page.getByTestId("legend-route").first()).toHaveAttribute("aria-label", /^Van 1: \d+ stops?$/);
@@ -131,6 +137,7 @@ test("el cambio de idioma en caliente repinta la comparativa, el detalle y el ma
   await page.getByRole("group", { name: "Idioma · Language" }).getByRole("button", { name: "ES" }).click();
   await expect(page.getByTestId("comparison")).toContainText("Comparativa");
   await expect(canvas).toHaveAttribute("aria-label", "Mapa de rutas");
+  await expect(gestures).toContainText("Usa dos dedos para mover el mapa");
   await expect(page.getByTestId("example-card").first()).toContainText("paradas · mapa real");
 });
 

@@ -317,6 +317,11 @@ export default function MapGL({
     if (!map) return;
     const table = (map as unknown as { _locale?: Record<string, string> })._locale;
     if (table) Object.assign(table, LOCALE[lang]);
+    // El aviso de gestos se escribe al activarse: se rehace para que tome la tabla nueva.
+    if (map.cooperativeGestures.isEnabled()) {
+      map.cooperativeGestures.disable();
+      map.cooperativeGestures.enable();
+    }
     map.getCanvas().setAttribute("aria-label", LOCALE[lang]["Map.Title"]);
   }, [map, lang]);
 
